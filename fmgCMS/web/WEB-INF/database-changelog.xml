@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog logicalFilePath="database-schema.xml" xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9 http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
+    <changeSet author="fmguler" id="init">
+    </changeSet>
+    <changeSet author="fmguler" id="0">
+        <tagDatabase tag="tag-init"/>
+    </changeSet>
+    <!-- CMS SCHEMA >> -->
+    <changeSet author="fmguler" id="1">
+        <createTable schemaName="public" tableName="content">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="content_pkey"/>
+            </column>
+            <column name="path" type="VARCHAR(100)"/>
+            <column name="content" type="TEXT(2147483647)"/>
+            <column name="date" type="TIMESTAMP WITHOUT TIME ZONE"/>            
+        </createTable>
+    </changeSet>    
+    <!-- << CMS SCHEMA -->
+</databaseChangeLog>

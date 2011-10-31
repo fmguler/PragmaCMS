@@ -16,5 +16,13 @@
           p:url="${jdbc.url}"
           p:username="${jdbc.username}"
           p:password="${jdbc.password}" />
+          
+    <!-- Liquibase configuration, for automatic schema updating -->
+    <bean id="liquibase" class="com.fmguler.cms.helper.SpringLiquibaseWrapper">
+        <property name="dataSource" ref="dataSource" />
+        <property name="changeLog" value="/WEB-INF/database-changelog.xml" />
+        <property name="liquibaseEnabled" value="${jdbc.liquibaseEnabled}" />
+        <!--property name="contexts" value="test, production" /-->
+    </bean>
 
 </beans>

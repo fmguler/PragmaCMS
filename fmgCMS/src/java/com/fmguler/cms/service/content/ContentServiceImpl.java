@@ -6,7 +6,7 @@
  */
 package com.fmguler.cms.service.content;
 
-import com.fmguler.cms.service.content.domain.Content;
+import com.fmguler.cms.service.content.domain.Page;
 import com.fmguler.ven.Criteria;
 import com.fmguler.ven.Ven;
 import java.util.HashSet;
@@ -24,17 +24,19 @@ public class ContentServiceImpl implements ContentService {
     private Ven ven;
 
     /**
-     * Return the content with the specified path
-     * @param path the path of the content
-     * @return content object with path and data
+     * Return the page with the specified path
+     * @param path the path of the page
+     * @return page object with attributes
      */
-    public Content getContent(String path) {
+    public Page getPage(String path) {
         Set joins = new HashSet();
+        joins.add("Page.template.templateAttributes.attribute");
+        joins.add("Page.pageAttributes.attribute");
         Criteria criteria = new Criteria();
-        criteria.eq("Content.path", path);
-        List list = ven.list(Content.class, joins, criteria);
+        criteria.eq("Page.path", path);
+        List list = ven.list(Page.class, joins, criteria);
         if (list.isEmpty()) return null;
-        return (Content)list.get(0);
+        return (Page)list.get(0);
     }
 
     //--------------------------------------------------------------------------

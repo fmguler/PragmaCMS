@@ -6,7 +6,7 @@
  */
 package com.fmguler.cms.service.content;
 
-import com.fmguler.cms.service.content.domain.Content;
+import com.fmguler.cms.service.content.domain.Page;
 
 /**
  * Handles content operations
@@ -15,9 +15,9 @@ import com.fmguler.cms.service.content.domain.Content;
  */
 public interface ContentService {
     /**
-     * Return the content with the specified path
-     * @param path the path of the content
-     * @return content object with path and data
+     * Return the page with the specified path
+     * @param path the path of the page
+     * @return page object with attributes
      */
-    Content getContent(String path);
+    public Page getPage(String path);
 }

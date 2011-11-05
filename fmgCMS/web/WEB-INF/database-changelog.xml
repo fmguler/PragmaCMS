@@ -7,14 +7,98 @@
     </changeSet>
     <!-- CMS SCHEMA >> -->
     <changeSet author="fmguler" id="1">
-        <createTable schemaName="public" tableName="content">
+        <createTable schemaName="public" tableName="attribute">
             <column autoIncrement="true" name="id" type="serial">
-                <constraints nullable="false" primaryKey="true" primaryKeyName="content_pkey"/>
+                <constraints nullable="false" primaryKey="true" primaryKeyName="attribute_pkey"/>
             </column>
-            <column name="path" type="VARCHAR(100)"/>
-            <column name="content" type="TEXT(2147483647)"/>
-            <column name="date" type="TIMESTAMP WITHOUT TIME ZONE"/>            
+            <column name="type" type="VARCHAR(1000)"/>
+            <column name="attribute" type="VARCHAR(1000)"/>
+            <column name="value" type="TEXT(2147483647)"/>
         </createTable>
-    </changeSet>    
+    </changeSet>
+    <changeSet author="fmguler" id="2">
+        <createTable schemaName="public" tableName="template">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="template_pkey"/>
+            </column>
+            <column name="name" type="VARCHAR(1000)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="3">
+        <createTable schemaName="public" tableName="page">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="page_pkey"/>
+            </column>
+            <column name="path" type="VARCHAR(1000)"/>
+            <column name="template_id" type="int4">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="4">
+        <createTable schemaName="public" tableName="template_attribute">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="template_attribute_pkey"/>
+            </column>
+            <column name="template_id" type="int4">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attribute_id" type="int4">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="5">
+        <createTable schemaName="public" tableName="page_attribute">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="page_attribute_pkey"/>
+            </column>
+            <column name="page_id" type="int4">
+                <constraints nullable="false"/>
+            </column>
+            <column name="attribute_id" type="int4">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="6">
+        <addForeignKeyConstraint 
+            constraintName="page_template_id_fkey"
+            baseTableSchemaName="public" baseTableName="page" baseColumnNames="template_id"
+            referencedTableSchemaName="public"   referencedTableName="template" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <changeSet author="fmguler" id="7">
+        <addForeignKeyConstraint 
+            constraintName="template_attribute_template_id_fkey"
+            baseTableSchemaName="public" baseTableName="template_attribute" baseColumnNames="template_id"
+            referencedTableSchemaName="public"   referencedTableName="template" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <changeSet author="fmguler" id="8">
+        <addForeignKeyConstraint 
+            constraintName="template_attribute_attribute_id_fkey"
+            baseTableSchemaName="public" baseTableName="template_attribute" baseColumnNames="attribute_id"
+            referencedTableSchemaName="public"   referencedTableName="attribute" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    
+    <changeSet author="fmguler" id="9">
+        <addForeignKeyConstraint 
+            constraintName="page_attribute_page_id_fkey"
+            baseTableSchemaName="public" baseTableName="page_attribute" baseColumnNames="page_id"
+            referencedTableSchemaName="public"   referencedTableName="page" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <changeSet author="fmguler" id="10">
+        <addForeignKeyConstraint 
+            constraintName="page_attribute_attribute_id_fkey"
+            baseTableSchemaName="public" baseTableName="page_attribute" baseColumnNames="attribute_id"
+            referencedTableSchemaName="public"   referencedTableName="attribute" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <changeSet author="fmguler" id="11">
+        <tagDatabase tag="tag-basic-domain"/>
+    </changeSet>
     <!-- << CMS SCHEMA -->
 </databaseChangeLog>

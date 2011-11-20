@@ -31,4 +31,9 @@
         <property name="dataSource" ref="dataSource" />
     </bean>
     
+    <!-- Template service, for templating-->
+    <bean id="templateService" class="com.fmguler.cms.service.template.TemplateServiceImpl" init-method="init">
+        <property name="templateFolder" value="${fmgcms.home}/www" />
+    </bean>
+    
 </beans>

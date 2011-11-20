@@ -8,8 +8,15 @@
        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
 
-    <!-- Map pages according to the controller class name, e.g. UserController methods are mapped to user/methodName.htm -->
-    <bean class="org.springframework.web.servlet.mvc.support.ControllerClassNameHandlerMapping"/>
+    <!-- Map pages according to this mapping -->
+    <bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+        <property name="mappings">
+            <value>
+                /admin/*=adminController                
+                /*=contentController                
+            </value>
+        </property>
+    </bean>
     
     <!-- Contrary to general Spring usage we specify the jsp files directly (not under WEB-INF) in order to edit jsp files with Dreamweaver, etc.
          Instead of putting files to WEB-INF, we deny the access to these jsp files using a filter -->
@@ -19,11 +26,14 @@
     
     <!-- Admin Controller -->
     <bean id="adminController"  class="com.fmguler.cms.controller.AdminController">
+        <property name="contentService" ref="contentService"/>
+        <property name="templateService" ref="templateService"/>
     </bean>
 
-    <!-- Page Controller -->
-    <bean id="pageController"  class="com.fmguler.cms.controller.PageController">
+    <!-- Content Controller -->
+    <bean id="contentController"  class="com.fmguler.cms.controller.ContentController">
         <property name="contentService" ref="contentService"/>
+        <property name="templateService" ref="templateService"/>
     </bean>
     
 </beans>

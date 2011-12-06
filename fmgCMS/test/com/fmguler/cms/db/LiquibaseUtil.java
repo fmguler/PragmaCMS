@@ -1,5 +1,5 @@
 /*
- *  MobileInventory
+ *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
  * 
  *  All rights reserved.

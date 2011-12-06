@@ -7,6 +7,7 @@
 package com.fmguler.cms.service.content;
 
 import com.fmguler.cms.service.content.domain.Page;
+import java.util.List;
 
 /**
  * Handles content operations
@@ -20,4 +21,9 @@ public interface ContentService {
      * @return page object with attributes
      */
     public Page getPage(String path);
+
+    /**
+     * @return all pages in the system
+     */
+    List getPages();
 }

@@ -6,7 +6,7 @@
  */
 package com.fmguler.cms.service.template;
 
-import java.io.OutputStream;
+import java.io.File;
 import java.util.Map;
 
 /**
@@ -24,11 +24,9 @@ public interface TemplateService {
     String merge(String templateName, Map model);
 
     /**
-     * Pipes other resources in the template folder, according to resourcePath.
-     * <p>
-     * Used for reading resources referenced in merged templates.
-     * @param resourcePath the path of the requested resource e.g. js/abc.js
-     * @param os the outputstream to be written
+     * Returns file info for the specified resource of the template
+     * @param resourcePath the path of the resource contained in the template
+     * @return file info, to be used for reading
      */
-    void pipeResource(String resourcePath, OutputStream os);
+    File getResource(String resourcePath);
 }

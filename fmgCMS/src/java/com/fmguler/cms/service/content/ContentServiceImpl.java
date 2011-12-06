@@ -23,11 +23,7 @@ public class ContentServiceImpl implements ContentService {
     private DataSource dataSource;
     private Ven ven;
 
-    /**
-     * Return the page with the specified path
-     * @param path the path of the page
-     * @return page object with attributes
-     */
+    @Override
     public Page getPage(String path) {
         Set joins = new HashSet();
         joins.add("Page.template.templateAttributes.attribute");
@@ -37,6 +33,16 @@ public class ContentServiceImpl implements ContentService {
         List list = ven.list(Page.class, joins, criteria);
         if (list.isEmpty()) return null;
         return (Page)list.get(0);
+    }
+
+    @Override
+    public List getPages() {
+        Set joins = new HashSet();
+        joins.add("Page.template.templateAttributes.attribute");
+        joins.add("Page.pageAttributes.attribute");
+        Criteria criteria = new Criteria();
+        List list = ven.list(Page.class, joins, criteria);
+        return list;
     }
 
     //--------------------------------------------------------------------------

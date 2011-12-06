@@ -56,14 +56,9 @@ public class TemplateServiceImpl implements TemplateService {
     }
 
     @Override
-    public void pipeResource(String resourcePath, OutputStream os) {
-        try {
-            File file = new File(templateFolder, resourcePath);
-            if (!file.exists()) throw new RuntimeException("Template resource does not exist");
-            IOUtils.copyLarge(new FileInputStream(file), os);
-        } catch (IOException ex) {
-            Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot pipe resource: " + resourcePath, ex);
-        }
+    public File getResource(String resourcePath) {
+        File file = new File(templateFolder, resourcePath);
+        return file;
     }
 
     //--------------------------------------------------------------------------

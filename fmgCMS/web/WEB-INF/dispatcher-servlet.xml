@@ -12,7 +12,7 @@
     <bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
         <property name="mappings">
             <value>
-                /admin/*=adminController                
+                /admin/*.htm=adminController                
                 /*=contentController                
             </value>
         </property>

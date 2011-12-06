@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.servlet.RequestDispatcher;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
@@ -47,6 +48,13 @@ public class ContentController extends AbstractController {
         //if this webapp has a context e.g. fmgCMS and has no trailing slash, browser will send the subsequent static requests from the root, so we must redirect to fmgCMS/
         if (path.equals("")) {
             response.sendRedirect("./");
+            return null;
+        }
+        
+        //required for jetty, which forwards jsps to here because of /* mapping in web.xml for dispatcher servlet
+        if (path.endsWith(".jsp")) {
+            RequestDispatcher dispatcher = getServletContext().getNamedDispatcher("jsp"); //this is the trick
+            dispatcher.forward(request, response);
             return null;
         }
 

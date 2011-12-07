@@ -6,6 +6,7 @@
  */
 package com.fmguler.cms.service.content;
 
+import com.fmguler.cms.service.content.domain.Attribute;
 import com.fmguler.cms.service.content.domain.Page;
 import java.util.List;
 
@@ -25,5 +26,21 @@ public interface ContentService {
     /**
      * @return all pages in the system
      */
-    List getPages();
+    public List getPages();
+
+    /**
+     * @return all templates in the system
+     */
+    public List getTemplates();
+
+    /**
+     * Save the attribute 
+     */
+    void saveAttribute(Attribute attribute);
+
+    /**
+     * @param id the id of the attribute
+     * @return the attribute
+     */
+    Attribute getAttribute(int id);
 }

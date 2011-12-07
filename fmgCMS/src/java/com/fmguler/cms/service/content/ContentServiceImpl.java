@@ -6,7 +6,9 @@
  */
 package com.fmguler.cms.service.content;
 
+import com.fmguler.cms.service.content.domain.Attribute;
 import com.fmguler.cms.service.content.domain.Page;
+import com.fmguler.cms.service.content.domain.Template;
 import com.fmguler.ven.Criteria;
 import com.fmguler.ven.Ven;
 import java.util.HashSet;
@@ -43,6 +45,25 @@ public class ContentServiceImpl implements ContentService {
         Criteria criteria = new Criteria();
         List list = ven.list(Page.class, joins, criteria);
         return list;
+    }
+    
+    @Override
+    public List getTemplates() {
+        Set joins = new HashSet();
+        joins.add("Template.templateAttributes.attribute");
+        Criteria criteria = new Criteria();
+        List list = ven.list(Template.class, joins, criteria);
+        return list;
+    }
+    
+    @Override
+    public Attribute getAttribute(int id){
+        return (Attribute)ven.get(id, Attribute.class, new HashSet());
+    }
+    
+    @Override
+    public void saveAttribute(Attribute attribute){
+        ven.save(attribute);
     }
 
     //--------------------------------------------------------------------------

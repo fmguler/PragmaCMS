@@ -51,13 +51,6 @@ public class ContentController extends AbstractController {
             return null;
         }
         
-        //required for jetty, which forwards jsps to here because of /* mapping in web.xml for dispatcher servlet
-        if (path.endsWith(".jsp")) {
-            RequestDispatcher dispatcher = getServletContext().getNamedDispatcher("jsp"); //this is the trick
-            dispatcher.forward(request, response);
-            return null;
-        }
-
         //if the requested resource is static, pipe it from template service
         if (isStaticResource(path)) {
             handleStaticResource(path, request, response);

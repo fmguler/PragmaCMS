@@ -8,7 +8,7 @@ package com.fmguler.cms.helper;
 
 import java.util.Locale;
 import liquibase.exception.LiquibaseException;
-import liquibase.spring.SpringLiquibase;
+import liquibase.integration.spring.SpringLiquibase;
 
 /**
  * Wrapper for liquibase.spring.SpringLiquibase (which cannot handle Turkish locale)

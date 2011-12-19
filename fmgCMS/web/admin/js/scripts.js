@@ -9,11 +9,22 @@
 function editPageReady(){
 }
 
+var contextPath = "";
+//set the context path (since the urls are absolute)
+function setContextPath(path){
+    contextPath = path;
+}
+
+
 //update page attributes
 function updateAttribute(attributeId){
+    var attribute = new Object();
+    attribute.id = attributeId;
+    attribute.value= $("#attribute-"+attributeId).val();
+    
     $.ajax({
-        url: 'updateAttribute.htm',
-        data: ("id=" + attributeId + "&value=" + $("#attribute-"+attributeId).val()),
+        url: contextPath + '/admin/updateAttribute',
+        data: attribute,
         dataType: 'json',
         type: 'POST',
         success: function(response) {

@@ -18,7 +18,7 @@
             </tr>
             <c:forEach items="${pages}" var="page">
                 <tr>
-                    <td><a href="editPage.htm?path=${page.path}">${page.path}</a></td>
+                    <td><a href="${page.path}/edit">${page.path}</a></td>
                     <td><a href="editTemplate.htm?name=${page.template.name}">${page.template.name}</a></td>
                     <td></td>
                 </tr>

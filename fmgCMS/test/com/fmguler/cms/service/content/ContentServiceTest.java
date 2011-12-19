@@ -18,14 +18,14 @@ public class ContentServiceTest {
 
     //test get page
     public void testGetPage() {
-        Page page = contentService.getPage("index.html");
+        Page page = contentService.getPage("/index.html");
         System.out.println(page);
     }
 
     //build content service
     private static ContentService buildContentService() {
         ContentServiceImpl contentService = new ContentServiceImpl();
-        contentService.setDataSource(LiquibaseUtil.getDataSource());
+        contentService.setDataSource(LiquibaseUtil.getDataSource("fmgcmsdb"));
         return contentService;
     }
 

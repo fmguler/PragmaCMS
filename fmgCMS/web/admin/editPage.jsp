@@ -6,16 +6,17 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>fmgCMS Administration</title>
-        <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
-        <script type="text/javascript" src="js/jquery-ui-1.8.16.custom.min.js"></script>
-        <script type="text/javascript" src="js/scripts.js"></script>
+        <script type="text/javascript" src="${pageContext.request.contextPath}/admin/js/jquery-1.7.1.min.js"></script>
+        <script type="text/javascript" src="${pageContext.request.contextPath}/admin/js/jquery-ui-1.8.16.custom.min.js"></script>
+        <script type="text/javascript" src="${pageContext.request.contextPath}/admin/js/scripts.js"></script>
         <script type="text/javascript">
             $(editPageReady);
+            setContextPath('${pageContext.request.contextPath}');
         </script>
     </head>
     <body>
         <h1>Edit Page: ${path}</h1>
-        <a href="home.htm">&lt;&lt;Back</a>
+        <a href="${pageContext.request.contextPath}/admin/home">&lt;&lt;Home</a>
         <a href="">Add New Attribute</a>
         <h2>Page Attributes</h2>
         <form id="pageForm">

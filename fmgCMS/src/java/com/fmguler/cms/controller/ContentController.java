@@ -19,23 +19,28 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.mvc.AbstractController;
 
 /**
  * Serves all content, dynamic and static.
  * @author Fatih Mehmet Güler
  */
-public class ContentController extends AbstractController {
+@Controller
+public class ContentController implements ServletContextAware {
     private ContentService contentService;
     private TemplateService templateService;
+    private ServletContext servletContext;
 
-    @Override
-    protected ModelAndView handleRequestInternal(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    @RequestMapping
+    protected ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
         //Based on the requested url, decide which page to be served
         //if the requested content is static, pipe it from template resources
 
@@ -50,7 +55,7 @@ public class ContentController extends AbstractController {
             response.sendRedirect("./");
             return null;
         }
-        
+
         //if the requested resource is static, pipe it from template service
         if (isStaticResource(path)) {
             handleStaticResource(path, request, response);
@@ -62,7 +67,7 @@ public class ContentController extends AbstractController {
 
         //return 404
         if (page == null) {
-            response.sendError(404, "Page not found");
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return null;
         }
 
@@ -97,7 +102,7 @@ public class ContentController extends AbstractController {
 
     //check if the given path is a static resource, e.g. js, css, image
     private boolean isStaticResource(String path) {
-        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg)");
+        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico)");
     }
 
     //handle static resource, pipe from template resources, handle caching
@@ -119,9 +124,10 @@ public class ContentController extends AbstractController {
             }
 
             //set the mime type
-            String mimeType = getServletContext().getMimeType(resourcePath.toLowerCase());
+            String mimeType = servletContext.getMimeType(resourcePath.toLowerCase());
             if (mimeType != null) response.setContentType(mimeType);
 
+            //checked last modified of the template resource
             if ((cachedResDate != -1) && (cachedResDate < (System.currentTimeMillis() / 1000L * 1000L)) && (cachedResDate >= (res.lastModified() / 1000L * 1000L))) {
                 response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
                 response.setContentLength(0);
@@ -158,11 +164,18 @@ public class ContentController extends AbstractController {
 
     //SETTERS
     //--------------------------------------------------------------------------
+    @Autowired
     public void setContentService(ContentService contentService) {
         this.contentService = contentService;
     }
 
+    @Autowired
     public void setTemplateService(TemplateService templateService) {
         this.templateService = templateService;
+    }
+
+    //to get named dispatcher
+    public void setServletContext(ServletContext servletContext) {
+        this.servletContext = servletContext;
     }
 }

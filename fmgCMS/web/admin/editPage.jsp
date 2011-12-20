@@ -15,30 +15,42 @@
         </script>
     </head>
     <body>
-        <h1>Edit Page: ${path}</h1>
+        <h1>Edit Page: ${path} (<a href="${pageContext.request.contextPath}/admin/editTemplate?id=${page.template.id}">${page.template.name}</a>)</h1>
         <a href="${pageContext.request.contextPath}/admin/home">&lt;&lt;Home</a>
-        <a href="">Add New Attribute</a>
-        <h2>Page Attributes</h2>
+        <a href="${path}">Visit Page</a>
+
         <form id="pageForm">
-            <input type="hidden" name="path" value="${path}" />
+            <h2>Page Properties</h2>
+            Path: <input type="text" name="path" value="${path}"/>
+            Template:
+            <select name="template.id">
+                <option selected value="${page.template.id}">${page.template.name}</option>
+                <c:forEach items="${templates}" var="template"><option value="${template.id}">${template.name}</option></c:forEach>
+            </select>
+            <input type="hidden" name="id" value="${page.id}"/>
+            <a href="javascript:savePage()">Save</a>
+
+            <h2>Page Attributes</h2>
+            <c:if test="${not empty missingPageAttributes}">
+                Missing Attributes:
+                <select id="new-page-attribute">
+                    <c:forEach items="${missingPageAttributes}" var="attrEnum">
+                        <option value="${attrEnum.attributeName}">${attrEnum.attributeName}</option>
+                    </c:forEach>
+                </select>
+                <a href="javascript:addPageAttribute(${page.id})">Add</a>
+            </c:if>
+
             <ul>
                 <c:forEach items="${page.pageAttributes}" var="attr">
                     <li>
-                        <a href="">(x)</a>
-                        <a href="javascript:updateAttribute('${attr.attribute.id}')">(update)</a>
+                        <a href="javascript:removeAttribute(${attr.attribute.id})">(x)</a>
+                        <a href="javascript:updateAttribute(${attr.attribute.id})">(update)</a>
                         ${attr.attribute.attribute} 
                     </li>
                     <textarea id="attribute-${attr.attribute.id}" cols="60" rows="10">${attr.attribute.value}</textarea>
                 </c:forEach>
             </ul>
         </form>
-
-        <h2>Template Attributes (${page.template.name})</h2>
-        <ul>
-            <c:forEach items="${page.template.templateAttributes}" var="attr">
-                <li>${attr.attribute.attribute}</li>
-                <textarea>${attr.attribute.value}</textarea>
-            </c:forEach>
-        </ul>
     </body>
 </html>

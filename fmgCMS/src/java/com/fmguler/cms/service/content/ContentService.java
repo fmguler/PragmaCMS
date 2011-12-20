@@ -8,6 +8,9 @@ package com.fmguler.cms.service.content;
 
 import com.fmguler.cms.service.content.domain.Attribute;
 import com.fmguler.cms.service.content.domain.Page;
+import com.fmguler.cms.service.content.domain.PageAttribute;
+import com.fmguler.cms.service.content.domain.Template;
+import com.fmguler.cms.service.content.domain.TemplateAttribute;
 import java.util.List;
 
 /**
@@ -29,6 +32,12 @@ public interface ContentService {
     public List getPages();
 
     /**
+     * @param id template id
+     * @return the template with the specified id
+     */
+    Template getTemplate(int id);
+
+    /**
      * @return all templates in the system
      */
     public List getTemplates();
@@ -43,4 +52,24 @@ public interface ContentService {
      * @return the attribute
      */
     Attribute getAttribute(int id);
+
+    /**
+     * Save the page attribute
+     */
+    void savePageAttribute(PageAttribute pageAttribute);
+
+    /**
+     * Save the template attribute
+     */
+    void saveTemplateAttribute(TemplateAttribute templateAttribute);
+
+    /**
+     * Save the page
+     */
+    void savePage(Page page);
+
+    /**
+     * remove the attribute with the id
+     */
+    void removeAttribute(int id);
 }

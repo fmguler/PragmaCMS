@@ -15,6 +15,45 @@ function setContextPath(path){
     contextPath = path;
 }
 
+//save page properties
+function savePage(){
+    var page =$("#pageForm").serializeObject() ;
+    $.ajax({
+        url: contextPath + '/admin/savePage',
+        data: page,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            location.href = contextPath + page.path + '/edit';
+        }
+    });
+}
+
+//add an attribute to a page
+function addPageAttribute(pageId){
+    $.ajax({
+        url: contextPath + '/admin/addPageAttribute',
+        data: 'pageId='+pageId+'&attributeName='+$("#new-page-attribute").val(),
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            location.reload();
+        }
+    });
+}
+
+//add an attribute to a template
+function addTemplateAttribute(templateId){
+    $.ajax({
+        url: contextPath + '/admin/addTemplateAttribute',
+        data: 'templateId='+templateId+'&attributeName='+$("#new-template-attribute").val(),
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            location.reload();
+        }
+    });
+}
 
 //update page attributes
 function updateAttribute(attributeId){
@@ -28,11 +67,20 @@ function updateAttribute(attributeId){
         dataType: 'json',
         type: 'POST',
         success: function(response) {
-            if (response.status != "0") {
-                alert(statusResponse.message);
-            } else {
-                
+            
         }
+    });
+}
+
+//remove an attribute
+function removeAttribute(attributeId){
+    $.ajax({
+        url: contextPath + '/admin/removeAttribute',
+        data: 'id='+attributeId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            location.reload();
         }
     });
 }

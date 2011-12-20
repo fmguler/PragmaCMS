@@ -103,5 +103,25 @@
     <changeSet author="fmguler" id="11">
         <tagDatabase tag="tag-basic-domain"/>
     </changeSet>
+    <changeSet author="fmguler" id="12">
+        <createTable schemaName="public" tableName="attribute_enum">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="attribute_enum_pkey"/>
+            </column>
+            <column name="attribute_name" type="VARCHAR(1000)"/>
+            <column name="attribute_type" type="int"/>
+            <column name="template_id" type="int"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="13">
+        <addForeignKeyConstraint
+		constraintName="attribute_enum_template_id_fkey"
+		baseTableSchemaName="public" baseTableName="attribute_enum" baseColumnNames="template_id"
+		referencedTableSchemaName="public" referencedTableName="template" referencedColumnNames="id"
+		deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <changeSet author="fmguler" id="14">
+        <tagDatabase tag="tag-enum"/>
+    </changeSet>
     <!-- << CMS SCHEMA -->
 </databaseChangeLog>

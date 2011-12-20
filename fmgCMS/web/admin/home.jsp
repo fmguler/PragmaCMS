@@ -19,7 +19,7 @@
             <c:forEach items="${pages}" var="page">
                 <tr>
                     <td><a href="${page.path}/edit">${page.path}</a></td>
-                    <td><a href="editTemplate.htm?name=${page.template.name}">${page.template.name}</a></td>
+                    <td><a href="editTemplate.htm?id=${page.template.id}">${page.template.name}</a></td>
                     <td></td>
                 </tr>
             </c:forEach>
@@ -33,7 +33,7 @@
             </tr>
             <c:forEach items="${templates}" var="template">
                 <tr>
-                    <td><a href="editTemplate.htm?name=${template.name}">${template.name}</a></td>
+                    <td><a href="editTemplate.htm?id=${template.id}">${template.name}</a></td>
                     <td></td>
                 </tr>
             </c:forEach>

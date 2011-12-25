@@ -126,6 +126,25 @@ public class AdminController {
     //ajax - add template attribute
     @RequestMapping()
     @ResponseBody
+    public String addAllPageAttributes(@RequestParam String path) {
+        Page page = contentService.getPage(path);
+        if (page == null) return "";
+
+        //calculate missing page and template attributes
+        List<AttributeEnum> missingPageAttributes = new LinkedList();
+        List missingTemplateAttributes = new LinkedList();
+        calculateMissingAttributes(page, missingPageAttributes, missingTemplateAttributes);
+
+        for (AttributeEnum attrEnum : missingPageAttributes) {
+            addPageAttribute(attrEnum.getAttributeName(), page.getId());
+        }
+
+        return "";
+    }
+
+    //ajax - add template attribute
+    @RequestMapping()
+    @ResponseBody
     public String addTemplateAttribute(@RequestParam String attributeName, @RequestParam Integer templateId) {
         TemplateAttribute templateAttribute = new TemplateAttribute();
         Template template = new Template();

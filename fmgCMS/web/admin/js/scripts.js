@@ -36,6 +36,19 @@ function addPageAttribute(pageId){
     });
 }
 
+//add an attribute to a page
+function addAllPageAttributes(pagePath){
+    $.ajax({
+        url: 'addAllPageAttributes',
+        data: 'path='+pagePath,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            location.reload();
+        }
+    });
+}
+
 //add an attribute to a template
 function addTemplateAttribute(templateId){
     $.ajax({

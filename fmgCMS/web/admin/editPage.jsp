@@ -38,6 +38,7 @@
                     </c:forEach>
                 </select>
                 <a href="javascript:addPageAttribute(${page.id})">Add</a>
+                <a href="javascript:addAllPageAttributes('${path}')">Add All</a>
             </c:if>
 
             <ul>
@@ -47,7 +48,7 @@
                         <a href="javascript:updateAttribute(${attr.attribute.id})">(update)</a>
                         ${attr.attribute.attribute} 
                     </li>
-                    <textarea id="attribute-${attr.attribute.id}" cols="60" rows="10">${attr.attribute.value}</textarea>
+                    <textarea id="attribute-${attr.attribute.id}" cols="50" rows="2">${attr.attribute.value}</textarea>
                 </c:forEach>
             </ul>
         </form>

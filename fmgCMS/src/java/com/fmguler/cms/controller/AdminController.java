@@ -47,9 +47,21 @@ public class AdminController {
 
     //edit a page
     @RequestMapping("/**/edit")
-    public String editPage(HttpServletRequest request, HttpServletResponse response, Model model) throws IOException {
-        String path = extractEditPath(request);
+    public String editPageRedirect(HttpServletRequest request, HttpServletResponse response, Model model) throws IOException {
+        String path = "";
+        String contextPath = request.getContextPath();
+        String requestUri = request.getRequestURI();
+        if (requestUri.startsWith(contextPath)) path = requestUri.substring(contextPath.length());
+        else path = requestUri;
+        //remove the trailing /edit
+        path = path.substring(0, path.lastIndexOf("/edit"));
         if (path.equals("")) return "redirect:/index.html/edit";
+        return "redirect:/admin/editPage?path=" + path;
+    }
+
+    //edit a page
+    @RequestMapping()
+    public String editPage(@RequestParam String path, Model model) throws IOException {
         Page page = contentService.getPage(path);
 
         //creating a new page
@@ -151,18 +163,6 @@ public class AdminController {
 
     //PRIVATE
     //--------------------------------------------------------------------------
-    //extract the path from requested url
-    private String extractEditPath(HttpServletRequest request) {
-        String path = "";
-        String contextPath = request.getContextPath();
-        String requestUri = request.getRequestURI();
-        if (requestUri.startsWith(contextPath)) path = requestUri.substring(contextPath.length());
-        else path = requestUri;
-        //remove the trailing /edit
-        path = path.substring(0, path.lastIndexOf("/edit"));
-        return path;
-    }
-
     //calculate missing page and template attributes
     private void calculateMissingAttributes(Page page, List missingPageAttributes, List missingTemplateAttributes) {
         if (page.getTemplate() == null) return;

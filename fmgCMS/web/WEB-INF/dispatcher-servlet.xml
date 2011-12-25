@@ -24,14 +24,24 @@
         </property>
     </bean>
     
+    <!-- Map static content according to this mapping -->
+    <bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+        <property name="order" value="1"/>
+        <property name="mappings">
+            <value>
+                /**/*.jsp=defaultServletController
+                /admin/js/*=defaultServletController
+            </value>
+        </property>
+    </bean>
+    
     <!-- Map pages according to this mapping -->
     <bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+        <property name="order" value="2"/>
         <property name="mappings">
             <value>
                 /admin/**=adminController   
-                /admin/js/**=defaultServletController
-                /**/edit=adminController
-                /**.jsp=defaultServletController
+                /**/edit=adminController                
                 /*=contentController                
             </value>
         </property>

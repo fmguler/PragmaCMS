@@ -6,18 +6,17 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>fmgCMS Administration</title>
-        <script type="text/javascript" src="${pageContext.request.contextPath}/admin/js/jquery-1.7.1.min.js"></script>
-        <script type="text/javascript" src="${pageContext.request.contextPath}/admin/js/jquery-ui-1.8.16.custom.min.js"></script>
-        <script type="text/javascript" src="${pageContext.request.contextPath}/admin/js/scripts.js"></script>
+        <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+        <script type="text/javascript" src="js/jquery-ui-1.8.16.custom.min.js"></script>
+        <script type="text/javascript" src="js/scripts.js"></script>
         <script type="text/javascript">
             $(editPageReady);
-            setContextPath('${pageContext.request.contextPath}');
         </script>
     </head>
     <body>
-        <h1>Edit Page: ${path} (<a href="${pageContext.request.contextPath}/admin/editTemplate?id=${page.template.id}">${page.template.name}</a>)</h1>
-        <a href="${pageContext.request.contextPath}/admin/home">&lt;&lt;Home</a>
-        <a href="${path}">Visit Page</a>
+        <h1>Edit Page: ${path} (<a href="editTemplate?id=${page.template.id}">${page.template.name}</a>)</h1>
+        <a href="home">&lt;&lt;Home</a>
+        <a href="${pageContext.request.contextPath}${path}">Visit Page</a>
 
         <form id="pageForm">
             <h2>Page Properties</h2>

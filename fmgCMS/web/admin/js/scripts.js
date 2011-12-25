@@ -9,22 +9,16 @@
 function editPageReady(){
 }
 
-var contextPath = "";
-//set the context path (since the urls are absolute)
-function setContextPath(path){
-    contextPath = path;
-}
-
 //save page properties
 function savePage(){
     var page =$("#pageForm").serializeObject() ;
     $.ajax({
-        url: contextPath + '/admin/savePage',
+        url: 'savePage',
         data: page,
         dataType: 'json',
         type: 'POST',
         success: function(response) {
-            location.href = contextPath + page.path + '/edit';
+            location.href = 'editPage?path='+page.path;
         }
     });
 }
@@ -32,7 +26,7 @@ function savePage(){
 //add an attribute to a page
 function addPageAttribute(pageId){
     $.ajax({
-        url: contextPath + '/admin/addPageAttribute',
+        url: 'addPageAttribute',
         data: 'pageId='+pageId+'&attributeName='+$("#new-page-attribute").val(),
         dataType: 'json',
         type: 'POST',
@@ -45,7 +39,7 @@ function addPageAttribute(pageId){
 //add an attribute to a template
 function addTemplateAttribute(templateId){
     $.ajax({
-        url: contextPath + '/admin/addTemplateAttribute',
+        url: 'addTemplateAttribute',
         data: 'templateId='+templateId+'&attributeName='+$("#new-template-attribute").val(),
         dataType: 'json',
         type: 'POST',
@@ -62,7 +56,7 @@ function updateAttribute(attributeId){
     attribute.value= $("#attribute-"+attributeId).val();
     
     $.ajax({
-        url: contextPath + '/admin/updateAttribute',
+        url: 'updateAttribute',
         data: attribute,
         dataType: 'json',
         type: 'POST',
@@ -75,7 +69,7 @@ function updateAttribute(attributeId){
 //remove an attribute
 function removeAttribute(attributeId){
     $.ajax({
-        url: contextPath + '/admin/removeAttribute',
+        url: 'removeAttribute',
         data: 'id='+attributeId,
         dataType: 'json',
         type: 'POST',

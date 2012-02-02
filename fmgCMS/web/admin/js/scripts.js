@@ -63,7 +63,10 @@ function addTemplateAttribute(templateId){
 }
 
 //update page attributes
-function updateAttribute(attributeId){
+function updateAttribute(){
+    var attributeId = $("#selectedAttributeId").val();
+    if (attributeId=='') return;
+    
     var attribute = new Object();
     attribute.id = attributeId;
     attribute.value= $("#attribute-"+attributeId).val();
@@ -74,13 +77,18 @@ function updateAttribute(attributeId){
         dataType: 'json',
         type: 'POST',
         success: function(response) {
-            
+            $('#pagePreview').attr("src", $('#pagePreview').attr("src"));
         }
     });
 }
 
 //remove an attribute
-function removeAttribute(attributeId){
+function removeAttribute(){
+    if(!confirm('Delete attribute, sure?')) return;
+    
+    var attributeId = $("#selectedAttributeId").val();
+    if (attributeId=='') return;
+    
     $.ajax({
         url: 'removeAttribute',
         data: 'id='+attributeId,
@@ -90,6 +98,39 @@ function removeAttribute(attributeId){
             location.reload();
         }
     });
+}
+
+//display selected attribute textarea
+function onSelectedAttributeChange(){
+    var attributeId = $("#selectedAttributeId").val();
+    if (attributeId=='') return;
+    
+    $(".attribute").hide();
+    $("#attribute-" + attributeId).show();
+}
+
+//aloha edited content is updated, update texts
+function alohaUpdate(){
+    $("#pagePreview").contents().find(".editable").each(function(){
+        var attribute = $(this).attr("id").substring(19);
+        var html = $(this).html();
+        
+        var attributeId = $("#attribute-to-id-"+attribute).val();
+        $("#attribute-"+attributeId).val(html);
+    });
+}
+            
+//on start editing an editable
+function startEditing(attribute){
+    var attributeId = $("#attribute-to-id-"+attribute).val();
+    
+    //show text area
+    $(".attribute").hide();
+    $("#attribute-"+attributeId).show();
+    
+    //make attribute selected
+    $("#selectedAttributeId").find("option:selected").removeAttr("selected");
+    $("#selectedAttributeId").find("option[value='"+attributeId+"']").attr("selected", "selected");
 }
 
 //on page form submit

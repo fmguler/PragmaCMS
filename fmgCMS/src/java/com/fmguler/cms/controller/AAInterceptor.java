@@ -14,25 +14,20 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
  *
  * @author Fatih Mehmet Güler
  */
-public class AAInterceptor extends HandlerInterceptorAdapter{
+public class AAInterceptor extends HandlerInterceptorAdapter {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String path = extractPath(request);
         if (!path.endsWith("/edit") && !path.startsWith("/admin")) return true;
-        
+        if (path.equals("/admin/login")) return true;
+        if (path.equals("/admin/login.jsp")) return true;
 
-        String authorized = (String)request.getSession().getAttribute("authorized");
-        if (authorized == null) {
-            String authToken = request.getParameter("authToken");
-            if (authToken == null){
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
-                System.out.println("Authorization token is null");
-                return false;
-            }else{
-                if (authToken.equals("qPoCeuZSUFyKxZPSBQq2")){
-                    request.getSession().setAttribute("authorized", "true");
-                }
-            }
+        //redirect to login, but continue to this url after login
+        String user = (String)request.getSession().getAttribute("user");
+        if (user == null) {
+            request.getSession().setAttribute("returnUrl", path + "?" + request.getQueryString());
+            response.sendRedirect(request.getContextPath() + "/admin/login");
+            return false;
         }
 
         return true;

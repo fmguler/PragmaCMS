@@ -7,21 +7,18 @@
 package com.fmguler.cms.controller;
 
 import com.fmguler.cms.service.content.ContentService;
-import com.fmguler.cms.service.content.domain.Attribute;
-import com.fmguler.cms.service.content.domain.AttributeEnum;
-import com.fmguler.cms.service.content.domain.Page;
-import com.fmguler.cms.service.content.domain.PageAttribute;
-import com.fmguler.cms.service.content.domain.Template;
-import com.fmguler.cms.service.content.domain.TemplateAttribute;
+import com.fmguler.cms.service.content.domain.*;
 import com.fmguler.cms.service.template.TemplateService;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -34,6 +31,55 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public class AdminController {
     private ContentService contentService;
     private TemplateService templateService;
+    private static String editorScript = ""
+            + "<script type=\"text/javascript\" src=\"admin/js/jquery-1.7.1.min.js\"></script>\n"
+            + "<script type=\"text/javascript\" src=\"admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
+            + "common/table,\n"
+            + "common/list,\n"
+            + "common/link,\n"
+            + "common/highlighteditables,\n"
+            + "common/block,\n"
+            + "common/undo,\n"
+            //+ "common/contenthandler,\n"
+            //+ "common/paste,\n"
+            //+ "common/commands,\n"
+            + "common/abbr\">\n"
+            + "</script>\n"
+            + "<script type=\"text/javascript\" src=\"admin/js/make-editable.js\"></script>\n"
+            + "<link href=\"admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
+
+    //login the user
+    @RequestMapping
+    public String login(Model model, HttpServletRequest request) {
+        String user = (String)request.getSession().getAttribute("user");
+        if (user != null) return "redirect:home.htm";
+
+        //check user
+        if (request.getMethod().equals("POST")) {
+            String username = ServletRequestUtils.getStringParameter(request, "username", "");
+            String password = ServletRequestUtils.getStringParameter(request, "password", "");
+            if (!password.equals("demo")) {
+                //return error message
+                String errrorMessage = "Kullanıcı adı ve şifre hatalı.";
+                model.addAttribute("errorMessage", errrorMessage);
+                return null;
+            }
+
+            //TODO: check authentication
+            request.getSession().setAttribute("user", "admin");
+            String returnUrl = (String)request.getSession().getAttribute("returnUrl");
+            if (returnUrl == null) return "redirect:home.htm";
+            return "redirect:" + returnUrl;
+        }
+
+        return null;
+    }
+
+    @RequestMapping
+    public String logout(HttpServletRequest request) {
+        request.getSession().invalidate();
+        return "redirect:/admin/login";
+    }
 
     //admin home
     @RequestMapping()
@@ -179,6 +225,31 @@ public class AdminController {
         contentService.removeAttribute(id);
         return "";
     }
+    
+    /**
+     * Inject editor code to page html
+     * @param pageHtml the page html
+     * @return injected page html
+     */
+    public static String injectEditor(String pageHtml) {
+        String disclaimer = "<!-- Edited by fmgCMS -->";
+
+        //inject editor code
+        StringBuffer pageBuffer = new StringBuffer(pageHtml);
+        pageBuffer.insert(0, disclaimer);
+        pageBuffer.insert(pageBuffer.indexOf("</head>"), editorScript);
+
+        //replace placeholders with editable
+        Pattern pattern = Pattern.compile("\\$\\{(.+)\\}");
+        Matcher matcher = pattern.matcher(pageBuffer);
+        StringBuffer sb = new StringBuffer();
+        while (matcher.find()) {
+            matcher.appendReplacement(sb, "<span id=\"attribute-editable-$1\" onclick=\"window.parent.startEditing('$1')\" class=\"editable\">\\${$1}</span>");
+        }
+        matcher.appendTail(sb);
+
+        return sb.toString();
+    }
 
     //PRIVATE
     //--------------------------------------------------------------------------
@@ -229,6 +300,25 @@ public class AdminController {
         for (AttributeEnum ae : missingAttributes) {
             if (ae.getAttributeType().equals(AttributeEnum.ATTRIBUTE_TYPE_TEMPLATE)) missingTemplateAttributes.add(ae);
         }
+    }
+
+    //get all the page and template attributes and return them as map
+    private Map getPageAttributesMap(Page page) {
+        Map result = new HashMap();
+
+        Iterator it = page.getTemplate().getTemplateAttributes().iterator();
+        while (it.hasNext()) {
+            TemplateAttribute attribute = (TemplateAttribute)it.next();
+            result.put(attribute.getAttribute().getAttribute(), attribute.getAttribute().getValue());
+        }
+
+        it = page.getPageAttributes().iterator();
+        while (it.hasNext()) {
+            PageAttribute attribute = (PageAttribute)it.next();
+            result.put(attribute.getAttribute().getAttribute(), attribute.getAttribute().getValue());
+        }
+
+        return result;
     }
 
     //SETTERS

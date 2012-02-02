@@ -14,7 +14,6 @@ import java.util.Map;
  * @author Fatih Mehmet Güler
  */
 public interface TemplateService {
-    
     /**
      * Merge a template with the given data
      * @param templateName name of the template, in template folder
@@ -29,4 +28,16 @@ public interface TemplateService {
      * @return file info, to be used for reading
      */
     File getResource(String resourcePath);
+
+    /**
+     * Returns the raw source of the template
+     * @param templateName the template (file in the directory)
+     * @return the contents of the template
+     */
+    String getTemplateSource(String templateName);
+
+    /**
+     * Merge template with model
+     */
+    String mergeFromSource(String templateSource, Map model);
 }

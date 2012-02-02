@@ -10,16 +10,14 @@ import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.FileUtils;
 
 /**
  * Handles templating operations, using freemarker.
@@ -27,7 +25,7 @@ import org.apache.commons.io.IOUtils;
  */
 public class TemplateServiceImpl implements TemplateService {
     private String templateFolder;
-    Configuration configuration;
+    private Configuration configuration;
 
     /**
      * Initialize the service.
@@ -41,16 +39,40 @@ public class TemplateServiceImpl implements TemplateService {
     @Override
     public String merge(String templateName, Map model) {
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            OutputStreamWriter osw = new OutputStreamWriter(baos, "UTF-8");
+            StringWriter sw = new StringWriter();
             Template template = configuration.getTemplate(templateName, "UTF-8");
-            template.process(model, osw);
-            osw.flush();
-            return new String(baos.toByteArray(), "UTF-8");
+            template.process(model, sw);
+            return sw.toString();
         } catch (TemplateException ex) {
             Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot merge template", ex);
         } catch (IOException ex) {
             Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot find template file", ex);
+        }
+        return "";
+    }
+
+    @Override
+    public String mergeFromSource(String templateSource, Map model) {
+        try {
+            StringWriter sw = new StringWriter();
+            Template template = new Template("template", new StringReader(templateSource), new Configuration());
+            template.process(model, sw);
+            return sw.toString();
+        } catch (TemplateException ex) {
+            Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot merge template from source", ex);
+        } catch (IOException ex) {
+            Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot merge template from source", ex);
+        }
+        return "";
+    }
+
+    @Override
+    public String getTemplateSource(String templateName) {
+        try {
+            File templateFile = getResource(templateName);
+            return FileUtils.readFileToString(templateFile, "UTF-8");
+        } catch (IOException ex) {
+            Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot read template file", ex);
         }
         return "";
     }

@@ -77,7 +77,17 @@ public class ContentController implements ServletContextAware {
         //find the template, fill with attributes
         String templateName = page.getTemplate().getName();
         Map model = getPageAttributesMap(page);
-        String pageHtml = templateService.merge(templateName, model);
+        String pageHtml = "";
+
+        //inject editor code if this is an edit
+        if (request.getParameter("edit") != null && request.getSession().getAttribute("user") != null) {
+            String templateSource = templateService.getTemplateSource(templateName);
+            templateSource = AdminController.injectEditor(templateSource);
+            pageHtml = templateService.mergeFromSource(templateSource, model);
+        } else {
+            //regular merge
+            pageHtml = templateService.merge(templateName, model);
+        }
 
         //write the page to the response
         response.setCharacterEncoding("UTF-8");
@@ -102,7 +112,7 @@ public class ContentController implements ServletContextAware {
 
     //check if the given path is a static resource, e.g. js, css, image
     private boolean isStaticResource(String path) {
-        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico)");
+        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico|swf|wmv|pdf)");
     }
 
     //handle static resource, pipe from template resources, handle caching

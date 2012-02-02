@@ -30,7 +30,7 @@
         <property name="mappings">
             <value>
                 /**/*.jsp=defaultServletController
-                /admin/js/*=defaultServletController
+                /admin/js/**=defaultServletController
             </value>
         </property>
     </bean>

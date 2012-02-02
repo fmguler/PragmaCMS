@@ -9,6 +9,7 @@
     </head>
     <body>
         <h1>Hello Admin!</h1>
+        <a href="logout">logout</a>
         <h2>All Pages</h2>
         <table>
             <tr>

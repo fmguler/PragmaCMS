@@ -244,7 +244,7 @@ public class AdminController {
         Matcher matcher = pattern.matcher(pageBuffer);
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
-            matcher.appendReplacement(sb, "<span id=\"attribute-editable-$1\" onclick=\"window.parent.startEditing('$1')\" class=\"editable\">\\${$1}</span>");
+            matcher.appendReplacement(sb, "<div id=\"attribute-editable-$1\" onclick=\"window.parent.startEditing('$1')\" class=\"editable\">\\${$1}</div>");
         }
         matcher.appendTail(sb);
 

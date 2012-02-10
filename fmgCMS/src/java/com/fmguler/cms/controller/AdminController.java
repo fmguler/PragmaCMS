@@ -31,22 +31,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public class AdminController {
     private ContentService contentService;
     private TemplateService templateService;
-    private static String editorScript = ""
-            + "<script type=\"text/javascript\" src=\"admin/js/jquery-1.7.1.min.js\"></script>\n"
-            + "<script type=\"text/javascript\" src=\"admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
-            + "common/table,\n"
-            + "common/list,\n"
-            + "common/link,\n"
-            + "common/highlighteditables,\n"
-            + "common/block,\n"
-            + "common/undo,\n"
-            //+ "common/contenthandler,\n"
-            //+ "common/paste,\n"
-            //+ "common/commands,\n"
-            + "common/abbr\">\n"
-            + "</script>\n"
-            + "<script type=\"text/javascript\" src=\"admin/js/make-editable.js\"></script>\n"
-            + "<link href=\"admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
 
     //login the user
     @RequestMapping
@@ -160,11 +144,8 @@ public class AdminController {
         Page page = new Page();
         page.setId(pageId);
         pageAttribute.setPage(page);
-        Attribute attribute = new Attribute();
-        attribute.setAttribute(attributeName);
-        attribute.setValue(""); //freemarker does not like nulls
-        contentService.saveAttribute(attribute);
-        pageAttribute.setAttribute(attribute);
+        pageAttribute.setAttribute(attributeName);
+        pageAttribute.setValue("");
         contentService.savePageAttribute(pageAttribute);
         return "";
     }
@@ -196,36 +177,50 @@ public class AdminController {
         Template template = new Template();
         template.setId(templateId);
         templateAttribute.setTemplate(template);
-        Attribute attribute = new Attribute();
-        attribute.setAttribute(attributeName);
-        attribute.setValue(""); //freemarker does not like nulls
-        contentService.saveAttribute(attribute);
-        templateAttribute.setAttribute(attribute);
+        templateAttribute.setAttribute(attributeName);
+        templateAttribute.setValue("");
         contentService.saveTemplateAttribute(templateAttribute);
         return "";
     }
 
-    //ajax - update page attribute
+    //ajax - save page attribute
     @RequestMapping()
     @ResponseBody
-    public String updateAttribute(@RequestParam String value, @RequestParam int id) {
-        //update the attribute
-        Attribute attribute = contentService.getAttribute(id);
-        if (attribute == null) return null; //TODO: return error status
-        attribute.setValue(value);
-        contentService.saveAttribute(attribute);
+    public String savePageAttribute(@RequestParam String value, @RequestParam int id) {
+        //get the attribute
+        PageAttribute attribute = contentService.getPageAttribute(id);
+        if (attribute == null) return ""; //TODO: return error status
+        
+        //do not add a new version if the content is exactly same
+        if (value.equals(attribute.getValue())) return ""; //TODO: return status
+
+        //add a new version of the attribute
+        PageAttribute newAttribute = new PageAttribute();
+        newAttribute.setPage(attribute.getPage());
+        newAttribute.setAttribute(attribute.getAttribute());
+        newAttribute.setValue(value);
+        newAttribute.setAuthor("admin");
+        newAttribute.setDate(new Date());
+        
+        newAttribute.setComment("added new version");
+        newAttribute.setVersion(attribute.getVersion() + 1);
+        contentService.savePageAttribute(newAttribute);
+        
         return "";
     }
 
-    //ajax - update page attribute
+    //ajax - remove page attribute
     @RequestMapping()
     @ResponseBody
-    public String removeAttribute(@RequestParam int id) {
-        //TODO: check
-        contentService.removeAttribute(id);
+    public String removePageAttribute(@RequestParam int id) {
+        PageAttribute attribute = contentService.getPageAttribute(id);
+        if (attribute == null) return null; //TODO: return error status
+        if (attribute.getVersion() == 0) return null; //cannot delete zeroth attribute (or template will give error)
+        
+        contentService.removePageAttribute(id);
         return "";
     }
-    
+
     /**
      * Inject editor code to page html
      * @param pageHtml the page html
@@ -233,6 +228,22 @@ public class AdminController {
      */
     public static String injectEditor(String pageHtml) {
         String disclaimer = "<!-- Edited by fmgCMS -->";
+        String editorScript = ""
+            + "<script type=\"text/javascript\" src=\"admin/js/jquery-1.7.1.min.js\"></script>\n"
+            + "<script type=\"text/javascript\" src=\"admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
+            + "common/table,\n"
+            + "common/list,\n"
+            + "common/link,\n"
+            + "common/highlighteditables,\n"
+            + "common/block,\n"
+            + "common/undo,\n"
+            //+ "common/contenthandler,\n"
+            //+ "common/paste,\n"
+            //+ "common/commands,\n"
+            + "common/abbr\">\n"
+            + "</script>\n"
+            + "<script type=\"text/javascript\" src=\"admin/js/make-editable.js\"></script>\n"
+            + "<link href=\"admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
 
         //inject editor code
         StringBuffer pageBuffer = new StringBuffer(pageHtml);
@@ -244,7 +255,7 @@ public class AdminController {
         Matcher matcher = pattern.matcher(pageBuffer);
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
-            matcher.appendReplacement(sb, "<div id=\"attribute-editable-$1\" onclick=\"window.parent.startEditing('$1')\" class=\"editable\">\\${$1}</div>");
+            matcher.appendReplacement(sb, "<div id=\"attribute-editable-$1\" onclick=\"window.parent.onAlohaClick('$1')\" class=\"editable\">\\${$1}</div>");
         }
         matcher.appendTail(sb);
 
@@ -263,7 +274,7 @@ public class AdminController {
         //remove already existing template attributes
         for (TemplateAttribute ta : templateAttributes) {
             AttributeEnum attr = new AttributeEnum();
-            attr.setAttributeName(ta.getAttribute().getAttribute());
+            attr.setAttributeName(ta.getAttribute());
             attr.setAttributeType(AttributeEnum.ATTRIBUTE_TYPE_TEMPLATE);
             missingAttributes.remove(attr);
         }
@@ -271,7 +282,7 @@ public class AdminController {
         //remove already existing page attributes
         for (PageAttribute pa : pageAttributes) {
             AttributeEnum attr = new AttributeEnum();
-            attr.setAttributeName(pa.getAttribute().getAttribute());
+            attr.setAttributeName(pa.getAttribute());
             attr.setAttributeType(AttributeEnum.ATTRIBUTE_TYPE_PAGE);
             missingAttributes.remove(attr);
         }
@@ -291,7 +302,7 @@ public class AdminController {
         //remove already existing template attributes
         for (TemplateAttribute ta : templateAttributes) {
             AttributeEnum attr = new AttributeEnum();
-            attr.setAttributeName(ta.getAttribute().getAttribute());
+            attr.setAttributeName(ta.getAttribute());
             attr.setAttributeType(AttributeEnum.ATTRIBUTE_TYPE_TEMPLATE);
             missingAttributes.remove(attr);
         }
@@ -309,13 +320,13 @@ public class AdminController {
         Iterator it = page.getTemplate().getTemplateAttributes().iterator();
         while (it.hasNext()) {
             TemplateAttribute attribute = (TemplateAttribute)it.next();
-            result.put(attribute.getAttribute().getAttribute(), attribute.getAttribute().getValue());
+            result.put(attribute.getAttribute(), attribute.getValue());
         }
 
         it = page.getPageAttributes().iterator();
         while (it.hasNext()) {
             PageAttribute attribute = (PageAttribute)it.next();
-            result.put(attribute.getAttribute().getAttribute(), attribute.getAttribute().getValue());
+            result.put(attribute.getAttribute(), attribute.getValue());
         }
 
         return result;

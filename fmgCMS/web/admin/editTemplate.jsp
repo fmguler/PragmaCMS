@@ -30,11 +30,11 @@
         <ul>
             <c:forEach items="${template.templateAttributes}" var="attr">
                 <li>
-                    <a href="javascript:removeAttribute(${attr.attribute.id})">(x)</a>
-                    <a href="javascript:updateAttribute(${attr.attribute.id})">(update)</a>
-                    ${attr.attribute.attribute}
+                    <a href="javascript:removeAttribute(${attr.id})">(x)</a>
+                    <a href="javascript:updateAttribute(${attr.id})">(update)</a>
+                    ${attr.attribute}
                 </li>
-                <textarea id="attribute-${attr.attribute.id}">${attr.attribute.value}</textarea>
+                <textarea id="attribute-${attr.id}">${attr.value}</textarea>
             </c:forEach>
         </ul>
     </body>

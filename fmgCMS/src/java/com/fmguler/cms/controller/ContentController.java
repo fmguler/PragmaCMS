@@ -74,6 +74,9 @@ public class ContentController implements ServletContextAware {
         //TODO: check page last modified date and return not modified (304)
         //page.getLastModifiedDate()
 
+        //TODO: if the assigned path to the page and it's template path are in different folders like /some-page and /template/page.html 
+        //it's resources will use /template as relative path, and return not found. We should implement pages like /some-page/ and look for resources starting with /some-page in /template
+
         //find the template, fill with attributes
         String templateName = page.getTemplate().getName();
         Map model = getPageAttributesMap(page);
@@ -160,13 +163,13 @@ public class ContentController implements ServletContextAware {
         Iterator it = page.getTemplate().getTemplateAttributes().iterator();
         while (it.hasNext()) {
             TemplateAttribute attribute = (TemplateAttribute)it.next();
-            result.put(attribute.getAttribute().getAttribute(), attribute.getAttribute().getValue());
+            result.put(attribute.getAttribute(), attribute.getValue());
         }
 
         it = page.getPageAttributes().iterator();
         while (it.hasNext()) {
             PageAttribute attribute = (PageAttribute)it.next();
-            result.put(attribute.getAttribute().getAttribute(), attribute.getAttribute().getValue());
+            result.put(attribute.getAttribute(), attribute.getValue());
         }
 
         return result;

@@ -62,8 +62,8 @@ function addTemplateAttribute(templateId){
     });
 }
 
-//update page attributes
-function updateAttribute(){
+//save the selected page attribute
+function savePageAttribute(){
     var attributeId = $("#selectedAttributeId").val();
     if (attributeId=='') return;
     
@@ -72,25 +72,25 @@ function updateAttribute(){
     attribute.value= $("#attribute-"+attributeId).val();
     
     $.ajax({
-        url: 'updateAttribute',
+        url: 'savePageAttribute',
         data: attribute,
         dataType: 'json',
         type: 'POST',
         success: function(response) {
-            $('#pagePreview').attr("src", $('#pagePreview').attr("src"));
+            location.reload();
         }
     });
 }
 
-//remove an attribute
-function removeAttribute(){
-    if(!confirm('Delete attribute, sure?')) return;
-    
+//remove the selected page attribute
+function removePageAttribute(){
     var attributeId = $("#selectedAttributeId").val();
     if (attributeId=='') return;
     
+    if(!confirm('You will delete this version of the attribute, are you sure?')) return;
+    
     $.ajax({
-        url: 'removeAttribute',
+        url: 'removePageAttribute',
         data: 'id='+attributeId,
         dataType: 'json',
         type: 'POST',
@@ -105,23 +105,30 @@ function onSelectedAttributeChange(){
     var attributeId = $("#selectedAttributeId").val();
     if (attributeId=='') return;
     
+    //show the current attribute textarea
     $(".attribute").hide();
     $("#attribute-" + attributeId).show();
+    
+    //focus to the selected editable
+    var editable = $("#pagePreview").contents().find("#attribute-editable-"+$("#id-to-attribute-"+attributeId).val());
+    editable.focus();
 }
 
-//aloha edited content is updated, update texts
-function alohaUpdate(){
-    $("#pagePreview").contents().find(".editable").each(function(){
-        var attribute = $(this).attr("id").substring(19);
-        var html = $(this).html();
-        
-        var attributeId = $("#attribute-to-id-"+attribute).val();
-        $("#attribute-"+attributeId).val(html);
-    });
+//on attribute textarea value change, update preview
+function onAttributeChange(attribute, id){
+    var editable = $("#pagePreview").contents().find("#attribute-editable-"+attribute);
+    editable.html($("#attribute-"+id).val());
+    editable.focus();
+}
+
+//aloha edited content is changed, update texts
+function onAlohaChange(attribute, html){
+    var attributeId = $("#attribute-to-id-"+attribute).val();
+    $("#attribute-"+attributeId).val(html);
 }
             
-//on start editing an editable
-function startEditing(attribute){
+//called when an editable is clicked
+function onAlohaClick(attribute){
     var attributeId = $("#attribute-to-id-"+attribute).val();
     
     //show text area
@@ -131,6 +138,18 @@ function startEditing(attribute){
     //make attribute selected
     $("#selectedAttributeId").find("option:selected").removeAttr("selected");
     $("#selectedAttributeId").find("option[value='"+attributeId+"']").attr("selected", "selected");
+}
+
+var contextPath = "";
+function setContextPath(path){
+    contextPath = path;
+}
+
+//called when user clicks a link in the preview iframe
+function onNavigateAway(url, path){    
+    if (url.substring(url.length-5, url.length)=="?edit") return true;        
+    location.href = "editPage?path=" + (path.substring(contextPath.length, path.length));
+    return false;
 }
 
 //on page form submit

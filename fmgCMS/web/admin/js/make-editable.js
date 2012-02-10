@@ -23,11 +23,14 @@ Aloha.settings = {
         disabled: true
     }
 };
-            
+
 // Make #content editable once Aloha is loaded and ready.
-Aloha.ready( function() {                         
-    Aloha.jQuery('.editable').aloha();      
-    Aloha.bind("aloha-smart-content-changed", function() {
-        window.parent.alohaUpdate();
-    });
+Aloha.ready(function() {
+    Aloha.jQuery('.editable').aloha();
+    Aloha.bind("aloha-smart-content-changed", function(e) {
+        var id = e.currentTarget.getActiveEditable().obj.context.id;
+        var attribute = id.substring(19);
+        var html = Aloha.getEditableById(id).getContents();
+        window.parent.onAlohaChange(attribute, html);
+    });    
 });

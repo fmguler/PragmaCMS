@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <databaseChangeLog logicalFilePath="database-changelog.xml"
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+                   xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
     <changeSet author="fmguler" id="init">
     </changeSet>
     <changeSet author="fmguler" id="0">
@@ -115,13 +115,50 @@
     </changeSet>
     <changeSet author="fmguler" id="13">
         <addForeignKeyConstraint
-		constraintName="attribute_enum_template_id_fkey"
-		baseTableSchemaName="public" baseTableName="attribute_enum" baseColumnNames="template_id"
-		referencedTableSchemaName="public" referencedTableName="template" referencedColumnNames="id"
-		deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+            constraintName="attribute_enum_template_id_fkey"
+            baseTableSchemaName="public" baseTableName="attribute_enum" baseColumnNames="template_id"
+            referencedTableSchemaName="public" referencedTableName="template" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
     </changeSet>
     <changeSet author="fmguler" id="14">
         <tagDatabase tag="tag-enum"/>
     </changeSet>
     <!-- << CMS SCHEMA -->
+    <!-- NEW SIMPLIFIED SCHEMA >> -->
+    <changeSet author="fmguler" id="15">
+        <addColumn tableName="page_attribute" schemaName="public">
+            <column name="attribute" type="VARCHAR(1000)"/>
+            <column name="value" type="TEXT"/>
+            <column name="version" type="int"/>
+            <column name="author" type="VARCHAR(1000)"/>
+            <column name="comment" type="VARCHAR(1000)"/>
+            <column name="date" type="TIMESTAMP WITHOUT TIME ZONE" />
+        </addColumn>
+    </changeSet>
+    <changeSet author="fmguler" id="16">
+        <addColumn tableName="template_attribute" schemaName="public">
+            <column name="attribute" type="VARCHAR(1000)"/>
+            <column name="value" type="TEXT"/>
+            <column name="version" type="int"/>
+            <column name="author" type="VARCHAR(1000)"/>
+            <column name="comment" type="VARCHAR(1000)"/>
+            <column name="date" type="TIMESTAMP WITHOUT TIME ZONE" />
+        </addColumn>
+    </changeSet>
+    <changeSet author="fmguler" id="17">
+        <sql>
+            UPDATE page_attribute SET attribute = (select a.attribute from attribute a where a.id = attribute_id), value = (select a.value from attribute a where a.id = attribute_id), version = 0, author = 'admin', comment= '', date = now();
+            UPDATE template_attribute SET attribute = (select a.attribute from attribute a where a.id = attribute_id), value = (select a.value from attribute a where a.id = attribute_id), version = 0, author = 'admin', comment= '', date = now();
+        </sql>
+        <rollback/>
+    </changeSet>
+    <!-- Note: this change does not support rollback, and will screw db if you do so -->
+    <changeSet author="fmguler" id="18">
+        <dropForeignKeyConstraint constraintName="page_attribute_attribute_id_fkey" baseTableName="page_attribute"/>
+        <dropForeignKeyConstraint constraintName="template_attribute_attribute_id_fkey" baseTableName="template_attribute"/>
+        <dropTable tableName="attribute" schemaName="public" />        
+        <dropColumn tableName="page_attribute" columnName="attribute_id"/>
+        <dropColumn tableName="template_attribute" columnName="attribute_id"/>
+    </changeSet>
+    <!-- << NEW SIMPLIFIED SCHEMA -->
 </databaseChangeLog>

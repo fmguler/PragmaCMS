@@ -6,7 +6,6 @@
  */
 package com.fmguler.cms.service.content;
 
-import com.fmguler.cms.service.content.domain.Attribute;
 import com.fmguler.cms.service.content.domain.Page;
 import com.fmguler.cms.service.content.domain.PageAttribute;
 import com.fmguler.cms.service.content.domain.Template;
@@ -41,17 +40,12 @@ public interface ContentService {
      * @return all templates in the system
      */
     public List getTemplates();
-
+    
     /**
-     * Save the attribute 
+     * @param id the id of the page attribute
+     * @return the page attribute
      */
-    void saveAttribute(Attribute attribute);
-
-    /**
-     * @param id the id of the attribute
-     * @return the attribute
-     */
-    Attribute getAttribute(int id);
+    PageAttribute getPageAttribute(int id);
 
     /**
      * Save the page attribute
@@ -71,5 +65,5 @@ public interface ContentService {
     /**
      * remove the attribute with the id
      */
-    void removeAttribute(int id);
+    void removePageAttribute(int id);
 }

@@ -21,6 +21,11 @@ import org.apache.commons.io.FileUtils;
 
 /**
  * Handles templating operations, using freemarker.
+ * <p>
+ * Basically responsible for; 
+ * <li>Merge some template (a text file with placeholders) with a model
+ * <li>Return resources relative to teplate folder
+ * 
  * @author Fatih Mehmet Güler
  */
 public class TemplateServiceImpl implements TemplateService {
@@ -37,10 +42,10 @@ public class TemplateServiceImpl implements TemplateService {
     }
 
     @Override
-    public String merge(String templateName, Map model) {
+    public String merge(String templatePath, Map model) {
         try {
             StringWriter sw = new StringWriter();
-            Template template = configuration.getTemplate(templateName, "UTF-8");
+            Template template = configuration.getTemplate(templatePath, "UTF-8");
             template.process(model, sw);
             return sw.toString();
         } catch (TemplateException ex) {
@@ -67,9 +72,9 @@ public class TemplateServiceImpl implements TemplateService {
     }
 
     @Override
-    public String getTemplateSource(String templateName) {
+    public String getTemplateSource(String templatePath) {
         try {
-            File templateFile = getResource(templateName);
+            File templateFile = getResource(templatePath);
             return FileUtils.readFileToString(templateFile, "UTF-8");
         } catch (IOException ex) {
             Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot read template file", ex);

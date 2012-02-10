@@ -11,11 +11,12 @@
         <script type="text/javascript" src="js/scripts.js"></script>
         <script type="text/javascript">
             $(editPageReady);
+            setContextPath('${pageContext.request.contextPath}');
         </script>
     </head>
     <body>
         <div style="float: left; width: 500px">
-            <h1>Edit Page: ${path}</h1>
+            <h1>${path}</h1>
             <a href="home">&lt;&lt;Home</a>
             <a href="${pageContext.request.contextPath}${path}">Visit Page</a>
             <form id="pageForm">
@@ -46,19 +47,20 @@
             <select id="selectedAttributeId" onchange="onSelectedAttributeChange()">
                 <option value="">--Select--</option>
                 <c:forEach items="${page.pageAttributes}" var="attr">
-                    <option value="${attr.attribute.id}">${attr.attribute.attribute}</option>
+                    <option value="${attr.id}">${attr.attribute}</option>
                 </c:forEach>
             </select>
-            <a href="javascript:removeAttribute()">(remove)</a>
-            <a href="javascript:updateAttribute()">(update)</a>
+            <a href="javascript:removePageAttribute()">(remove this version)</a>
+            <a href="javascript:savePageAttribute()">(save as new version)</a>
         </div>
         <div style="float: left;">
             <c:forEach items="${page.pageAttributes}" var="attr">
-                <textarea id="attribute-${attr.attribute.id}" class="attribute" style="display:none"  cols="55" rows="6">${attr.attribute.value}</textarea>
-                <input type="hidden" id="attribute-to-id-${attr.attribute.attribute}" value="${attr.attribute.id}" />
+                <textarea id="attribute-${attr.id}" class="attribute" style="display:none"  cols="55" rows="6" onchange="onAttributeChange('${attr.attribute}', ${attr.id})">${attr.value}</textarea>
+                <input type="hidden" id="attribute-to-id-${attr.attribute}" value="${attr.id}" />
+                <input type="hidden" id="id-to-attribute-${attr.id}" value="${attr.attribute}" />
             </c:forEach>
         </div>
         <p/>
-        <iframe id="pagePreview" src="${pageContext.request.contextPath}${path}?edit" width="100%" height="600"></iframe>
+        <iframe id="pagePreview" src="${pageContext.request.contextPath}${path}?edit" width="100%" height="480" onLoad="onNavigateAway(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>
     </body>
 </html>

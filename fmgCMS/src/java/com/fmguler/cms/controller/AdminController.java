@@ -42,7 +42,7 @@ public class AdminController {
         if (request.getMethod().equals("POST")) {
             String username = ServletRequestUtils.getStringParameter(request, "username", "");
             String password = ServletRequestUtils.getStringParameter(request, "password", "");
-            if (!password.equals("demo")) {
+            if (!password.equals("qPoCeuZSUFyKxZPSBQq2")) {
                 //return error message
                 String errrorMessage = "Kullanıcı adı ve şifre hatalı.";
                 model.addAttribute("errorMessage", errrorMessage);
@@ -96,16 +96,12 @@ public class AdminController {
 
         //creating a new page
         if (page == null) page = new Page();
-
-        //calculate missing page and template attributes
-        List missingPageAttributes = new LinkedList();
-        List missingTemplateAttributes = new LinkedList();
-        calculateMissingAttributes(page, missingPageAttributes, missingTemplateAttributes);
+        
+        //scan and auto add attributes
+        scanPageAttributes(page);
 
         model.addAttribute("page", page);
         model.addAttribute("path", path);
-        model.addAttribute("missingPageAttributes", missingPageAttributes);
-        model.addAttribute("missingTemplateAttributes", missingTemplateAttributes);
         model.addAttribute("templates", contentService.getTemplates());
         return "admin/editPage";
     }
@@ -127,60 +123,8 @@ public class AdminController {
             return null;
         }
 
-        //calculate missing page and template attributes
-        List missingTemplateAttributes = new LinkedList();
-        calculateMissingAttributes(template, missingTemplateAttributes);
-
         model.addAttribute("template", template);
-        model.addAttribute("missingTemplateAttributes", missingTemplateAttributes);
         return "admin/editTemplate";
-    }
-
-    //ajax - add page attribute
-    @RequestMapping()
-    @ResponseBody
-    public String addPageAttribute(@RequestParam String attributeName, @RequestParam Integer pageId) {
-        PageAttribute pageAttribute = new PageAttribute();
-        Page page = new Page();
-        page.setId(pageId);
-        pageAttribute.setPage(page);
-        pageAttribute.setAttribute(attributeName);
-        pageAttribute.setValue("");
-        contentService.savePageAttribute(pageAttribute);
-        return "";
-    }
-
-    //ajax - add template attribute
-    @RequestMapping()
-    @ResponseBody
-    public String addAllPageAttributes(@RequestParam String path) {
-        Page page = contentService.getPage(path);
-        if (page == null) return "";
-
-        //calculate missing page and template attributes
-        List<AttributeEnum> missingPageAttributes = new LinkedList();
-        List missingTemplateAttributes = new LinkedList();
-        calculateMissingAttributes(page, missingPageAttributes, missingTemplateAttributes);
-
-        for (AttributeEnum attrEnum : missingPageAttributes) {
-            addPageAttribute(attrEnum.getAttributeName(), page.getId());
-        }
-
-        return "";
-    }
-
-    //ajax - add template attribute
-    @RequestMapping()
-    @ResponseBody
-    public String addTemplateAttribute(@RequestParam String attributeName, @RequestParam Integer templateId) {
-        TemplateAttribute templateAttribute = new TemplateAttribute();
-        Template template = new Template();
-        template.setId(templateId);
-        templateAttribute.setTemplate(template);
-        templateAttribute.setAttribute(attributeName);
-        templateAttribute.setValue("");
-        contentService.saveTemplateAttribute(templateAttribute);
-        return "";
     }
 
     //ajax - save page attribute
@@ -190,7 +134,7 @@ public class AdminController {
         //get the attribute
         PageAttribute attribute = contentService.getPageAttribute(id);
         if (attribute == null) return ""; //TODO: return error status
-        
+
         //do not add a new version if the content is exactly same
         if (value.equals(attribute.getValue())) return ""; //TODO: return status
 
@@ -201,11 +145,11 @@ public class AdminController {
         newAttribute.setValue(value);
         newAttribute.setAuthor("admin");
         newAttribute.setDate(new Date());
-        
+
         newAttribute.setComment("added new version");
         newAttribute.setVersion(attribute.getVersion() + 1);
         contentService.savePageAttribute(newAttribute);
-        
+
         return "";
     }
 
@@ -216,7 +160,7 @@ public class AdminController {
         PageAttribute attribute = contentService.getPageAttribute(id);
         if (attribute == null) return null; //TODO: return error status
         if (attribute.getVersion() == 0) return null; //cannot delete zeroth attribute (or template will give error)
-        
+
         contentService.removePageAttribute(id);
         return "";
     }
@@ -229,21 +173,21 @@ public class AdminController {
     public static String injectEditor(String pageHtml) {
         String disclaimer = "<!-- Edited by fmgCMS -->";
         String editorScript = ""
-            + "<script type=\"text/javascript\" src=\"admin/js/jquery-1.7.1.min.js\"></script>\n"
-            + "<script type=\"text/javascript\" src=\"admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
-            + "common/table,\n"
-            + "common/list,\n"
-            + "common/link,\n"
-            + "common/highlighteditables,\n"
-            + "common/block,\n"
-            + "common/undo,\n"
-            //+ "common/contenthandler,\n"
-            //+ "common/paste,\n"
-            //+ "common/commands,\n"
-            + "common/abbr\">\n"
-            + "</script>\n"
-            + "<script type=\"text/javascript\" src=\"admin/js/make-editable.js\"></script>\n"
-            + "<link href=\"admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
+                + "<script type=\"text/javascript\" src=\"admin/js/jquery-1.7.1.min.js\"></script>\n"
+                + "<script type=\"text/javascript\" src=\"admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
+                + "common/table,\n"
+                + "common/list,\n"
+                + "common/link,\n"
+                + "common/highlighteditables,\n"
+                + "common/block,\n"
+                + "common/undo,\n"
+                //+ "common/contenthandler,\n"
+                //+ "common/paste,\n"
+                //+ "common/commands,\n"
+                + "common/abbr\">\n"
+                + "</script>\n"
+                + "<script type=\"text/javascript\" src=\"admin/js/make-editable.js\"></script>\n"
+                + "<link href=\"admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
 
         //inject editor code
         StringBuffer pageBuffer = new StringBuffer(pageHtml);
@@ -251,8 +195,9 @@ public class AdminController {
         pageBuffer.insert(pageBuffer.indexOf("</head>"), editorScript);
 
         //replace placeholders with editable
-        Pattern pattern = Pattern.compile("\\$\\{(.+)\\}");
+        Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}"); //lazy match, to match multiple attrs in one line
         Matcher matcher = pattern.matcher(pageBuffer);
+        matcher.region(pageBuffer.indexOf("<body>"), pageBuffer.length()); //do not inject to invisible region (head)
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
             matcher.appendReplacement(sb, "<div id=\"attribute-editable-$1\" onclick=\"window.parent.onAlohaClick('$1')\" class=\"editable\">\\${$1}</div>");
@@ -264,72 +209,55 @@ public class AdminController {
 
     //PRIVATE
     //--------------------------------------------------------------------------
-    //calculate missing page and template attributes
-    private void calculateMissingAttributes(Page page, List missingPageAttributes, List missingTemplateAttributes) {
+    //scan page attributes
+    private void scanPageAttributes(Page page) {
+        //scan the page for ${} placeholders
+        //detect the missing page attributes, and add them to the page
+        //detect unused attributes and mark them
+        
+        //new page, template not selected yet
         if (page.getTemplate() == null) return;
-        List<AttributeEnum> missingAttributes = contentService.getTemplate(page.getTemplate().getId()).getAttributeEnumerations(); //attr enums is not included in the page
-        List<TemplateAttribute> templateAttributes = page.getTemplate().getTemplateAttributes();
-        List<PageAttribute> pageAttributes = page.getPageAttributes();
 
-        //remove already existing template attributes
-        for (TemplateAttribute ta : templateAttributes) {
-            AttributeEnum attr = new AttributeEnum();
-            attr.setAttributeName(ta.getAttribute());
-            attr.setAttributeType(AttributeEnum.ATTRIBUTE_TYPE_TEMPLATE);
-            missingAttributes.remove(attr);
+        String templatePath = page.getTemplate().getName();
+        String templateSource = templateService.getTemplateSource(templatePath);
+        
+        //scan template source for attributes
+        List<String> pageAttributes = new LinkedList();
+        List templateAttributes = new LinkedList();
+        Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
+        Matcher matcher = pattern.matcher(templateSource);
+        while (matcher.find()) {
+            String attribute = matcher.group(1);
+            if (attribute.startsWith("t_")) templateAttributes.add(attribute);
+            else pageAttributes.add(attribute);
         }
-
-        //remove already existing page attributes
-        for (PageAttribute pa : pageAttributes) {
-            AttributeEnum attr = new AttributeEnum();
-            attr.setAttributeName(pa.getAttribute());
-            attr.setAttributeType(AttributeEnum.ATTRIBUTE_TYPE_PAGE);
-            missingAttributes.remove(attr);
+        
+        //detect missing attributes
+        List<PageAttribute> existingPageAttributes = page.getPageAttributes();
+        for(PageAttribute attr : existingPageAttributes){
+            if (pageAttributes.contains(attr.getAttribute())) pageAttributes.remove(attr.getAttribute());
         }
-
-        //seperate according to type
-        for (AttributeEnum ae : missingAttributes) {
-            if (ae.getAttributeType().equals(AttributeEnum.ATTRIBUTE_TYPE_PAGE)) missingPageAttributes.add(ae);
-            if (ae.getAttributeType().equals(AttributeEnum.ATTRIBUTE_TYPE_TEMPLATE)) missingTemplateAttributes.add(ae);
-        }
-    }
-
-    //calculate missing template attributes
-    private void calculateMissingAttributes(Template template, List missingTemplateAttributes) {
-        List<TemplateAttribute> templateAttributes = template.getTemplateAttributes();
-        List<AttributeEnum> missingAttributes = template.getAttributeEnumerations();
-
-        //remove already existing template attributes
-        for (TemplateAttribute ta : templateAttributes) {
-            AttributeEnum attr = new AttributeEnum();
-            attr.setAttributeName(ta.getAttribute());
-            attr.setAttributeType(AttributeEnum.ATTRIBUTE_TYPE_TEMPLATE);
-            missingAttributes.remove(attr);
-        }
-
-        //seperate according to type
-        for (AttributeEnum ae : missingAttributes) {
-            if (ae.getAttributeType().equals(AttributeEnum.ATTRIBUTE_TYPE_TEMPLATE)) missingTemplateAttributes.add(ae);
+        
+        //add missing attributes to page
+        for(String attribute : pageAttributes){
+            PageAttribute pageAttribute = new PageAttribute();
+            pageAttribute.setAttribute(attribute);
+            pageAttribute.setAuthor("admin");
+            pageAttribute.setComment("attribute is scanned");
+            pageAttribute.setDate(new Date());
+            pageAttribute.setPage(page);
+            pageAttribute.setValue("");
+            pageAttribute.setVersion(0);
+            contentService.savePageAttribute(pageAttribute);
+            page.getPageAttributes().add(pageAttribute);
         }
     }
 
-    //get all the page and template attributes and return them as map
-    private Map getPageAttributesMap(Page page) {
-        Map result = new HashMap();
-
-        Iterator it = page.getTemplate().getTemplateAttributes().iterator();
-        while (it.hasNext()) {
-            TemplateAttribute attribute = (TemplateAttribute)it.next();
-            result.put(attribute.getAttribute(), attribute.getValue());
-        }
-
-        it = page.getPageAttributes().iterator();
-        while (it.hasNext()) {
-            PageAttribute attribute = (PageAttribute)it.next();
-            result.put(attribute.getAttribute(), attribute.getValue());
-        }
-
-        return result;
+    //scan template attributes
+    private void scanTemplateAttributes(Template template) {
+        //scan the template for ${} placeholders, use some convention for template and global attrs
+        //detect the missing template attributes, and add them to the template
+        //detect unused attributes and mark them
     }
 
     //SETTERS

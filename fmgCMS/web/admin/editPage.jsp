@@ -30,17 +30,7 @@
                     <input type="hidden" name="id" value="${page.id}"/>
                     <a href="javascript:savePage()">Save</a>
                 </p>
-            </form>
-            <c:if test="${not empty missingPageAttributes}">
-                Missing Attributes:
-                <select id="new-page-attribute">
-                    <c:forEach items="${missingPageAttributes}" var="attrEnum">
-                        <option value="${attrEnum.attributeName}">${attrEnum.attributeName}</option>
-                    </c:forEach>
-                </select>
-                <a href="javascript:addPageAttribute(${page.id})">Add</a>
-                <a href="javascript:addAllPageAttributes('${path}')">Add All</a>
-            </c:if>
+            </form>            
         </div>
         <div>
             Attribute:

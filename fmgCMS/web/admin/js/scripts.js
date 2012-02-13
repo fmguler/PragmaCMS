@@ -23,45 +23,6 @@ function savePage(){
     });
 }
 
-//add an attribute to a page
-function addPageAttribute(pageId){
-    $.ajax({
-        url: 'addPageAttribute',
-        data: 'pageId='+pageId+'&attributeName='+$("#new-page-attribute").val(),
-        dataType: 'json',
-        type: 'POST',
-        success: function(response) {
-            location.reload();
-        }
-    });
-}
-
-//add an attribute to a page
-function addAllPageAttributes(pagePath){
-    $.ajax({
-        url: 'addAllPageAttributes',
-        data: 'path='+pagePath,
-        dataType: 'json',
-        type: 'POST',
-        success: function(response) {
-            location.reload();
-        }
-    });
-}
-
-//add an attribute to a template
-function addTemplateAttribute(templateId){
-    $.ajax({
-        url: 'addTemplateAttribute',
-        data: 'templateId='+templateId+'&attributeName='+$("#new-template-attribute").val(),
-        dataType: 'json',
-        type: 'POST',
-        success: function(response) {
-            location.reload();
-        }
-    });
-}
-
 //save the selected page attribute
 function savePageAttribute(){
     var attributeId = $("#selectedAttributeId").val();

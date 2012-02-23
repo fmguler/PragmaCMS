@@ -8,17 +8,20 @@ package com.fmguler.cms.controller;
 
 import com.fmguler.cms.service.content.ContentService;
 import com.fmguler.cms.service.content.domain.Page;
+import com.fmguler.cms.service.content.domain.PageAttachment;
 import com.fmguler.cms.service.content.domain.PageAttribute;
 import com.fmguler.cms.service.content.domain.TemplateAttribute;
 import com.fmguler.cms.service.template.TemplateService;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import com.fmguler.common.service.storage.StorageException;
+import com.fmguler.common.service.storage.StorageService;
+import java.io.*;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -37,6 +40,7 @@ import org.springframework.web.servlet.ModelAndView;
 public class ContentController implements ServletContextAware {
     private ContentService contentService;
     private TemplateService templateService;
+    private StorageService storageService;
     private ServletContext servletContext;
 
     @RequestMapping
@@ -53,6 +57,13 @@ public class ContentController implements ServletContextAware {
         //if this webapp has a context e.g. fmgCMS and has no trailing slash, browser will send the subsequent static requests from the root, so we must redirect to fmgCMS/
         if (path.equals("")) {
             response.sendRedirect("./");
+            return null;
+        }
+
+        //if the requested resource is page attachment (binary user uploaded content), download it from storage service
+        Integer attachmentId;
+        if ((attachmentId = checkPageAttachment(path)) != null) {
+            handlePageAttachment(attachmentId, request, response);
             return null;
         }
 
@@ -122,6 +133,8 @@ public class ContentController implements ServletContextAware {
     private void handleStaticResource(String resourcePath, HttpServletRequest request, HttpServletResponse response) {
         //TODO: catch template service exception and return 404 if requested resource does not exist.
         //NOTE: some of the following code block is taken from winstone code (StaticResourceServlet.java)
+        InputStream inputStream = null;
+        OutputStream outputStream = null;
         try {
             File res = templateService.getResource(resourcePath);
             long cachedResDate = request.getDateHeader("If-Modified-Since");
@@ -149,10 +162,64 @@ public class ContentController implements ServletContextAware {
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.setContentLength((int)res.length());
                 response.addDateHeader("Last-Modified", res.lastModified());
-                IOUtils.copyLarge(new FileInputStream(res), response.getOutputStream());
+                inputStream = new FileInputStream(res);
+                outputStream = response.getOutputStream();
+                IOUtils.copyLarge(inputStream, outputStream);
             }
         } catch (IOException ex) {
             Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot write to response output stream", ex);
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+            IOUtils.closeQuietly(outputStream);
+        }
+    }
+
+    //check if the given path is a page content attachment, e.g. js, css, image uploaded by user
+    private Integer checkPageAttachment(String path) {
+        Matcher matcher = Pattern.compile("^/page-attachment/([0-9]+).*").matcher(path);
+        if (matcher.matches()) return Integer.valueOf(matcher.group(1));
+        return null;
+    }
+
+    //handle static resource, pipe from template resources, handle caching
+    private void handlePageAttachment(Integer attachmentId, HttpServletRequest request, HttpServletResponse response) {
+        //TODO: catch template service exception and return 404 if requested resource does not exist.
+        //NOTE: some of the following code block is taken from winstone code (StaticResourceServlet.java)
+        InputStream inputStream = null;
+        OutputStream outputStream = null;
+        try {
+            PageAttachment pageAttachment = contentService.getPageAttachment(attachmentId);
+            long cachedResDate = request.getDateHeader("If-Modified-Since");
+
+            if (pageAttachment == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            //set the mime type
+            String mimeType = pageAttachment.getContentType(); //servletContext.getMimeType(pageAttachment.getName());
+            if (mimeType != null) response.setContentType(mimeType);
+
+            //checked last modified of the template resource
+            if ((cachedResDate != -1) && (cachedResDate < (System.currentTimeMillis() / 1000L * 1000L)) && (cachedResDate >= (pageAttachment.getLastModified().getTime() / 1000L * 1000L))) {
+                response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+                response.setContentLength(0);
+                response.flushBuffer();
+            } else {
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.setContentLength(pageAttachment.getContentLength());
+                response.addDateHeader("Last-Modified", pageAttachment.getLastModified().getTime());
+                inputStream = storageService.getInputStream(pageAttachment.getContentKey());
+                outputStream = response.getOutputStream();
+                IOUtils.copyLarge(inputStream, outputStream);
+            }
+        } catch (StorageException ex) {
+            Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Storage service error at handlePageAttachment", ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot write to response output stream", ex);
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+            IOUtils.closeQuietly(outputStream);
         }
     }
 
@@ -185,6 +252,11 @@ public class ContentController implements ServletContextAware {
     @Autowired
     public void setTemplateService(TemplateService templateService) {
         this.templateService = templateService;
+    }
+
+    @Autowired
+    public void setStorageService(StorageService storageService) {
+        this.storageService = storageService;
     }
 
     //to get named dispatcher

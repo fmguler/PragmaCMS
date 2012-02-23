@@ -18,15 +18,6 @@
         <a href="home">&lt;&lt;Home</a>
 
         <h2>Template Attributes</h2>
-        <c:if test="${not empty missingTemplateAttributes}">
-            Missing Attributes:
-            <select id="new-template-attribute">
-                <c:forEach items="${missingTemplateAttributes}" var="attrEnum">
-                    <option value="${attrEnum.attributeName}">${attrEnum.attributeName}</option>
-                </c:forEach>
-            </select>
-            <a href="javascript:addTemplateAttribute(${template.id})">Add</a>
-        </c:if>
         <ul>
             <c:forEach items="${template.templateAttributes}" var="attr">
                 <li>

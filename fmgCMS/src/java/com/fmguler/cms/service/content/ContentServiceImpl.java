@@ -6,10 +6,7 @@
  */
 package com.fmguler.cms.service.content;
 
-import com.fmguler.cms.service.content.domain.Page;
-import com.fmguler.cms.service.content.domain.PageAttribute;
-import com.fmguler.cms.service.content.domain.Template;
-import com.fmguler.cms.service.content.domain.TemplateAttribute;
+import com.fmguler.cms.service.content.domain.*;
 import com.fmguler.ven.Criteria;
 import com.fmguler.ven.Ven;
 import java.util.HashSet;
@@ -33,7 +30,7 @@ public class ContentServiceImpl implements ContentService {
         joins.add("Page.pageAttributes");
         Criteria criteria = new Criteria();
         criteria.eq("Page.path", path);
-        
+
         //modify the query
         String query = ven.getQueryGenerator().generateSelectQuery(Page.class, joins);
         query += " left join (select page_id as __page_id, attribute as __attribute, max(version) as __max_version from page_attribute group by attribute, page_id) __pa on (__pa.__page_id = page_id and __pa.__attribute = page_page_attributes.attribute)";
@@ -45,11 +42,11 @@ public class ContentServiceImpl implements ContentService {
 
         //get the list
         List list = ven.getQueryMapper().list(query, criteria.getParameters(), Page.class);
-        
+
         if (list.isEmpty()) return null;
         return (Page)list.get(0);
     }
-    
+
     @Override
     public List getPages() {
         Set joins = new HashSet();
@@ -65,7 +62,6 @@ public class ContentServiceImpl implements ContentService {
     public Template getTemplate(int id) {
         Set joins = new HashSet();
         joins.add("Template.templateAttributes");
-        joins.add("Template.attributeEnumerations");
         return (Template)ven.get(id, Template.class, joins);
     }
 
@@ -73,7 +69,6 @@ public class ContentServiceImpl implements ContentService {
     public List getTemplates() {
         Set joins = new HashSet();
         joins.add("Template.templateAttributes");
-        joins.add("Template.attributeEnumerations");
         Criteria criteria = new Criteria();
         criteria.orderAsc("Template.name");
         List list = ven.list(Template.class, joins, criteria);
@@ -105,6 +100,27 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public void removePageAttribute(int id) {
         ven.delete(id, PageAttribute.class);
+    }
+
+    @Override
+    public List getPageAttachments(int pageId) {
+        Set joins = new HashSet();
+        Criteria criteria = new Criteria();
+        criteria.eq("PageAttachment.pageId", pageId);
+        List list = ven.list(PageAttachment.class, joins, criteria);
+        return list;
+    }
+    
+    @Override
+    public PageAttachment getPageAttachment(int id) {
+        Set joins = new HashSet();
+        joins.add("PageAttachment.page");
+        return (PageAttachment)ven.get(id, PageAttachment.class, joins);
+    }
+
+    @Override
+    public void savePageAttachment(PageAttachment pageAttachment) {
+        ven.save(pageAttachment);
     }
 
     //--------------------------------------------------------------------------

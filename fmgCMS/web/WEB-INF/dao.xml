@@ -24,5 +24,15 @@
         <property name="liquibaseEnabled" value="${jdbc.liquibaseEnabled}" />
         <!--property name="contexts" value="test, production" /-->
     </bean>
+    
+    <!-- Storage dao, used by storage service -->
+    <bean id="storageDao" class="com.fmguler.common.service.storage.dao.StorageDaoPostgresImpl">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="databaseConfiguration">
+            <map>
+                <entry key="tablePrefix" value=""/>
+            </map>
+        </property>
+    </bean>
 
 </beans>

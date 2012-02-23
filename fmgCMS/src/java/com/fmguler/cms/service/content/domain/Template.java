@@ -18,7 +18,6 @@ public class Template {
     private Integer id;
     private String name;
     private List templateAttributes = new VenList(TemplateAttribute.class, "template");
-    private List attributeEnumerations = new VenList(AttributeEnum.class, "template");
 
     /**
      * @return the id
@@ -64,20 +63,7 @@ public class Template {
 
     @Override
     public String toString() {
-        return "Template: " + name + " enumerations: {" + getAttributeEnumerations() + "} attributes: {" + getTemplateAttributes() + "}";
+        return "Template: " + name + " attributes: {" + getTemplateAttributes() + "}";
     }
 
-    /**
-     * @return the attributeEnumerations
-     */
-    public List getAttributeEnumerations() {
-        return attributeEnumerations;
-    }
-
-    /**
-     * @param attributeEnumerations the attributeEnumerations to set
-     */
-    public void setAttributeEnumerations(List attributeEnumerations) {
-        this.attributeEnumerations = attributeEnumerations;
-    }
 }

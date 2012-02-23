@@ -7,14 +7,29 @@
 package com.fmguler.cms.controller;
 
 import com.fmguler.cms.service.content.ContentService;
-import com.fmguler.cms.service.content.domain.*;
+import com.fmguler.cms.service.content.domain.Page;
+import com.fmguler.cms.service.content.domain.PageAttachment;
+import com.fmguler.cms.service.content.domain.PageAttribute;
+import com.fmguler.cms.service.content.domain.Template;
 import com.fmguler.cms.service.template.TemplateService;
+import com.fmguler.common.service.storage.StorageException;
+import com.fmguler.common.service.storage.StorageService;
+import com.fmguler.common.service.storage.domain.StorageObject;
 import java.io.IOException;
-import java.util.*;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URLConnection;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,6 +37,8 @@ import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 /**
  * Privileged operations for admins.
@@ -31,6 +48,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public class AdminController {
     private ContentService contentService;
     private TemplateService templateService;
+    private StorageService storageService;
 
     //login the user
     @RequestMapping
@@ -96,13 +114,14 @@ public class AdminController {
 
         //creating a new page
         if (page == null) page = new Page();
-        
+
         //scan and auto add attributes
         scanPageAttributes(page);
 
         model.addAttribute("page", page);
         model.addAttribute("path", path);
         model.addAttribute("templates", contentService.getTemplates());
+        model.addAttribute("pageAttachments", page.getId() == null ? new LinkedList() : contentService.getPageAttachments(page.getId()));
         return "admin/editPage";
     }
 
@@ -165,6 +184,61 @@ public class AdminController {
         return "";
     }
 
+    //uploads new item
+    @RequestMapping()
+    public String uploadPageAttachment(HttpServletRequest request) {
+        if (request instanceof MultipartHttpServletRequest) {
+            MultipartHttpServletRequest multipartReq = (MultipartHttpServletRequest)request;
+
+            //which page this attachment belongs to
+            Page page = new Page();
+            page.setId(Integer.valueOf(request.getParameter("page.id")));
+
+            Iterator it = multipartReq.getFileNames();
+            while (it.hasNext()) {
+                String fileName = (String)it.next();
+                MultipartFile multipartFile = multipartReq.getFile(fileName);
+                String originalName = multipartFile.getOriginalFilename();
+
+                //Create new workspace item
+                PageAttachment pageAttachment = new PageAttachment();
+                pageAttachment.setPage(page);
+                pageAttachment.setContentKey(storageService.generateKey());
+                pageAttachment.setName(originalName);
+                String guessedContentType = URLConnection.guessContentTypeFromName(originalName);
+                pageAttachment.setContentType(guessedContentType == null ? multipartFile.getContentType() : guessedContentType);
+                pageAttachment.setLastModified(new Date());
+
+                //pipe uploaded data to attachment output stream (original upload)
+                InputStream is = null;
+                OutputStream os = null;
+                try {
+                    os = storageService.getOutputStream(pageAttachment.getContentKey());
+                    is = multipartFile.getInputStream();
+                    IOUtils.copyLarge(is, os);
+                } catch (StorageException ex) {
+                    Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Storage service error at uploadPageAttachment", ex);
+                    continue; //TODO: inform the user
+                } catch (IOException ex) {
+                    Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot read from multipart request input stream", ex);
+                    continue; //TODO: inform the user
+                } finally {
+                    IOUtils.closeQuietly(is);
+                    IOUtils.closeQuietly(os);
+                }
+
+                //set the content length
+                StorageObject storageObject = storageService.getStorageObject(pageAttachment.getContentKey());
+                pageAttachment.setContentLength(storageObject.getSize());
+
+                //save the workspace item
+                contentService.savePageAttachment(pageAttachment);
+            }
+        }
+
+        return "redirect:/admin/editPage?path=" + request.getParameter("page.path");
+    }
+
     /**
      * Inject editor code to page html
      * @param pageHtml the page html
@@ -174,6 +248,7 @@ public class AdminController {
         String disclaimer = "<!-- Edited by fmgCMS -->";
         String editorScript = ""
                 + "<script type=\"text/javascript\" src=\"admin/js/jquery-1.7.1.min.js\"></script>\n"
+                + "<script type=\"text/javascript\" src=\"admin/js/jquery-ui-1.8.16.custom.min.js\"></script>\n"
                 + "<script type=\"text/javascript\" src=\"admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
                 + "common/table,\n"
                 + "common/list,\n"
@@ -181,12 +256,16 @@ public class AdminController {
                 + "common/highlighteditables,\n"
                 + "common/block,\n"
                 + "common/undo,\n"
+                + "common/fmg\n"
+                //+ "common/image\n"                
                 //+ "common/contenthandler,\n"
                 //+ "common/paste,\n"
                 //+ "common/commands,\n"
-                + "common/abbr\">\n"
+                //+ "common/abbr\">\n"
+                + "\">\n"
                 + "</script>\n"
                 + "<script type=\"text/javascript\" src=\"admin/js/make-editable.js\"></script>\n"
+                + "<link href=\"admin/js/jquery-ui-base/jquery.ui.all.css\" type=\"text/css\" rel=\"stylesheet\" />\n"
                 + "<link href=\"admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
 
         //inject editor code
@@ -214,13 +293,13 @@ public class AdminController {
         //scan the page for ${} placeholders
         //detect the missing page attributes, and add them to the page
         //detect unused attributes and mark them
-        
+
         //new page, template not selected yet
         if (page.getTemplate() == null) return;
 
         String templatePath = page.getTemplate().getName();
         String templateSource = templateService.getTemplateSource(templatePath);
-        
+
         //scan template source for attributes
         List<String> pageAttributes = new LinkedList();
         List templateAttributes = new LinkedList();
@@ -231,15 +310,15 @@ public class AdminController {
             if (attribute.startsWith("t_")) templateAttributes.add(attribute);
             else pageAttributes.add(attribute);
         }
-        
+
         //detect missing attributes
         List<PageAttribute> existingPageAttributes = page.getPageAttributes();
-        for(PageAttribute attr : existingPageAttributes){
+        for (PageAttribute attr : existingPageAttributes) {
             if (pageAttributes.contains(attr.getAttribute())) pageAttributes.remove(attr.getAttribute());
         }
-        
+
         //add missing attributes to page
-        for(String attribute : pageAttributes){
+        for (String attribute : pageAttributes) {
             PageAttribute pageAttribute = new PageAttribute();
             pageAttribute.setAttribute(attribute);
             pageAttribute.setAuthor("admin");
@@ -270,5 +349,10 @@ public class AdminController {
     @Autowired
     public void setTemplateService(TemplateService templateService) {
         this.templateService = templateService;
+    }
+
+    @Autowired
+    public void setStorageService(StorageService storageService) {
+        this.storageService = storageService;
     }
 }

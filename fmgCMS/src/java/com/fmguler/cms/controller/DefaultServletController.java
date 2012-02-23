@@ -48,7 +48,7 @@ public class DefaultServletController implements ServletContextAware {
 
     //check if the given path is a static resource, e.g. js, css, image
     private boolean isStaticResource(String path) {
-        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico)");
+        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico|cur)");
     }
 
     //to get named dispatcher

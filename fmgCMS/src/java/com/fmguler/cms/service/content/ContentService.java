@@ -6,10 +6,7 @@
  */
 package com.fmguler.cms.service.content;
 
-import com.fmguler.cms.service.content.domain.Page;
-import com.fmguler.cms.service.content.domain.PageAttribute;
-import com.fmguler.cms.service.content.domain.Template;
-import com.fmguler.cms.service.content.domain.TemplateAttribute;
+import com.fmguler.cms.service.content.domain.*;
 import java.util.List;
 
 /**
@@ -66,4 +63,10 @@ public interface ContentService {
      * remove the attribute with the id
      */
     void removePageAttribute(int id);
+
+    PageAttachment getPageAttachment(int id);
+
+    void savePageAttachment(PageAttachment pageAttachment);
+
+    List getPageAttachments(int pageId);
 }

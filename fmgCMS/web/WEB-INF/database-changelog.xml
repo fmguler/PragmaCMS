@@ -160,5 +160,44 @@
         <dropColumn tableName="page_attribute" columnName="attribute_id"/>
         <dropColumn tableName="template_attribute" columnName="attribute_id"/>
     </changeSet>
+    <changeSet author="fmguler" id="19">
+        <dropTable tableName="attribute_enum" schemaName="public"/>
+    </changeSet>
+    <changeSet author="fmguler" id="20">
+        <tagDatabase tag="tag-simplified-domain"/>
+    </changeSet>
     <!-- << NEW SIMPLIFIED SCHEMA -->
+    <!-- ATTACHMENT SUPPORT >> -->
+    <changeSet author="fmguler" id="21">
+        <createTable schemaName="public" tableName="page_attachment">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="page_attachment_pkey"/>
+            </column>
+            <column name="page_id" type="int4">
+                <constraints nullable="false"/>
+            </column>            
+            <column name="name" type="VARCHAR(1000)"/>
+            <column name="content_key" type="VARCHAR(1000)"/>
+            <column name="content_type" type="VARCHAR(1000)"/>
+            <column name="content_length" type="int"/>
+            <column name="last_modified" type="TIMESTAMP WITHOUT TIME ZONE" />
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="22">
+        <addForeignKeyConstraint 
+            constraintName="page_attachment_attribute_id_fkey"
+            baseTableSchemaName="public" baseTableName="page_attachment" baseColumnNames="page_id"
+            referencedTableSchemaName="public"   referencedTableName="page" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <changeSet author="fmguler" id="23">
+        <createTable schemaName="public" tableName="storage_object">
+            <column name="key" type="VARCHAR(1024)">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="storage_object_pkey"/>
+            </column>
+            <column name="size" type="int4" defaultValueNumeric="0"/>
+            <column name="hash" type="VARCHAR(1024)"/>
+        </createTable>
+    </changeSet>
+    <!-- << ATTACHMENT SUPPORT -->
 </databaseChangeLog>

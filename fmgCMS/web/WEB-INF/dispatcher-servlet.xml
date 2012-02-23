@@ -55,6 +55,13 @@
     <!-- Contrary to general Spring usage we specify the jsp files directly (not under WEB-INF) in order to edit jsp files with Dreamweaver, etc.
          Instead of putting files to WEB-INF, we deny the access to these jsp files using a filter -->
     <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver" p:prefix="/" p:suffix=".jsp" />
+    
+    <!-- Multipart resolver, for uploading files -->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="maxInMemorySize">
+            <value>2097152</value>
+        </property>
+    </bean>
 
     <!-- APPLICATION WEB INTERFACES /////////////////////////////////////////////// -->
     

@@ -145,7 +145,7 @@ public class ContentController implements ServletContextAware {
 
     //check if the given path is a static resource, e.g. js, css, image
     private boolean isStaticResource(String path) {
-        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico|swf|wmv|pdf)");
+        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico|swf|wmv|pdf|txt|xml)");
     }
 
     //handle static resource, pipe from template resources, handle caching
@@ -260,7 +260,7 @@ public class ContentController implements ServletContextAware {
 
         return result;
     }
-
+    
     //SETTERS
     //--------------------------------------------------------------------------
     @Autowired

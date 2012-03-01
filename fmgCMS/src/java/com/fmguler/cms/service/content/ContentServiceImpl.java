@@ -45,7 +45,7 @@ public class ContentServiceImpl implements ContentService {
         if (list.isEmpty()) return null;
         return (Page)list.get(0);
     }
-    
+
     @Override
     public Page getPage(int id) {
         Set joins = new HashSet();
@@ -69,13 +69,13 @@ public class ContentServiceImpl implements ContentService {
         if (list.isEmpty()) return null;
         return (Page)list.get(0);
     }
-    
+
     @Override
-    public void updatePageRedirects(String oldRedirect, String newRedirect){
+    public void updatePageRedirects(String oldRedirect, String newRedirect) {
         Map paramMap = new HashMap();
         paramMap.put("oldRedirect", oldRedirect);
         paramMap.put("newRedirect", newRedirect);
-        
+
         String sql = "UPDATE page set new_path = :newRedirect where new_path = :oldRedirect";
         template.update(sql, paramMap);
     }
@@ -143,7 +143,7 @@ public class ContentServiceImpl implements ContentService {
         List list = ven.list(PageAttachment.class, joins, criteria);
         return list;
     }
-    
+
     @Override
     public PageAttachment getPageAttachment(int id) {
         Set joins = new HashSet();
@@ -155,7 +155,7 @@ public class ContentServiceImpl implements ContentService {
     public void savePageAttachment(PageAttachment pageAttachment) {
         ven.save(pageAttachment);
     }
-
+    
     //--------------------------------------------------------------------------
     //SETTERS
     public void setDataSource(DataSource dataSource) {

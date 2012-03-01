@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLConnection;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -271,6 +272,32 @@ public class AdminController {
         }
 
         return "redirect:/admin/editPage?path=" + request.getParameter("page.path");
+    }
+
+    //generate sitemap xml
+    @RequestMapping()
+    @ResponseBody()    
+    public String generateSitemap(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        //get the http://something part
+        String urlPrefix = request.getRequestURL().substring(0, request.getRequestURL().length() - request.getRequestURI().length());
+        response.setContentType("text/xml");
+        
+        StringBuffer sitemapBuffer = new StringBuffer();
+        sitemapBuffer.append("<?xml version=\"1.0\" encoding=\"utf-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
+
+        //add all pages with last modified date
+        List<Page> pages = contentService.getPages();
+        for (Page page : pages) {
+            sitemapBuffer.append("<url>");
+            sitemapBuffer.append("<loc>").append(urlPrefix).append(page.getPath()).append("</loc>");
+            sitemapBuffer.append("<lastmod>").append(new SimpleDateFormat("yyyy-MM-dd").format(page.getLastModified())).append("</lastmod>");
+            sitemapBuffer.append("<changefreq>daily</changefreq>");
+            sitemapBuffer.append("<priority>0.8</priority>");
+            sitemapBuffer.append("</url>");
+        }
+
+        sitemapBuffer.append("</urlset>");
+        return sitemapBuffer.toString();
     }
 
     /**

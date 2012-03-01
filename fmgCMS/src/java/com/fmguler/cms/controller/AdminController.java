@@ -128,6 +128,7 @@ public class AdminController {
     @RequestMapping
     @ResponseBody
     public String savePage(Page page) {
+        page.setLastModified(new Date());
         contentService.savePage(page);
         return "";
     }
@@ -169,6 +170,11 @@ public class AdminController {
         newAttribute.setVersion(attribute.getVersion() + 1);
         contentService.savePageAttribute(newAttribute);
 
+        //update last modified
+        Page page = attribute.getPage();
+        page.setLastModified(new Date());
+        contentService.savePage(page);
+
         return "";
     }
 
@@ -181,6 +187,12 @@ public class AdminController {
         if (attribute.getVersion() == 0) return null; //cannot delete zeroth attribute (or template will give error)
 
         contentService.removePageAttribute(id);
+
+        //update last modified
+        Page page = attribute.getPage();
+        page.setLastModified(new Date());
+        contentService.savePage(page);
+
         return "";
     }
 

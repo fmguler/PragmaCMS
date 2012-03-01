@@ -82,8 +82,8 @@ public class ContentController implements ServletContextAware {
             return null;
         }
 
-        //TODO: check page last modified date and return not modified (304)
-        //page.getLastModifiedDate()
+        //get request last modified header to check not modified
+        long cachedResDate = request.getDateHeader("If-Modified-Since");
 
         //TODO: if the assigned path to the page and it's template path are in different folders like /some-page and /template/page.html 
         //it's resources will use /template as relative path, and return not found. We should implement pages like /some-page/ and look for resources starting with /some-page in /template
@@ -93,11 +93,17 @@ public class ContentController implements ServletContextAware {
         Map model = getPageAttributesMap(page);
         String pageHtml = "";
 
-        //inject editor code if this is an edit
         if (request.getParameter("edit") != null && request.getSession().getAttribute("user") != null) {
+            //inject editor code if this is an edit
             String templateSource = templateService.getTemplateSource(templateName);
             templateSource = AdminController.injectEditor(templateSource);
             pageHtml = templateService.mergeFromSource(templateSource, model);
+        } else if ((cachedResDate != -1) && (cachedResDate < (System.currentTimeMillis() / 1000L * 1000L)) && (cachedResDate >= (page.getLastModified().getTime() / 1000L * 1000L))) {
+            //not modified (browser cache)
+            response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+            response.setContentLength(0);
+            response.flushBuffer();
+            return null;
         } else {
             //regular merge
             pageHtml = templateService.merge(templateName, model);
@@ -106,7 +112,10 @@ public class ContentController implements ServletContextAware {
         //write the page to the response
         response.setCharacterEncoding("UTF-8");
         response.setContentType("text/html");
-        response.getOutputStream().write(pageHtml.getBytes("UTF-8"));
+        response.addDateHeader("Last-Modified", page.getLastModified().getTime());
+        byte[] content = pageHtml.getBytes("UTF-8");
+        response.setContentLength(content.length);
+        response.getOutputStream().write(content);
 
         //no view
         return null;

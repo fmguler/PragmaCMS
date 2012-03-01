@@ -199,5 +199,11 @@
             <column name="hash" type="VARCHAR(1024)"/>
         </createTable>
     </changeSet>
+    <!-- to add caching for pages -->
+    <changeSet author="fmguler" id="24">
+        <addColumn tableName="page" schemaName="public">
+            <column name="last_modified" type="TIMESTAMP WITHOUT TIME ZONE" defaultValueDate="now()" />
+        </addColumn>
+    </changeSet>
     <!-- << ATTACHMENT SUPPORT -->
 </databaseChangeLog>

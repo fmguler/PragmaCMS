@@ -78,7 +78,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public PageAttribute getPageAttribute(int id) {
         Set joins = new HashSet();
-        joins.add("PageAttribute.page");
+        joins.add("PageAttribute.page.template");
         return (PageAttribute)ven.get(id, PageAttribute.class, joins);
     }
 

@@ -7,6 +7,7 @@
 package com.fmguler.cms.service.content.domain;
 
 import com.fmguler.ven.util.VenList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -17,6 +18,7 @@ public class Page {
     private Integer id;
     private String path;
     private Template template;
+    private Date lastModified;
     private List pageAttributes = new VenList(PageAttribute.class, "page");
 
     /**
@@ -78,5 +80,19 @@ public class Page {
     @Override
     public String toString() {
         return "Page: " + path + " attributes: {" + getPageAttributes() + "} " + template;
+    }
+
+    /**
+     * @return the lastModified
+     */
+    public Date getLastModified() {
+        return lastModified;
+    }
+
+    /**
+     * @param lastModified the lastModified to set
+     */
+    public void setLastModified(Date lastModified) {
+        this.lastModified = lastModified;
     }
 }

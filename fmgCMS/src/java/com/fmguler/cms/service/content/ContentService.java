@@ -69,4 +69,8 @@ public interface ContentService {
     void savePageAttachment(PageAttachment pageAttachment);
 
     List getPageAttachments(int pageId);
+
+    Page getPage(int id);
+
+    void updatePageRedirects(String oldRedirect, String newRedirect);
 }

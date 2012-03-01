@@ -15,12 +15,14 @@
             <tr>
                 <th>Page Path</th>
                 <th>Template</th>
+                <th>Redirects To</th>
                 <td></td>
             </tr>
             <c:forEach items="${pages}" var="page">
                 <tr>
                     <td><a href="${pageContext.request.contextPath}${page.path}/edit">${page.path}</a></td>
                     <td><a href="editTemplate?id=${page.template.id}">${page.template.name}</a></td>
+                    <td>${page.newPath}</td>
                     <td></td>
                 </tr>
             </c:forEach>

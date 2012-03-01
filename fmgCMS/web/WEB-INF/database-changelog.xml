@@ -205,5 +205,11 @@
             <column name="last_modified" type="TIMESTAMP WITHOUT TIME ZONE" defaultValueDate="now()" />
         </addColumn>
     </changeSet>
+    <!-- to add redirect for pages -->
+    <changeSet author="fmguler" id="25">
+        <addColumn tableName="page" schemaName="public">
+            <column name="new_path" type="varchar(1000)" />
+        </addColumn>
+    </changeSet>
     <!-- << ATTACHMENT SUPPORT -->
 </databaseChangeLog>

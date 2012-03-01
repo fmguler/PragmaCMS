@@ -82,6 +82,16 @@ public class ContentController implements ServletContextAware {
             return null;
         }
 
+        //if this page is renamed return 301 (permanent redirect)
+        if (page.getNewPath() != null) {
+            response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
+            StringBuffer absoluteUrl = request.getRequestURL();
+            absoluteUrl.replace(absoluteUrl.length() - path.length(), absoluteUrl.length(), page.getNewPath());
+
+            response.setHeader("Location", response.encodeRedirectURL(absoluteUrl.toString()));
+            return null;
+        }
+
         //get request last modified header to check not modified
         long cachedResDate = request.getDateHeader("If-Modified-Since");
 

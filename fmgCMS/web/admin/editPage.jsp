@@ -38,6 +38,7 @@
                         <option selected value="${page.template.id}">${page.template.name}</option>
                         <c:forEach items="${templates}" var="template"><option value="${template.id}">${template.name}</option></c:forEach>
                     </select>
+                    R:<input type="checkbox" name="redirect" value="true" />
                     <input type="hidden" name="id" value="${page.id}"/>
                     <a href="javascript:savePage()">Save</a>
                 </p>

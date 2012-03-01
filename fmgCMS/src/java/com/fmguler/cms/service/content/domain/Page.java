@@ -19,6 +19,7 @@ public class Page {
     private String path;
     private Template template;
     private Date lastModified;
+    private String newPath;
     private List pageAttributes = new VenList(PageAttribute.class, "page");
 
     /**
@@ -94,5 +95,19 @@ public class Page {
      */
     public void setLastModified(Date lastModified) {
         this.lastModified = lastModified;
+    }
+
+    /**
+     * @return the newPath
+     */
+    public String getNewPath() {
+        return newPath;
+    }
+
+    /**
+     * @param newPath the newPath to set
+     */
+    public void setNewPath(String newPath) {
+        this.newPath = newPath;
     }
 }

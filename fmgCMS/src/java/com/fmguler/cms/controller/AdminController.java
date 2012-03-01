@@ -115,6 +115,11 @@ public class AdminController {
         //creating a new page
         if (page == null) page = new Page();
 
+        //if this page is renamed edit the renamed version
+        if (page.getNewPath() != null) {
+            return "redirect:/admin/editPage?path=" + page.getNewPath();
+        }
+
         //scan and auto add attributes
         scanPageAttributes(page);
 
@@ -127,7 +132,24 @@ public class AdminController {
 
     @RequestMapping
     @ResponseBody
-    public String savePage(Page page) {
+    public String savePage(Page page, @RequestParam(required = false) String redirect) {
+        if (redirect != null) {
+            Page originalPage = contentService.getPage(page.getId());
+            if (originalPage == null) return ""; //TODO: error - cannot redirect a new page
+            if (originalPage.getPath().equals(page.getPath())) return ""; //trying to redirect to the same path, would cause redirect loop
+
+            //add a new redirect page from old path to the new path
+            Page redirectPage = new Page();
+            redirectPage.setLastModified(new Date());
+            redirectPage.setPath(originalPage.getPath()); //old path
+            redirectPage.setNewPath(page.getPath()); //new path
+            redirectPage.setTemplate(page.getTemplate());
+            contentService.savePage(redirectPage);
+
+            //also update redirects pointing to the old path to the new path (it would still work but we reduce it to single redirect)
+            contentService.updatePageRedirects(originalPage.getPath(), page.getPath());
+        }
+
         page.setLastModified(new Date());
         contentService.savePage(page);
         return "";

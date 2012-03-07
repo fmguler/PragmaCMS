@@ -7,10 +7,7 @@
 package com.fmguler.cms.controller;
 
 import com.fmguler.cms.service.content.ContentService;
-import com.fmguler.cms.service.content.domain.Page;
-import com.fmguler.cms.service.content.domain.PageAttachment;
-import com.fmguler.cms.service.content.domain.PageAttribute;
-import com.fmguler.cms.service.content.domain.Template;
+import com.fmguler.cms.service.content.domain.*;
 import com.fmguler.cms.service.template.TemplateService;
 import com.fmguler.common.service.storage.StorageException;
 import com.fmguler.common.service.storage.StorageService;
@@ -20,10 +17,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLConnection;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -340,6 +334,9 @@ public class AdminController {
         matcher.region(pageBuffer.indexOf("<body>"), pageBuffer.length()); //do not inject to invisible region (head)
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
+            String attribute = matcher.group(1);
+            if (attribute.startsWith("i_")) continue; //do not edit invisible attributes
+            if (attribute.startsWith("t_")) continue; //do not edit template attributes
             matcher.appendReplacement(sb, "<div id=\"attribute-editable-$1\" onclick=\"window.parent.onAlohaClick('$1')\" class=\"editable\">\\${$1}</div>");
         }
         matcher.appendTail(sb);
@@ -362,8 +359,8 @@ public class AdminController {
         String templateSource = templateService.getTemplateSource(templatePath);
 
         //scan template source for attributes
-        List<String> pageAttributes = new LinkedList();
-        List templateAttributes = new LinkedList();
+        Set<String> pageAttributes = new HashSet();
+        Set<String> templateAttributes = new HashSet();
         Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
         Matcher matcher = pattern.matcher(templateSource);
         while (matcher.find()) {
@@ -376,6 +373,12 @@ public class AdminController {
         List<PageAttribute> existingPageAttributes = page.getPageAttributes();
         for (PageAttribute attr : existingPageAttributes) {
             if (pageAttributes.contains(attr.getAttribute())) pageAttributes.remove(attr.getAttribute());
+        }
+        
+        //detect missing template attributes
+        List<TemplateAttribute> existingTemplateAttributes = page.getTemplate().getTemplateAttributes();
+        for (TemplateAttribute attr : existingTemplateAttributes) {
+            if (templateAttributes.contains(attr.getAttribute())) templateAttributes.remove(attr.getAttribute());
         }
 
         //add missing attributes to page
@@ -390,6 +393,20 @@ public class AdminController {
             pageAttribute.setVersion(0);
             contentService.savePageAttribute(pageAttribute);
             page.getPageAttributes().add(pageAttribute);
+        }
+        
+        //add missing attributes to template
+        for (String attribute : templateAttributes) {
+            TemplateAttribute templateAttribute = new TemplateAttribute();
+            templateAttribute.setAttribute(attribute);
+            templateAttribute.setAuthor("admin");
+            templateAttribute.setComment("attribute is scanned");
+            templateAttribute.setDate(new Date());
+            templateAttribute.setTemplate(page.getTemplate());
+            templateAttribute.setValue("");
+            templateAttribute.setVersion(0);
+            contentService.saveTemplateAttribute(templateAttribute);
+            page.getTemplate().getTemplateAttributes().add(templateAttribute);
         }
     }
 

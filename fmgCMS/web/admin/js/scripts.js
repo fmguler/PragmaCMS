@@ -1,12 +1,59 @@
-/* 
+/*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 
 //on edit page ready
 function editPageReady(){
+    //upload attachment (modal)
+    $("#uploadAttachmentDialog").dialog({
+        //height: 'auto',
+        width: 400,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+                text: messages["upload"][locale],
+                click: uploadAttachment
+            },{
+                text: messages["cancel"][locale],
+                click: function() {
+                    $(this).dialog("close");
+                }
+            }]
+    });
+
+    //edit path (modal)
+    $("#editPathDialog").dialog({
+        //height: 'auto',
+        width: 400,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+                text: messages["save"][locale],
+                click: savePage
+            },{
+                text: messages["cancel"][locale],
+                click: function() {
+                    $(this).dialog("close");
+                }
+            }]
+    });
+
+    //edit html (modal)
+    $("#editHtmlDialog").dialog({
+        //height: 'auto',
+        width: 600,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+                text: messages["ok"][locale],
+                click: function() {
+                    $(this).dialog("close");
+                }
+            }]
+    });
 }
 
 //save page properties
@@ -27,11 +74,11 @@ function savePage(){
 function savePageAttribute(){
     var attributeId = $("#selectedAttributeId").val();
     if (attributeId=='') return;
-    
+
     var attribute = new Object();
     attribute.id = attributeId;
     attribute.value= $("#attribute-"+attributeId).val();
-    
+
     $.ajax({
         url: 'savePageAttribute',
         data: attribute,
@@ -47,9 +94,9 @@ function savePageAttribute(){
 function removePageAttribute(){
     var attributeId = $("#selectedAttributeId").val();
     if (attributeId=='') return;
-    
+
     if(!confirm('You will delete this version of the attribute, are you sure?')) return;
-    
+
     $.ajax({
         url: 'removePageAttribute',
         data: 'id='+attributeId,
@@ -65,11 +112,11 @@ function removePageAttribute(){
 function onSelectedAttributeChange(){
     var attributeId = $("#selectedAttributeId").val();
     if (attributeId=='') return;
-    
+
     //show the current attribute textarea
     $(".attribute").hide();
     $("#attribute-" + attributeId).show();
-    
+
     //focus to the selected editable
     var editable = $("#pagePreview").contents().find("#attribute-editable-"+$("#id-to-attribute-"+attributeId).val());
     editable.focus();
@@ -87,15 +134,15 @@ function onAlohaChange(attribute, html){
     var attributeId = $("#attribute-to-id-"+attribute).val();
     $("#attribute-"+attributeId).val(html);
 }
-            
+
 //called when an editable is clicked
 function onAlohaClick(attribute){
     var attributeId = $("#attribute-to-id-"+attribute).val();
-    
+
     //show text area
     $(".attribute").hide();
     $("#attribute-"+attributeId).show();
-    
+
     //make attribute selected
     $("#selectedAttributeId").find("option:selected").removeAttr("selected");
     $("#selectedAttributeId").find("option[value='"+attributeId+"']").attr("selected", "selected");
@@ -107,8 +154,8 @@ function setContextPath(path){
 }
 
 //called when user clicks a link in the preview iframe
-function onNavigateAway(url, path){    
-    if (url.substring(url.length-5, url.length)=="?edit") return true;        
+function onNavigateAway(url, path){
+    if (url.substring(url.length-5, url.length)=="?edit") return true;
     location.href = "editPage?path=" + (path.substring(contextPath.length, path.length));
     return false;
 }
@@ -118,6 +165,11 @@ function pageFormSubmit(){
     //NOT USED
     var pageFormJson = $("#pageForm").serializeObject();
     alert(JSON.stringify(pageFormJson));
+}
+
+//upload attachment
+function uploadAttachment(){
+    $("#uploadAttachmentForm").submit();
 }
 
 //serialize jquery objects to json
@@ -136,4 +188,16 @@ $.fn.serializeObject = function()
         }
     });
     return o;
+};
+
+//I18N messages-----------------------------------------------------------------
+var messages = {
+    "error": {en: "Error", tr: "Hata"},
+    "status": {en: "Status", tr: "Durum"},
+    "upload": {en: "Upload", tr: "Yükle"},
+    "cancel": {en: "Cancel", tr: "İptal"},
+    "ok": {en: "OK", tr: "Tamam"},
+    "save": {en: "Save", tr: "Kaydet"},
+    "remove": {en: "Remove", tr: "Kaldır"},
+    "select": {en: "Select", tr: "Seç"}
 };

@@ -80,12 +80,24 @@ public class AdminController {
 
     //admin home
     @RequestMapping()
-    public String home(Model model) {
-        List pages = contentService.getPages();
+    public String home(Model model) {        
+        return "redirect:/admin/pages";
+    }
+    
+    //list pages
+    @RequestMapping()
+    public String pages(Model model) {
+        List pages = contentService.getPages();        
+        model.addAttribute("pages", pages);        
+        return "admin/pages";
+    }
+    
+    //list templates
+    @RequestMapping()
+    public String templates(Model model) {
         List templates = contentService.getTemplates();
-        model.addAttribute("pages", pages);
-        model.addAttribute("templates", templates);
-        return "admin/home";
+        model.addAttribute("templates", templates);        
+        return "admin/templates";
     }
 
     //edit a page

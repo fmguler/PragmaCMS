@@ -14,14 +14,14 @@ function editPageReady(){
         autoOpen: false,
         modal: true,
         buttons: [{
-                text: messages["upload"][locale],
-                click: uploadAttachment
-            },{
-                text: messages["cancel"][locale],
-                click: function() {
-                    $(this).dialog("close");
-                }
-            }]
+            text: messages["upload"][locale],
+            click: uploadAttachment
+        },{
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
     });
 
     //edit path (modal)
@@ -31,14 +31,14 @@ function editPageReady(){
         autoOpen: false,
         modal: true,
         buttons: [{
-                text: messages["save"][locale],
-                click: savePage
-            },{
-                text: messages["cancel"][locale],
-                click: function() {
-                    $(this).dialog("close");
-                }
-            }]
+            text: messages["save"][locale],
+            click: savePage
+        },{
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
     });
 
     //edit html (modal)
@@ -48,11 +48,11 @@ function editPageReady(){
         autoOpen: false,
         modal: true,
         buttons: [{
-                text: messages["ok"][locale],
-                click: function() {
-                    $(this).dialog("close");
-                }
-            }]
+            text: messages["ok"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
     });
 }
 
@@ -148,6 +148,11 @@ function onAlohaClick(attribute){
     $("#selectedAttributeId").find("option[value='"+attributeId+"']").attr("selected", "selected");
 }
 
+//called when user scrolls by mouse wheel on iframe
+function onIFrameScroll(event){
+    $("body").scrollTop($("body").scrollTop() - event.originalEvent.wheelDelta);
+}
+
 var contextPath = "";
 function setContextPath(path){
     contextPath = path;
@@ -155,7 +160,23 @@ function setContextPath(path){
 
 //called when user clicks a link in the preview iframe
 function onNavigateAway(url, path){
-    if (url.substring(url.length-5, url.length)=="?edit") return true;
+    if (url.substring(url.length-5, url.length)=="?edit"){
+        //auto size iframe
+        var iframeWidth = $("#pagePreview").contents().find("body")[0].scrollWidth;
+        var iframeHeight = $("#pagePreview").contents().find("body")[0].scrollHeight;
+
+        //adjust page elems width
+        $(".content").width(iframeWidth);
+        $(".container").width(iframeWidth);
+        $(".page-header").width(iframeWidth);
+
+        //resize iframe to actual content
+        $("#pagePreview").width(iframeWidth);
+        $("#pagePreview").height(iframeHeight+30);
+
+        return true;
+    }
+    //a link is clicked within iframe, reopen this page in edit mode
     location.href = "editPage?path=" + (path.substring(contextPath.length, path.length));
     return false;
 }

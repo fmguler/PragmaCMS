@@ -1,12 +1,12 @@
-/* 
+/*
  *  fmgCMS
  *  Copyright 2012 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 
 var Aloha = window.Aloha || ( window.Aloha = {} );
-            
+
 Aloha.settings = {
     locale: 'en',
     plugins: {
@@ -32,5 +32,13 @@ Aloha.ready(function() {
         var attribute = id.substring(19);
         var html = Aloha.getEditableById(id).getContents();
         window.parent.onAlohaChange(attribute, html);
-    });    
+    });
+});
+
+//when the user tries to scroll by mouse wheel (since the iframe is auto sized it won't work)
+$(function(){
+    $('body').bind('mousewheel', function(event) {
+        window.parent.onIFrameScroll(event);
+        return false;
+    });
 });

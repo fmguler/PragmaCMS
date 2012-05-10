@@ -26,19 +26,19 @@
 
         <div class="container">
             <div class="content">
-                <div class="row">
+                <div class="row-fluid">
                     <div class="span12">
-                        <div class="page-header">
-                            <h2 style="display: inline">Editing Page: ${path}</h2>
-                            <div style="float: right;">
-                                <div class="btn-group" style="display: inline-block;">
+                        <div class="page-header style-position-fixed">
+                            <h2 class="style-display-inline">Editing Page: ${path}</h2>
+                            <div class="style-float-right">
+                                <div class="btn-group style-display-ib">
                                     <a class="btn" href="javascript:$('#uploadAttachmentDialog').dialog('open')"><i class="icon-upload"></i> Upload Attachment</a>
                                     <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
                                         <li><a href="#"><i class="icon-list"></i> View Attachments</a></li>
                                     </ul>
                                 </div>
-                                <div class="btn-group" style="display: inline-block;">
+                                <div class="btn-group style-display-ib">
                                     <a class="btn" href="javascript:$('#editPathDialog').dialog('open')"><i class="icon-edit"></i> Rename Path</a>
                                     <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
@@ -48,22 +48,24 @@
                                     </ul>
                                 </div>
                             </div>
+                            <div class="well attribute-menu">
+                                Current Attribute:
+                                <select class="style-margin-bottom-zero" id="selectedAttributeId" onchange="onSelectedAttributeChange()">
+                                    <option value="">--Select--</option>
+                                    <c:forEach items="${page.pageAttributes}" var="attr">
+                                        <option value="${attr.id}">${attr.attribute}</option>
+                                    </c:forEach>
+                                </select>
+                                &nbsp;&nbsp;
+                                <a class="btn btn-success" href="javascript:savePageAttribute()"><i class="icon-ok icon-white"></i> Save</a>
+                                <a class="btn btn-primary" href="#"><i class="icon-list icon-white"></i> View Revisions / History</a>
+                                <a class="btn btn-danger" href="javascript:removePageAttribute()"><i class="icon-remove icon-white"></i> Remove This Version</a>
+                                <a class="btn btn-info" href="javascript:$('#editHtmlDialog').dialog('open')"><i class="icon-pencil icon-white"></i> Edit HTML</a>
+                            </div>
                         </div>
 
-                        <div style="margin-bottom: 20px">
-                            Current Attribute:
-                            <select id="selectedAttributeId" onchange="onSelectedAttributeChange()" style="margin-bottom: 0px;">
-                                <option value="">--Select--</option>
-                                <c:forEach items="${page.pageAttributes}" var="attr">
-                                    <option value="${attr.id}">${attr.attribute}</option>
-                                </c:forEach>
-                            </select>
-                            &nbsp;&nbsp;
-                            <a class="btn btn-success" href="javascript:savePageAttribute()"><i class="icon-ok icon-white"></i> Save</a>
-                            <a class="btn btn-primary" href="#"><i class="icon-list icon-white"></i> View Revisions / History</a>
-                            <a class="btn btn-danger" href="javascript:removePageAttribute()"><i class="icon-remove icon-white"></i> Remove This Version</a>
-                            <a class="btn btn-info" href="javascript:$('#editHtmlDialog').dialog('open')"><i class="icon-pencil icon-white"></i> Edit HTML</a>
-                        </div>
+                        <div style="height:150px"></div>
+
                         <%--div>
                             Attachment:
                             <select id="selectedAttachmentId">

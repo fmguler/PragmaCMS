@@ -8,6 +8,7 @@
     <changeSet author="fmguler" id="0">
         <tagDatabase tag="tag-init"/>
     </changeSet>
+
     <!-- CMS SCHEMA >> -->
     <changeSet author="fmguler" id="1">
         <createTable schemaName="public" tableName="attribute">
@@ -65,36 +66,35 @@
         </createTable>
     </changeSet>
     <changeSet author="fmguler" id="6">
-        <addForeignKeyConstraint 
+        <addForeignKeyConstraint
             constraintName="page_template_id_fkey"
             baseTableSchemaName="public" baseTableName="page" baseColumnNames="template_id"
             referencedTableSchemaName="public"   referencedTableName="template" referencedColumnNames="id"
             deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
     </changeSet>
     <changeSet author="fmguler" id="7">
-        <addForeignKeyConstraint 
+        <addForeignKeyConstraint
             constraintName="template_attribute_template_id_fkey"
             baseTableSchemaName="public" baseTableName="template_attribute" baseColumnNames="template_id"
             referencedTableSchemaName="public"   referencedTableName="template" referencedColumnNames="id"
             deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
     </changeSet>
     <changeSet author="fmguler" id="8">
-        <addForeignKeyConstraint 
+        <addForeignKeyConstraint
             constraintName="template_attribute_attribute_id_fkey"
             baseTableSchemaName="public" baseTableName="template_attribute" baseColumnNames="attribute_id"
             referencedTableSchemaName="public"   referencedTableName="attribute" referencedColumnNames="id"
             deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
     </changeSet>
-    
     <changeSet author="fmguler" id="9">
-        <addForeignKeyConstraint 
+        <addForeignKeyConstraint
             constraintName="page_attribute_page_id_fkey"
             baseTableSchemaName="public" baseTableName="page_attribute" baseColumnNames="page_id"
             referencedTableSchemaName="public"   referencedTableName="page" referencedColumnNames="id"
             deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
     </changeSet>
     <changeSet author="fmguler" id="10">
-        <addForeignKeyConstraint 
+        <addForeignKeyConstraint
             constraintName="page_attribute_attribute_id_fkey"
             baseTableSchemaName="public" baseTableName="page_attribute" baseColumnNames="attribute_id"
             referencedTableSchemaName="public"   referencedTableName="attribute" referencedColumnNames="id"
@@ -124,6 +124,7 @@
         <tagDatabase tag="tag-enum"/>
     </changeSet>
     <!-- << CMS SCHEMA -->
+
     <!-- NEW SIMPLIFIED SCHEMA >> -->
     <changeSet author="fmguler" id="15">
         <addColumn tableName="page_attribute" schemaName="public">
@@ -156,7 +157,7 @@
     <changeSet author="fmguler" id="18">
         <dropForeignKeyConstraint constraintName="page_attribute_attribute_id_fkey" baseTableName="page_attribute"/>
         <dropForeignKeyConstraint constraintName="template_attribute_attribute_id_fkey" baseTableName="template_attribute"/>
-        <dropTable tableName="attribute" schemaName="public" />        
+        <dropTable tableName="attribute" schemaName="public" />
         <dropColumn tableName="page_attribute" columnName="attribute_id"/>
         <dropColumn tableName="template_attribute" columnName="attribute_id"/>
     </changeSet>
@@ -167,6 +168,7 @@
         <tagDatabase tag="tag-simplified-domain"/>
     </changeSet>
     <!-- << NEW SIMPLIFIED SCHEMA -->
+
     <!-- ATTACHMENT SUPPORT >> -->
     <changeSet author="fmguler" id="21">
         <createTable schemaName="public" tableName="page_attachment">
@@ -175,7 +177,7 @@
             </column>
             <column name="page_id" type="int4">
                 <constraints nullable="false"/>
-            </column>            
+            </column>
             <column name="name" type="VARCHAR(1000)"/>
             <column name="content_key" type="VARCHAR(1000)"/>
             <column name="content_type" type="VARCHAR(1000)"/>
@@ -184,7 +186,7 @@
         </createTable>
     </changeSet>
     <changeSet author="fmguler" id="22">
-        <addForeignKeyConstraint 
+        <addForeignKeyConstraint
             constraintName="page_attachment_attribute_id_fkey"
             baseTableSchemaName="public" baseTableName="page_attachment" baseColumnNames="page_id"
             referencedTableSchemaName="public"   referencedTableName="page" referencedColumnNames="id"
@@ -212,4 +214,28 @@
         </addColumn>
     </changeSet>
     <!-- << ATTACHMENT SUPPORT -->
+
+    <!-- MILESTONE 0.3 AUTHOR/ETC >> -->
+    <changeSet author="fmguler" id="26">
+        <createTable schemaName="public" tableName="author">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="author_pkey"/>
+            </column>
+            <column name="username" type="VARCHAR(1000)"/>
+            <column name="password" type="VARCHAR(1000)"/>
+            <column name="first_name" type="VARCHAR(1000)"/>
+            <column name="last_name" type="VARCHAR(1000)"/>
+            <column name="email" type="VARCHAR(1000)"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="27">
+        <insert schemaName="public" tableName="author">
+            <column name="username" value="admin"/>
+            <column name="password" value="21232f297a57a5a743894a0e4a801fc3"/>
+            <column name="first_name" value="System"/>
+            <column name="last_name" value="Administrator"/>
+            <column name="email" value="root@localhost"/>
+        </insert>
+    </changeSet>
+    <!-- <<MILESTONE 0.3 AUTHOR/ETC -->
 </databaseChangeLog>

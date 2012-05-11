@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.controller;
@@ -48,22 +48,27 @@ public class AdminController {
     //login the user
     @RequestMapping
     public String login(Model model, HttpServletRequest request) {
-        String user = (String)request.getSession().getAttribute("user");
+        Author user = (Author)request.getSession().getAttribute("user");
         if (user != null) return "redirect:home.htm";
 
-        //check user
+        //on post
         if (request.getMethod().equals("POST")) {
             String username = ServletRequestUtils.getStringParameter(request, "username", "");
             String password = ServletRequestUtils.getStringParameter(request, "password", "");
-            if (!password.equals("qPoCeuZSUFyKxZPSBQq2")) {
+
+            //check user existence & authentication
+            user = contentService.getAuthor(username);
+            if (user == null || !user.checkPassword(password)) {
                 //return error message
-                String errrorMessage = "Kullanıcı adı ve şifre hatalı.";
+                String errrorMessage = "Username/password incorrect!";
                 model.addAttribute("errorMessage", errrorMessage);
                 return null;
             }
 
-            //TODO: check authentication
-            request.getSession().setAttribute("user", "admin");
+            //attach user to session
+            request.getSession().setAttribute("user", user);
+
+            //return back to the desired url
             String returnUrl = (String)request.getSession().getAttribute("returnUrl");
             if (returnUrl == null) return "redirect:home.htm";
             return "redirect:" + returnUrl;
@@ -80,23 +85,23 @@ public class AdminController {
 
     //admin home
     @RequestMapping()
-    public String home(Model model) {        
+    public String home(Model model) {
         return "redirect:/admin/pages";
     }
-    
+
     //list pages
     @RequestMapping()
     public String pages(Model model) {
-        List pages = contentService.getPages();        
-        model.addAttribute("pages", pages);        
+        List pages = contentService.getPages();
+        model.addAttribute("pages", pages);
         return "admin/pages";
     }
-    
+
     //list templates
     @RequestMapping()
     public String templates(Model model) {
         List templates = contentService.getTemplates();
-        model.addAttribute("templates", templates);        
+        model.addAttribute("templates", templates);
         return "admin/templates";
     }
 
@@ -282,12 +287,12 @@ public class AdminController {
 
     //generate sitemap xml
     @RequestMapping()
-    @ResponseBody()    
+    @ResponseBody()
     public String generateSitemap(HttpServletRequest request, HttpServletResponse response) throws IOException {
         //get the http://something part
         String urlPrefix = request.getRequestURL().substring(0, request.getRequestURL().length() - request.getRequestURI().length());
         response.setContentType("text/xml");
-        
+
         StringBuffer sitemapBuffer = new StringBuffer();
         sitemapBuffer.append("<?xml version=\"1.0\" encoding=\"utf-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
 
@@ -324,7 +329,7 @@ public class AdminController {
                 + "common/block,\n"
                 + "common/undo,\n"
                 + "common/fmg\n"
-                //+ "common/image\n"                
+                //+ "common/image\n"
                 //+ "common/contenthandler,\n"
                 //+ "common/paste,\n"
                 //+ "common/commands,\n"
@@ -386,7 +391,7 @@ public class AdminController {
         for (PageAttribute attr : existingPageAttributes) {
             if (pageAttributes.contains(attr.getAttribute())) pageAttributes.remove(attr.getAttribute());
         }
-        
+
         //detect missing template attributes
         List<TemplateAttribute> existingTemplateAttributes = page.getTemplate().getTemplateAttributes();
         for (TemplateAttribute attr : existingTemplateAttributes) {
@@ -406,7 +411,7 @@ public class AdminController {
             contentService.savePageAttribute(pageAttribute);
             page.getPageAttributes().add(pageAttribute);
         }
-        
+
         //add missing attributes to template
         for (String attribute : templateAttributes) {
             TemplateAttribute templateAttribute = new TemplateAttribute();

@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.service.content;
@@ -37,7 +37,7 @@ public interface ContentService {
      * @return all templates in the system
      */
     public List getTemplates();
-    
+
     /**
      * @param id the id of the page attribute
      * @return the page attribute
@@ -73,4 +73,10 @@ public interface ContentService {
     Page getPage(int id);
 
     void updatePageRedirects(String oldRedirect, String newRedirect);
+
+    /**
+     * Get the author by username
+     * @return Author in the system
+     */
+    Author getAuthor(String username);
 }

@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.service.content;
@@ -22,6 +22,7 @@ public class ContentServiceImpl implements ContentService {
     private NamedParameterJdbcTemplate template;
     private Ven ven;
 
+    //PAGE----------------------------------------------------------------------
     @Override
     public Page getPage(String path) {
         Set joins = new HashSet();
@@ -92,6 +93,12 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    public void savePage(Page page) {
+        ven.save(page);
+    }
+
+    //TEMPLATE------------------------------------------------------------------
+    @Override
     public Template getTemplate(int id) {
         Set joins = new HashSet();
         joins.add("Template.templateAttributes");
@@ -108,6 +115,7 @@ public class ContentServiceImpl implements ContentService {
         return list;
     }
 
+    //ATTRIBUTE-----------------------------------------------------------------
     @Override
     public PageAttribute getPageAttribute(int id) {
         Set joins = new HashSet();
@@ -126,15 +134,11 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
-    public void savePage(Page page) {
-        ven.save(page);
-    }
-
-    @Override
     public void removePageAttribute(int id) {
         ven.delete(id, PageAttribute.class);
     }
 
+    //ATTACHMENT----------------------------------------------------------------
     @Override
     public List getPageAttachments(int pageId) {
         Set joins = new HashSet();
@@ -155,7 +159,17 @@ public class ContentServiceImpl implements ContentService {
     public void savePageAttachment(PageAttachment pageAttachment) {
         ven.save(pageAttachment);
     }
-    
+
+    //AUTHOR--------------------------------------------------------------------
+    public Author getAuthor(String username) {
+        Set joins = new HashSet();
+        Criteria criteria = new Criteria();
+        criteria.eq("Author.username", username);
+        List<Author> list = ven.list(Author.class, joins, criteria);
+        if (list.isEmpty()) return null;
+        return list.get(0);
+    }
+
     //--------------------------------------------------------------------------
     //SETTERS
     public void setDataSource(DataSource dataSource) {

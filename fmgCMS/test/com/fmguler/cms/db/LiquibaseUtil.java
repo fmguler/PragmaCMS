@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.db;
@@ -21,7 +21,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 /**
  * Database utilities for testing (while developing)
  * For Liquibase 2.0
- * 
+ *
  * @author Fatih Mehmet Güler
  */
 public class LiquibaseUtil {

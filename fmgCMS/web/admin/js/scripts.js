@@ -54,6 +54,9 @@ function editPageReady(){
             }
         }]
     });
+
+    //make jqueryui buttons bootstrap style
+    $("button").addClass("btn");
 }
 
 //save page properties

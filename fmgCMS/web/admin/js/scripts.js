@@ -5,6 +5,28 @@
  *  All rights reserved.
  */
 
+//on pages ready
+function pagesReady(){
+    //add page
+    $("#addPageDialog").dialog({
+        //height: 'auto',
+        width: 400,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
+            click: addPage
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+}
+
 //on edit page ready
 function editPageReady(){
     //upload attachment (modal)
@@ -14,9 +36,11 @@ function editPageReady(){
         autoOpen: false,
         modal: true,
         buttons: [{
+            'class': 'btn btn-primary',
             text: messages["upload"][locale],
             click: uploadAttachment
         },{
+            'class': 'btn',
             text: messages["cancel"][locale],
             click: function() {
                 $(this).dialog("close");
@@ -31,9 +55,11 @@ function editPageReady(){
         autoOpen: false,
         modal: true,
         buttons: [{
+            'class': 'btn btn-primary',
             text: messages["save"][locale],
             click: savePage
         },{
+            'class': 'btn',
             text: messages["cancel"][locale],
             click: function() {
                 $(this).dialog("close");
@@ -48,15 +74,13 @@ function editPageReady(){
         autoOpen: false,
         modal: true,
         buttons: [{
+            'class': 'btn',
             text: messages["ok"][locale],
             click: function() {
                 $(this).dialog("close");
             }
         }]
     });
-
-    //make jqueryui buttons bootstrap style
-    $("button").addClass("btn");
 }
 
 //save page properties
@@ -69,6 +93,25 @@ function savePage(){
         type: 'POST',
         success: function(response) {
             location.href = 'editPage?path='+page.path;
+        }
+    });
+}
+
+//add page
+function addPage(){
+    var page =$("#addPageForm").serializeObject() ;
+    $.ajax({
+        url: 'addPage',
+        data: page,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            //location.href = 'editPage?path='+page.path;
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.reload();
+            }
         }
     });
 }
@@ -156,11 +199,6 @@ function onIFrameScroll(event){
     $("body").scrollTop($("body").scrollTop() - event.originalEvent.wheelDelta);
 }
 
-var contextPath = "";
-function setContextPath(path){
-    contextPath = path;
-}
-
 //called when user clicks a link in the preview iframe
 function onNavigateAway(url, path){
     if (url.substring(url.length-5, url.length)=="?edit"){
@@ -196,6 +234,58 @@ function uploadAttachment(){
     $("#uploadAttachmentForm").submit();
 }
 
+//utility-----------------------------------------------------------------------
+
+//fill a target with item values
+function fillRecursively(targetPrefix, item){
+    $.each(item, function(key, value) {
+        if(typeof(value) == 'object') return  fillRecursively(targetPrefix+'-'+key, value);
+        //alert (targetPrefix+key+":"+value);
+        var target = $(targetPrefix+'-'+key);
+        if (target.length) target.text(value); //fill if exists
+    });
+}
+
+//error dialog
+function showErrorDialog(message){
+    var errorDialog = $('<div></div>')
+    .dialog({
+        autoOpen: false,
+        title: messages["error"][locale],
+        modal: true
+
+    });
+    errorDialog.html("<p><strong>"+message+"</strong></p>");
+    errorDialog.dialog("option", "buttons", [{
+        'class': 'btn',
+        text: messages["ok"][locale],
+        click: function() {
+            $(this).dialog("close");
+        }
+    }]);
+    errorDialog.dialog('open');
+}
+
+//status dialog
+function showStatusDialog(message){
+    var statusDialog = $('<div></div>')
+    .dialog({
+        autoOpen: false,
+        title: messages["status"][locale],
+        modal: true
+
+    });
+    statusDialog.html("<p><center><strong>"+message+"</strong></center></p>");
+    statusDialog.dialog("option", "buttons", [{
+        'class': 'btn',
+        text: messages["ok"][locale],
+        click: function() {
+            $(this).dialog("close");
+        }
+    }]);
+    statusDialog.dialog('open');
+}
+
 //serialize jquery objects to json
 $.fn.serializeObject = function()
 {
@@ -216,12 +306,36 @@ $.fn.serializeObject = function()
 
 //I18N messages-----------------------------------------------------------------
 var messages = {
-    "error": {en: "Error", tr: "Hata"},
-    "status": {en: "Status", tr: "Durum"},
-    "upload": {en: "Upload", tr: "Yükle"},
-    "cancel": {en: "Cancel", tr: "İptal"},
-    "ok": {en: "OK", tr: "Tamam"},
-    "save": {en: "Save", tr: "Kaydet"},
-    "remove": {en: "Remove", tr: "Kaldır"},
-    "select": {en: "Select", tr: "Seç"}
+    "error": {
+        en: "Error",
+        tr: "Hata"
+    },
+    "status": {
+        en: "Status",
+        tr: "Durum"
+    },
+    "upload": {
+        en: "Upload",
+        tr: "Yükle"
+    },
+    "cancel": {
+        en: "Cancel",
+        tr: "İptal"
+    },
+    "ok": {
+        en: "OK",
+        tr: "Tamam"
+    },
+    "save": {
+        en: "Save",
+        tr: "Kaydet"
+    },
+    "remove": {
+        en: "Remove",
+        tr: "Kaldır"
+    },
+    "select": {
+        en: "Select",
+        tr: "Seç"
+    }
 };

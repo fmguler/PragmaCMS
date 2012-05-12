@@ -5024,6 +5024,11 @@ body {
     margin-bottom: 0px;
 }
 
+/* full width */
+.style-full-width {
+    width: 100%;
+}
+
 /* attribute menu*/
 .attribute-menu {
     margin-bottom: 0px;

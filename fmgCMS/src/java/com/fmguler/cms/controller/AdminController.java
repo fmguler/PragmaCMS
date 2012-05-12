@@ -6,6 +6,7 @@
  */
 package com.fmguler.cms.controller;
 
+import com.fmguler.cms.helper.CommonController;
 import com.fmguler.cms.service.content.ContentService;
 import com.fmguler.cms.service.content.domain.*;
 import com.fmguler.cms.service.template.TemplateService;
@@ -93,8 +94,26 @@ public class AdminController {
     @RequestMapping()
     public String pages(Model model) {
         List pages = contentService.getPages();
+        List templates = contentService.getTemplates();
         model.addAttribute("pages", pages);
+        model.addAttribute("templates", templates);
         return "admin/pages";
+    }
+
+    @RequestMapping
+    @ResponseBody
+    public String addPage(Page page) {
+        if (page.getId() != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This page already exists", null);
+        if (!page.getPath().startsWith("/")) page.setPath("/" + page.getPath());
+        if (!page.getPath().substring(1).matches("[A-Za-z0-9\\-]{0,61}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<br/><li>Dash (-)", null);
+        if (contentService.getPage(page.getPath()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A page with this path already exists", null);
+
+        //save the page
+        page.setLastModified(new Date());
+        contentService.savePage(page);
+
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", page);
     }
 
     //list templates
@@ -125,7 +144,12 @@ public class AdminController {
         Page page = contentService.getPage(path);
 
         //creating a new page
-        if (page == null) page = new Page();
+        if (page == null) {
+            model.addAttribute("errorMessage", "This page does not exist. You should add the page first.");
+            model.addAttribute("errorAction", "Add Page");
+            model.addAttribute("errorActionUrl", "pages?addPage=" + path);
+            return "admin/error";
+        }
 
         //if this page is renamed edit the renamed version
         if (page.getNewPath() != null) {
@@ -162,9 +186,12 @@ public class AdminController {
             contentService.updatePageRedirects(originalPage.getPath(), page.getPath());
         }
 
+        //save the page
         page.setLastModified(new Date());
         contentService.savePage(page);
-        return "";
+
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", page);
     }
 
     //edit a template
@@ -246,7 +273,7 @@ public class AdminController {
                 MultipartFile multipartFile = multipartReq.getFile(fileName);
                 String originalName = multipartFile.getOriginalFilename();
 
-                //Create new workspace item
+                //Create new page attachment
                 PageAttachment pageAttachment = new PageAttachment();
                 pageAttachment.setPage(page);
                 pageAttachment.setContentKey(storageService.generateKey());
@@ -369,7 +396,7 @@ public class AdminController {
         //detect the missing page attributes, and add them to the page
         //detect unused attributes and mark them
 
-        //new page, template not selected yet
+        //new page, template not selected yet (this shouldn't happen anymore, but be safe)
         if (page.getTemplate() == null) return;
 
         String templatePath = page.getTemplate().getName();

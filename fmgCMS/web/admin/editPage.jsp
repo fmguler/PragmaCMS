@@ -8,16 +8,16 @@
         <title>fmgCMS - Edit Page : ${path}</title>
         <link rel="shortcut icon" href="js/favicon.ico">
         <link rel="stylesheet" href="js/bootstrap/css/bootstrap.css" >
-        <link rel="stylesheet" href="js/jquery-ui-base/jquery.ui.all.css">
-        <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
-        <script type="text/javascript" src="js/jquery-ui-1.8.16.custom.min.js"></script>
+        <link rel="stylesheet" href="js/jquery-ui-base/jquery-ui-1.8.20.custom.css">
+        <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
+        <script type="text/javascript" src="js/jquery-ui-1.8.20.custom.min.js"></script>
         <script type="text/javascript" src="js/bootstrap/js/bootstrap.js"></script>
         <script type="text/javascript" src="js/scripts.js"></script>
         <script type="text/javascript">
             var locale = 'en';
-            $(editPageReady);
-            setContextPath('${pageContext.request.contextPath}');
+            var contextPath = '${pageContext.request.contextPath}';
             var pageAttachments = [<c:forEach items="${pageAttachments}" var="attch">{id: ${attch.id}, name: "${attch.name}"},</c:forEach>0];
+            $(editPageReady);
         </script>
     </head>
     <body>

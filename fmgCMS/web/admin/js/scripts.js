@@ -5,6 +5,8 @@
  *  All rights reserved.
  */
 
+//page inits--------------------------------------------------------------------
+
 //on pages ready
 function pagesReady(){
     //add page
@@ -25,6 +27,12 @@ function pagesReady(){
             }
         }]
     });
+
+    //if this page is opened with addPage param, open add page dialog
+    if(window.location.href.indexOf("addPage")>0){
+        $("#addPageDialog").find("[name=path]").val(getParameterByName("addPage"));
+        $('#addPageDialog').dialog('open');
+    }
 }
 
 //on edit page ready
@@ -49,7 +57,7 @@ function editPageReady(){
     });
 
     //edit path (modal)
-    $("#editPathDialog").dialog({
+    $("#renamePageDialog").dialog({
         //height: 'auto',
         width: 400,
         autoOpen: false,
@@ -57,7 +65,7 @@ function editPageReady(){
         buttons: [{
             'class': 'btn btn-primary',
             text: messages["save"][locale],
-            click: savePage
+            click: renamePage
         },{
             'class': 'btn',
             text: messages["cancel"][locale],
@@ -83,19 +91,7 @@ function editPageReady(){
     });
 }
 
-//save page properties
-function savePage(){
-    var page =$("#pageForm").serializeObject() ;
-    $.ajax({
-        url: 'savePage',
-        data: page,
-        dataType: 'json',
-        type: 'POST',
-        success: function(response) {
-            location.href = 'editPage?path='+page.path;
-        }
-    });
-}
+//list pages actions------------------------------------------------------------
 
 //add page
 function addPage(){
@@ -106,11 +102,57 @@ function addPage(){
         dataType: 'json',
         type: 'POST',
         success: function(response) {
-            //location.href = 'editPage?path='+page.path;
             if (response.status != "0") {
                 showErrorDialog(response.message);
             } else {
-                location.reload();
+                location.href = 'editPage?path='+response.object.path;
+            }
+        }
+    });
+}
+
+//remove page
+function removePage(pageId, goback){
+    if(!confirm(messages["confirm_remove_page"][locale])) return;
+
+    $.ajax({
+        url: 'removePage',
+        data: 'pageId='+pageId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                //we're in edit page mode, go back to page list
+                if (goback) location.href = 'pages';
+
+                //hide the page row
+                $("#page-"+pageId).css({
+                    "background-color" : "#fbcdcd"
+                }, 'fast').fadeOut("fast");
+            }
+        }
+    });
+}
+
+//edit page actions-------------------------------------------------------------
+
+//save page properties
+function renamePage(){
+    var page =$("#renamePageForm").serializeObject() ;
+    $.ajax({
+        url: 'renamePage',
+        data: page,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                //TODO: shall we reload page? all paths should be updated
+                $('#renamePageDialog').dialog('close');
+                showStatusDialog(response.message);
             }
         }
     });
@@ -304,6 +346,18 @@ $.fn.serializeObject = function()
     return o;
 };
 
+//get param from query string
+function getParameterByName(name){
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+    var regexS = "[\\?&]" + name + "=([^&#]*)";
+    var regex = new RegExp(regexS);
+    var results = regex.exec(window.location.search);
+    if(results == null)
+        return "";
+    else
+        return decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
 //I18N messages-----------------------------------------------------------------
 var messages = {
     "error": {
@@ -337,5 +391,9 @@ var messages = {
     "select": {
         en: "Select",
         tr: "Seç"
+    },
+    "confirm_remove_page": {
+        en: "This page will be completely removed from the system. This action is permanent. Are you sure?",
+        tr: "Bu sayfa sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
     }
 };

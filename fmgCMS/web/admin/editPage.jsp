@@ -5,7 +5,7 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>fmgCMS - Edit Page : ${path}</title>
+        <title>fmgCMS - Edit Page : ${page.path}</title>
         <link rel="shortcut icon" href="js/favicon.ico">
         <link rel="stylesheet" href="js/bootstrap/css/bootstrap.css" >
         <link rel="stylesheet" href="js/jquery-ui-base/jquery-ui-1.8.20.custom.css">
@@ -21,7 +21,7 @@
         </script>
     </head>
     <body>
-        <c:set var="viewMenuEditPage" value="${path}" />
+        <c:set var="viewMenuEditPage" value="${page.path}" />
         <%@include file="_menu.jspf" %>
 
         <div class="container">
@@ -29,7 +29,7 @@
                 <div class="row-fluid">
                     <div class="span12">
                         <div class="page-header style-position-fixed">
-                            <h2 class="style-display-inline">Editing Page: ${path}</h2>
+                            <h2 class="style-display-inline">Editing Page: ${page.path}</h2>
                             <div class="style-float-right">
                                 <div class="btn-group style-display-ib">
                                     <a class="btn" href="javascript:$('#uploadAttachmentDialog').dialog('open')"><i class="icon-upload"></i> Upload Attachment</a>
@@ -39,12 +39,12 @@
                                     </ul>
                                 </div>
                                 <div class="btn-group style-display-ib">
-                                    <a class="btn" href="javascript:$('#editPathDialog').dialog('open')"><i class="icon-edit"></i> Rename Path</a>
+                                    <a class="btn" href="javascript:$('#renamePageDialog').dialog('open')"><i class="icon-edit"></i> Rename Path</a>
                                     <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
                                         <li><a href="${pageContext.request.contextPath}${page.path}" target="_blank"><i class="icon-eye-open"></i> View Page</a></li>
                                         <li class="divider"></li>
-                                        <li><a href="#"><i class="icon-trash"></i> Delete Page</a></li>
+                                        <li><a href="javascript:removePage(${page.id},true)"><i class="icon-trash"></i> Delete Page</a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -76,7 +76,7 @@
                             </select>
                             <a href="javascript:removePageAttachment()">(remove attachment)</a>
                         </div--%>
-                        <iframe id="pagePreview" src="${pageContext.request.contextPath}${path}?edit" width="100%" height="480" onLoad="onNavigateAway(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>
+                        <iframe id="pagePreview" src="${pageContext.request.contextPath}${page.path}?edit" width="100%" height="480" onLoad="onNavigateAway(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>
                     </div>
                 </div>
             </div>
@@ -89,7 +89,7 @@
         <div id="uploadAttachmentDialog" title="Upload Attachment">
             <form id="uploadAttachmentForm" method="POST" action="uploadPageAttachment" enctype="multipart/form-data">
                 <input type="hidden" name="page.id" value="${page.id}"/>
-                <input type="hidden" name="page.path" value="${path}"/>
+                <input type="hidden" name="page.path" value="${page.path}"/>
                 <table>
                     <tr>
                         <td><strong>Select the attachment to upload</strong></td>
@@ -104,19 +104,18 @@
             </form>
         </div>
 
-        <!-- Change Url Dialog -->
-        <div id="editPathDialog" title="Edit Page Path">
-            <form id="pageForm">
-                <input type="hidden" name="id" value="${page.id}"/>
-                <input type="hidden" name="template.id" value="${page.template.id}"/>
+        <!-- Rename Page Dialog -->
+        <div id="renamePageDialog" title="Rename Page">
+            <form id="renamePageForm">
+                <input type="hidden" name="pageId" value="${page.id}"/>
                 <table>
                     <tr>
-                        <td>Path:</td>
-                        <td><input type="text" name="path" value="${path}"/></td>
+                        <td>New Path:</td>
+                        <td><input type="text" name="newPath" value="${page.path}"/></td>
                     </tr>
                     <tr>
                         <td>Redirect Old Path:</td>
-                        <td><input type="checkbox" name="redirect" value="true" /></td>
+                        <td><input type="checkbox" name="redirect" value="true" checked /></td>
                     </tr>
                 </table>
             </form>

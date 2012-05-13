@@ -41,7 +41,7 @@
                                 <th width="150">Actions</th>
                             </tr>
                             <c:forEach items="${pages}" var="page">
-                                <tr>
+                                <tr id="page-${page.id}">
                                     <td><a href="${pageContext.request.contextPath}${page.path}/edit">${page.path}</a></td>
                                     <td><a href="editTemplate?id=${page.template.id}">${page.template.name}</a></td>
                                     <td>${page.newPath}</td>
@@ -52,7 +52,7 @@
                                             <ul class="dropdown-menu">
                                                 <li><a href="${pageContext.request.contextPath}${page.path}" target="_blank"><i class="icon-eye-open"></i> View Page</a></li>
                                                 <li class="divider"></li>
-                                                <li><a href="#"><i class="icon-trash"></i> Delete Page</a></li>
+                                                <li><a href="javascript:removePage(${page.id})"><i class="icon-trash"></i> Delete Page</a></li>
                                             </ul>
                                         </div>
                                     </td>

@@ -97,6 +97,11 @@ public class ContentServiceImpl implements ContentService {
         ven.save(page);
     }
 
+    @Override
+    public void removePage(int id) {
+        ven.delete(id, Page.class);
+    }
+
     //TEMPLATE------------------------------------------------------------------
     @Override
     public Template getTemplate(int id) {

@@ -90,6 +90,9 @@ public class AdminController {
         return "redirect:/admin/pages";
     }
 
+    //--------------------------------------------------------------------------
+    //PAGES
+    //--------------------------------------------------------------------------
     //list pages
     @RequestMapping()
     public String pages(Model model) {
@@ -116,6 +119,21 @@ public class AdminController {
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", page);
     }
 
+    //remove page
+    @RequestMapping
+    @ResponseBody
+    public String removePage(@RequestParam int pageId, Model model) {
+        try {
+            contentService.removePage(pageId);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
+        } catch (Exception ex) { //TODO: service exception
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This page could not be removed. Error: " + ex.getMessage(), null);
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    //TEMPLATES
+    //--------------------------------------------------------------------------
     //list templates
     @RequestMapping()
     public String templates(Model model) {
@@ -124,6 +142,9 @@ public class AdminController {
         return "admin/templates";
     }
 
+    //--------------------------------------------------------------------------
+    //EDIT PAGE
+    //--------------------------------------------------------------------------
     //edit a page
     @RequestMapping("/**/edit")
     public String editPageRedirect(HttpServletRequest request, HttpServletResponse response, Model model) throws IOException {
@@ -160,52 +181,44 @@ public class AdminController {
         scanPageAttributes(page);
 
         model.addAttribute("page", page);
-        model.addAttribute("path", path);
         model.addAttribute("templates", contentService.getTemplates());
-        model.addAttribute("pageAttachments", page.getId() == null ? new LinkedList() : contentService.getPageAttachments(page.getId()));
+        model.addAttribute("pageAttachments", contentService.getPageAttachments(page.getId()));
         return "admin/editPage";
     }
 
     @RequestMapping
     @ResponseBody
-    public String savePage(Page page, @RequestParam(required = false) String redirect) {
-        if (redirect != null) {
-            Page originalPage = contentService.getPage(page.getId());
-            if (originalPage == null) return ""; //TODO: error - cannot redirect a new page
-            if (originalPage.getPath().equals(page.getPath())) return ""; //trying to redirect to the same path, would cause redirect loop
+    public String renamePage(@RequestParam Integer pageId, @RequestParam String newPath, @RequestParam(required = false) String redirect) {
+        Page originalPage = contentService.getPage(pageId);
+        if (originalPage == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null); //error - cannot redirect a new page
+        if (contentService.getPage(newPath) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A page with this address already exists!", null);
+        if (originalPage.getPath().equals(newPath)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "You did not change the address...", null); //also this could cause redirect loop
 
+        //path validity checks (same as addPage)
+        if (!newPath.startsWith("/")) newPath = "/" + newPath;
+        if (!newPath.substring(1).matches("[A-Za-z0-9\\-]{0,61}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<br/><li>Dash (-)", null);
+
+        //add a redirect page with old path pointing to renamed page
+        if (redirect != null) {
             //add a new redirect page from old path to the new path
             Page redirectPage = new Page();
             redirectPage.setLastModified(new Date());
             redirectPage.setPath(originalPage.getPath()); //old path
-            redirectPage.setNewPath(page.getPath()); //new path
-            redirectPage.setTemplate(page.getTemplate());
+            redirectPage.setNewPath(newPath); //new path
+            redirectPage.setTemplate(originalPage.getTemplate());
             contentService.savePage(redirectPage);
-
-            //also update redirects pointing to the old path to the new path (it would still work but we reduce it to single redirect)
-            contentService.updatePageRedirects(originalPage.getPath(), page.getPath());
         }
 
-        //save the page
-        page.setLastModified(new Date());
-        contentService.savePage(page);
+        //also update redirects pointing to the old path to the new path (it would still work but we reduce it to single redirect)
+        contentService.updatePageRedirects(originalPage.getPath(), newPath);
+
+        //save the page with new path
+        originalPage.setLastModified(new Date());
+        originalPage.setPath(newPath);
+        contentService.savePage(originalPage);
 
         //return success
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", page);
-    }
-
-    //edit a template
-    @RequestMapping()
-    public String editTemplate(@RequestParam int id, Model model) {
-        Template template = contentService.getTemplate(id);
-
-        //return 404
-        if (template == null) {
-            return null;
-        }
-
-        model.addAttribute("template", template);
-        return "admin/editTemplate";
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Page is renamed successfully", null);
     }
 
     //ajax - save page attribute
@@ -312,6 +325,26 @@ public class AdminController {
         return "redirect:/admin/editPage?path=" + request.getParameter("page.path");
     }
 
+    //--------------------------------------------------------------------------
+    //EDIT TEMPLATE
+    //--------------------------------------------------------------------------
+    //edit a template
+    @RequestMapping()
+    public String editTemplate(@RequestParam int id, Model model) {
+        Template template = contentService.getTemplate(id);
+
+        //return 404
+        if (template == null) {
+            return null;
+        }
+
+        model.addAttribute("template", template);
+        return "admin/editTemplate";
+    }
+
+    //--------------------------------------------------------------------------
+    //ADVANCED
+    //--------------------------------------------------------------------------
     //generate sitemap xml
     @RequestMapping()
     @ResponseBody()
@@ -346,8 +379,8 @@ public class AdminController {
     public static String injectEditor(String pageHtml) {
         String disclaimer = "<!-- Edited by fmgCMS -->";
         String editorScript = ""
-                + "<script type=\"text/javascript\" src=\"admin/js/jquery-1.7.1.min.js\"></script>\n"
-                + "<script type=\"text/javascript\" src=\"admin/js/jquery-ui-1.8.16.custom.min.js\"></script>\n"
+                + "<script type=\"text/javascript\" src=\"admin/js/jquery-1.7.2.min.js\"></script>\n"
+                + "<script type=\"text/javascript\" src=\"admin/js/jquery-ui-1.8.20.custom.min.js\"></script>\n"
                 + "<script type=\"text/javascript\" src=\"admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
                 + "common/table,\n"
                 + "common/list,\n"
@@ -364,7 +397,7 @@ public class AdminController {
                 + "\">\n"
                 + "</script>\n"
                 + "<script type=\"text/javascript\" src=\"admin/js/make-editable.js\"></script>\n"
-                + "<link href=\"admin/js/jquery-ui-base/jquery.ui.all.css\" type=\"text/css\" rel=\"stylesheet\" />\n"
+                + "<link href=\"admin/js/jquery-ui-base/jquery-ui-1.8.20.custom.css\" type=\"text/css\" rel=\"stylesheet\" />\n"
                 + "<link href=\"admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
 
         //inject editor code

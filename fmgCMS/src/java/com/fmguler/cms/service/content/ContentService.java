@@ -79,4 +79,6 @@ public interface ContentService {
      * @return Author in the system
      */
     Author getAuthor(String username);
+
+    void removePage(int id);
 }

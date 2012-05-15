@@ -1,5 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
 
 <!DOCTYPE html>
 <html>
@@ -16,6 +18,7 @@
         <script type="text/javascript">
             var locale = 'en';
             var contextPath = '${pageContext.request.contextPath}';
+            var pagePath = "${page.path}";
             var pageAttachments = [<c:forEach items="${pageAttachments}" var="attch">{id: ${attch.id}, name: "${attch.name}"},</c:forEach>0];
             $(editPageReady);
         </script>
@@ -39,7 +42,7 @@
                                     </ul>
                                 </div>
                                 <div class="btn-group style-display-ib">
-                                    <a class="btn" href="javascript:$('#renamePageDialog').dialog('open')"><i class="icon-edit"></i> Rename Path</a>
+                                    <a class="btn" href="javascript:$('#renamePageDialog').dialog('open')"><i class="icon-edit"></i> Rename Page</a>
                                     <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
                                         <li><a href="${pageContext.request.contextPath}${page.path}" target="_blank"><i class="icon-eye-open"></i> View Page</a></li>
@@ -49,7 +52,7 @@
                                 </div>
                             </div>
                             <div class="well attribute-menu">
-                                Current Attribute:
+                                Selected Attribute:
                                 <select class="style-margin-bottom-zero" id="selectedAttributeId" onchange="onSelectedAttributeChange()">
                                     <option value="">--Select--</option>
                                     <c:forEach items="${page.pageAttributes}" var="attr">
@@ -57,10 +60,10 @@
                                     </c:forEach>
                                 </select>
                                 &nbsp;&nbsp;
-                                <a class="btn btn-success" href="javascript:savePageAttribute()"><i class="icon-ok icon-white"></i> Save</a>
-                                <a class="btn btn-primary" href="#"><i class="icon-list icon-white"></i> View Revisions / History</a>
+                                <a class="btn btn-success" href="javascript:saveDialog()"><i class="icon-ok icon-white"></i> Save All</a>
+                                <a class="btn btn-primary" href="javascript:historyDialog()"><i class="icon-list icon-white"></i> History</a>
                                 <a class="btn btn-danger" href="javascript:removePageAttribute()"><i class="icon-remove icon-white"></i> Remove This Version</a>
-                                <a class="btn btn-info" href="javascript:$('#editHtmlDialog').dialog('open')"><i class="icon-pencil icon-white"></i> Edit HTML</a>
+                                <a class="btn btn-info" href="javascript:editHtmlDialog()"><i class="icon-pencil icon-white"></i> Edit HTML</a>
                             </div>
                         </div>
 
@@ -76,7 +79,7 @@
                             </select>
                             <a href="javascript:removePageAttachment()">(remove attachment)</a>
                         </div--%>
-                        <iframe id="pagePreview" src="${pageContext.request.contextPath}${page.path}?edit" width="100%" height="480" onLoad="onNavigateAway(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>
+                        <iframe id="pagePreview" src="about:blank" width="100%" height="480" onLoad="onIFrameLoad(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>
                     </div>
                 </div>
             </div>
@@ -90,7 +93,7 @@
             <form id="uploadAttachmentForm" method="POST" action="uploadPageAttachment" enctype="multipart/form-data">
                 <input type="hidden" name="page.id" value="${page.id}"/>
                 <input type="hidden" name="page.path" value="${page.path}"/>
-                <table>
+                <table class="style-full-width">
                     <tr>
                         <td><strong>Select the attachment to upload</strong></td>
                     </tr>
@@ -108,13 +111,15 @@
         <div id="renamePageDialog" title="Rename Page">
             <form id="renamePageForm">
                 <input type="hidden" name="pageId" value="${page.id}"/>
-                <table>
+                <table class="style-full-width">
                     <tr>
-                        <td>New Path:</td>
-                        <td><input type="text" name="newPath" value="${page.path}"/></td>
+                        <td><strong>New Path:</strong></td>
+                        <td class="span1"></td>
+                        <td><input class="span4" type="text" name="newPath" value="${page.path}"/></td>
                     </tr>
                     <tr>
-                        <td>Redirect Old Path:</td>
+                        <td><strong>Redirect Old Path:</strong></td>
+                        <td></td>
                         <td><input type="checkbox" name="redirect" value="true" checked /></td>
                     </tr>
                 </table>
@@ -124,12 +129,32 @@
         <!-- Edit Html Dialog -->
         <div id="editHtmlDialog" title="Edit Attribute HTML">
             <div>
+                <textarea class="span7" rows="20" id="selectedAttributeHtml" onchange="onSelectedAttributeHtmlChange()">[No Attribute Selected]</textarea>
+            </div>
+        </div>
+
+        <!-- Save Dialog -->
+        <div id="saveDialog" title="Save Changes">
+            <form id="pageAttributesForm">
+                <input type="hidden" name="pageId" value="${page.id}"/>
+                <table class="style-full-width">
+                    <tr>
+                        <td><strong>Comment:</strong></td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <textarea class="span7" rows="4" name="comment">added new version</textarea>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Hidden page attributes -->
                 <c:forEach items="${page.pageAttributes}" var="attr">
-                    <textarea class="span7" rows="20" id="attribute-${attr.id}" class="attribute" style="display:none" onchange="onAttributeChange('${attr.attribute}', ${attr.id})">${attr.value}</textarea>
-                    <input type="hidden" id="attribute-to-id-${attr.attribute}" value="${attr.id}" />
+                    <textarea class="style-hidden" name="attribute-${attr.id}" id="attribute-${attr.id}">${fn:escapeXml(attr.value)}</textarea>
+                    <input type="hidden" name="attributeId[]" id="attribute-to-id-${attr.attribute}" value="${attr.id}" />
                     <input type="hidden" id="id-to-attribute-${attr.id}" value="${attr.attribute}" />
                 </c:forEach>
-            </div>
+            </form>
         </div>
     </body>
 </html>

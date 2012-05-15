@@ -40,7 +40,7 @@ function editPageReady(){
     //upload attachment (modal)
     $("#uploadAttachmentDialog").dialog({
         //height: 'auto',
-        width: 400,
+        width: 370,
         autoOpen: false,
         modal: true,
         buttons: [{
@@ -56,10 +56,10 @@ function editPageReady(){
         }]
     });
 
-    //edit path (modal)
+    //rename page (modal)
     $("#renamePageDialog").dialog({
         //height: 'auto',
-        width: 400,
+        width: 470,
         autoOpen: false,
         modal: true,
         buttons: [{
@@ -78,17 +78,52 @@ function editPageReady(){
     //edit html (modal)
     $("#editHtmlDialog").dialog({
         //height: 'auto',
-        width: 600,
+        width: 570,
         autoOpen: false,
         modal: true,
         buttons: [{
             'class': 'btn',
+            text: messages["apply"][locale],
+            click: function() {}
+        },{
+            'class': 'btn btn-primary',
             text: messages["ok"][locale],
             click: function() {
                 $(this).dialog("close");
             }
         }]
     });
+
+    //save (modal)
+    $("#saveDialog").dialog({
+        //height: 'auto',
+        width: 570,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-success',
+            text: messages["button_save_and_publish"][locale],
+            click: saveAndPublish
+        },{
+            'class': 'btn btn-inverse',
+            text: messages["button_save_as_draft"][locale],
+            click: saveAsDraft
+        },{
+            'class': 'btn btn-primary',
+            text: messages["button_review_changes"][locale],
+            click: reviewChanges
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //load the page preview iframe
+    var pagePreviewSrc = contextPath+pagePath+"?time="+(new Date()).getTime()+"&edit";
+    $("#pagePreview").attr("src", pagePreviewSrc);
 }
 
 //list pages actions------------------------------------------------------------
@@ -158,22 +193,23 @@ function renamePage(){
     });
 }
 
-//save the selected page attribute
-function savePageAttribute(){
-    var attributeId = $("#selectedAttributeId").val();
-    if (attributeId=='') return;
-
-    var attribute = new Object();
-    attribute.id = attributeId;
-    attribute.value= $("#attribute-"+attributeId).val();
+//save all page attributes
+function savePageAttributes(){
+    var pageAttributes =$("#pageAttributesForm").serializeObject() ;
 
     $.ajax({
-        url: 'savePageAttribute',
-        data: attribute,
+        url: 'savePageAttributes',
+        data: pageAttributes,
         dataType: 'json',
         type: 'POST',
         success: function(response) {
-            location.reload();
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                $('#saveDialog').dialog('close');
+                showStatusDialog(response.message);
+                //TODO: we need to update attribute id's (they're changed)
+            }
         }
     });
 }
@@ -191,19 +227,58 @@ function removePageAttribute(){
         dataType: 'json',
         type: 'POST',
         success: function(response) {
-            location.reload();
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.reload();
+            }
         }
     });
 }
+
+//edit page dialogs-------------------------------------------------------------
+
+//save dialog, calls publish/draft/review
+function saveDialog(){
+    $('#saveDialog').dialog('open');
+}
+
+//save all page attributes and immediately publish them
+function saveAndPublish(){
+    savePageAttributes();
+}
+
+//save all page attributes as draft version (don't publish)
+function saveAsDraft(){
+    alert("draft");
+}
+
+//review changes, diff to published version
+function reviewChanges(){
+    alert("review");
+}
+
+//edit page attribute contents (html)
+function editHtmlDialog(){
+    var attributeId = $("#selectedAttributeId").val();
+    if (attributeId==''){
+        alert("Please select an attribute first.");
+        return;
+    }
+
+    //update the selected attribute html
+    updateSelectedAttributeHtml($("#attribute-" + attributeId).val());
+
+    //show the dialog
+    $('#editHtmlDialog').dialog('open');
+}
+
+//edit page events--------------------------------------------------------------
 
 //display selected attribute textarea
 function onSelectedAttributeChange(){
     var attributeId = $("#selectedAttributeId").val();
     if (attributeId=='') return;
-
-    //show the current attribute textarea
-    $(".attribute").hide();
-    $("#attribute-" + attributeId).show();
 
     //focus to the selected editable
     var editable = $("#pagePreview").contents().find("#attribute-editable-"+$("#id-to-attribute-"+attributeId).val());
@@ -211,25 +286,45 @@ function onSelectedAttributeChange(){
 }
 
 //on attribute textarea value change, update preview
-function onAttributeChange(attribute, id){
+function onSelectedAttributeHtmlChange(){
+    var attributeId = $("#selectedAttributeId").val();
+    if (attributeId=='') return;
+    var attribute = $("#id-to-attribute-"+attributeId).val();
+    var html = $("#selectedAttributeHtml").val();
+
+    //update the actual attribute html
+    updateAttributeHtml(attributeId, html);
+
+    //update editable html
     var editable = $("#pagePreview").contents().find("#attribute-editable-"+attribute);
-    editable.html($("#attribute-"+id).val());
+    editable.html(html);
     editable.focus();
+}
+
+//when an attribute changes
+function updateAttributeHtml(attributeId, html){
+    //alert("updating attr"+attributeId+" html: "+html);
+    $("#attribute-"+attributeId).val(html);
+}
+
+//update the selected attribute html
+function updateSelectedAttributeHtml(html){
+    //alert("updating selected attr html: "+html);
+    $("#selectedAttributeHtml").val(html);
 }
 
 //aloha edited content is changed, update texts
 function onAlohaChange(attribute, html){
     var attributeId = $("#attribute-to-id-"+attribute).val();
-    $("#attribute-"+attributeId).val(html);
+    updateAttributeHtml(attributeId, html);
+
+    //aloha updates late, update the selected attribute
+    updateSelectedAttributeHtml(html);
 }
 
 //called when an editable is clicked
 function onAlohaClick(attribute){
     var attributeId = $("#attribute-to-id-"+attribute).val();
-
-    //show text area
-    $(".attribute").hide();
-    $("#attribute-"+attributeId).show();
 
     //make attribute selected
     $("#selectedAttributeId").find("option:selected").removeAttr("selected");
@@ -241,10 +336,19 @@ function onIFrameScroll(event){
     $("body").scrollTop($("body").scrollTop() - event.originalEvent.wheelDelta);
 }
 
-//called when user clicks a link in the preview iframe
-function onNavigateAway(url, path){
-    if (url.substring(url.length-5, url.length)=="?edit"){
-        //auto size iframe
+//called when preview iframe is loaded
+function onIFrameLoad(url, path){
+    //initial opening, no src
+    if (url == 'about:blank') return true;
+
+    //prevent links
+    $("#pagePreview").contents().find("a").click(function(event) {
+        if ($(event.currentTarget).parents().hasClass('aloha-floatingmenu')) return true; //do not meddle aloha
+        if (!confirm("Any unchanged changes will be lost if you navigate away from this page, are you sure?")) event.preventDefault();
+    });
+
+    //an edit mode page is opened, adjust the host page
+    if (url.substring(url.length-5, url.length)=="&edit"){
         var iframeWidth = $("#pagePreview").contents().find("body")[0].scrollWidth;
         var iframeHeight = $("#pagePreview").contents().find("body")[0].scrollHeight;
 
@@ -259,16 +363,10 @@ function onNavigateAway(url, path){
 
         return true;
     }
-    //a link is clicked within iframe, reopen this page in edit mode
+
+    //a link is clicked within the iframe, reopen this page in edit mode
     location.href = "editPage?path=" + (path.substring(contextPath.length, path.length));
     return false;
-}
-
-//on page form submit
-function pageFormSubmit(){
-    //NOT USED
-    var pageFormJson = $("#pageForm").serializeObject();
-    alert(JSON.stringify(pageFormJson));
 }
 
 //upload attachment
@@ -391,6 +489,22 @@ var messages = {
     "select": {
         en: "Select",
         tr: "Seç"
+    },
+    "apply": {
+        en: "Apply",
+        tr: "Uygula"
+    },
+    "button_save_and_publish": {
+        en: "Save and Publish",
+        tr: "Kaydet ve Yayınla"
+    },
+    "button_save_as_draft": {
+        en: "Save as Draft",
+        tr: "Taslak Olarak Kaydet"
+    },
+    "button_review_changes": {
+        en: "Review Changes",
+        tr: "Değişiklikleri Gözden Geçir"
     },
     "confirm_remove_page": {
         en: "This page will be completely removed from the system. This action is permanent. Are you sure?",

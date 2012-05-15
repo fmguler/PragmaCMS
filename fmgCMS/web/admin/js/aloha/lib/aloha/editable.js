@@ -52,6 +52,12 @@ define( [
 		Aloha.settings.contentHandler = {};
 	}
 
+	var defaultContentSerializer = function(editableElement){
+		return jQuery(editableElement).html();
+	};
+
+	var contentSerializer = defaultContentSerializer;
+
 	/**
 	 * Editable object
 	 * @namespace Aloha
@@ -76,8 +82,9 @@ define( [
 
 			// delimiters, timer and idle for smartContentChange
 			// smartContentChange triggers -- tab: '\u0009' - space: '\u0020' - enter: 'Enter'
+			// backspace: U+0008 - delete: U+007F
 			this.sccDelimiters = [ ':', ';', '.', '!', '?', ',',
-				unescape( '%u0009' ), unescape( '%u0020' ), 'Enter' ];
+				unescape( '%u0009' ), unescape( '%u0020' ), unescape( '%u0008' ), unescape( '%u007F' ), 'Enter' ];
 			this.sccIdle = 5000;
 			this.sccDelay = 500;
 			this.sccTimerIdle = false;
@@ -199,9 +206,17 @@ define( [
 				// by catching the keydown we can prevent the browser from doing its own thing
 				// if it does not handle the keyStroke it returns true and therefore all other
 				// events (incl. browser's) continue
-				me.obj.keydown( function( event ) {
+				//me.obj.keydown( function( event ) {
+				//me.obj.add('.aloha-block', me.obj).live('keydown', function (event) { // live not working but would be usefull
+				me.obj.add('.aloha-block', me.obj).keydown(function (event) {
+					var letEventPass = Markup.preProcessKeyStrokes( event );
 					me.keyCode = event.which;
-					return Markup.preProcessKeyStrokes( event );
+
+					if (!letEventPass) {
+						// the event will not proceed to key press, therefore trigger smartContentChange
+						me.smartContentChange( event );
+					}
+					return letEventPass;
 				} );
 
 				// handle keypress
@@ -688,19 +703,32 @@ define( [
 			this.removePlaceholder( clonedObj );
 			PluginManager.makeClean( clonedObj );
 
-			/*
-			//also deactivated for now. like initEditable. just in case ...
-			var content = clonedObj.html()
-			if ( typeof Aloha.settings.contentHandler.getContents === 'undefined' ) {
-				Aloha.settings.contentHandler.getContents = Aloha.defaults.contentHandler.getContents;
-			}
-			content = ContentHandlerManager.handleContent( content, {
-				contenthandler: Aloha.settings.contentHandler.getContents
-			} );
-			clonedObj.html( content );
-			*/
+			return asObject ? clonedObj.contents() : contentSerializer(clonedObj[0]);
+		},
 
-			return asObject ? clonedObj.contents() : clonedObj.html();
+		/**
+		 * Set the contents of this editable as a HTML string
+		 * @param content as html
+		 * @param return as object or html string
+		 * @return contents of the editable
+		 */
+		setContents: function( content, asObject ) {
+			var reactivate = null;
+
+			if ( Aloha.getActiveEditable() === this ) {
+				Aloha.deactivateEditable();
+				reactivate = this;
+			}
+
+			this.obj.html( content );
+
+			if ( null !== reactivate ) {
+				reactivate.activate();
+			}
+
+			this.smartContentChange({type : 'set-contents'});
+
+			return asObject ? this.obj.contents() : contentSerializer(this.obj[0]);
 		},
 
 		/**
@@ -767,7 +795,7 @@ define( [
 				clearTimeout( this.sccTimerIdle );
 				clearTimeout( this.sccTimerDelay );
 
-				this.sccTimerDelay = setTimeout( function() {
+				this.sccTimerDelay = window.setTimeout( function() {
 					Aloha.trigger( 'aloha-smart-content-changed', {
 						'editable'        : me,
 						'keyIdentifier'   : event.originalEvent.keyIdentifier,
@@ -826,7 +854,7 @@ define( [
 				// in the rare case idle time is lower then delay time
 				clearTimeout( this.sccTimerDelay );
 				clearTimeout( this.sccTimerIdle );
-				this.sccTimerIdle = setTimeout( function() {
+				this.sccTimerIdle = window.setTimeout( function() {
 					Aloha.trigger( 'aloha-smart-content-changed', {
 						'editable'        : me,
 						'keyIdentifier'   : null,
@@ -849,6 +877,24 @@ define( [
 			this.snapshotContent = this.getContents();
 			return ret;
 		}
-
 	} );
+
+	/**
+	 * Sets the serializer function to be used for the contents of all editables.
+	 *
+	 * The default content serializer will just call the jQuery.html()
+	 * function on the editable element (which gets the innerHTML property).
+	 *
+	 * This method is a static class method and will affect the result
+	 * of editable.getContents() for all editables that have been or
+	 * will be constructed.
+	 *
+	 * @param serializerFunction
+	 *        A function that accepts a DOM element and returns the serialized
+	 *        XHTML of the element contents (excluding the start and end tag of
+	 *        the passed element).
+	 */
+	Aloha.Editable.setContentSerializer = function( serializerFunction ) {
+		contentSerializer = serializerFunction;
+	};
 } );

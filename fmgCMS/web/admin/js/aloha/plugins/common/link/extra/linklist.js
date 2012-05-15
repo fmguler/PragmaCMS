@@ -25,8 +25,8 @@ function ( Aloha, jQuery ) {
 	 * @private
 	 */
 	var urlset = [
-		{ name: 'Aloha Editor - The HTML5 Editor', url: 'http://aloha-editor.com', type: 'website' },
-		{ name: 'Aloha Editor - Wiki', url: 'http://www.aloha-editor.org/wiki/Main_Page', type: 'website' },
+		{ name: 'Aloha Editor - The HTML5 Editor', url: 'http://aloha-editor.org', type: 'website' },
+		{ name: 'Aloha Editor - Wiki', url: 'http://github.com/alohaeditor/Aloha-Editor/wiki', type: 'website' },
 		{ name: 'Aloha Editor - GitHub', url: 'http://github.com/alohaeditor/Aloha-Editor', type: 'website' },
 		{ name: 'Aloha Logo', url: 'http://www.aloha-editor.com/images/aloha-editor-logo.png', type: 'image'  }
 	];
@@ -48,6 +48,13 @@ function ( Aloha, jQuery ) {
 		 * additional properties to the items
 		 */
 		init: function () {
+
+                        if ( typeof Aloha.settings.repositories !== 'undefined'
+                                        && typeof Aloha.settings.repositories.linklist !== 'undefined' 
+					&& typeof Aloha.settings.repositories.linklist.data !== 'undefined' ) {
+                                urlset = Aloha.settings.repositories.linklist.data;
+                        }
+
 			// Add ECMA262-5 Array method filter if not supported natively.
 			// But we will be very conservative and add to this single array
 			// object so that we do not tamper with the native Array prototype
@@ -67,11 +74,6 @@ function ( Aloha, jQuery ) {
 					
 					return other;
 				};
-			}
-			
-			if ( typeof Aloha.settings.repositories != 'undefined' 
-					&& typeof Aloha.settings.repositories.linklist.data != 'undefined' ) {
-				urlset = Aloha.settings.repositories.linklist.data;
 			}
 			
 			var l = urlset.length;

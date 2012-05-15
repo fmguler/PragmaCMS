@@ -5029,6 +5029,11 @@ body {
     width: 100%;
 }
 
+/* hidden */
+.style-hidden {
+    display:none;
+}
+
 /* attribute menu*/
 .attribute-menu {
     margin-bottom: 0px;

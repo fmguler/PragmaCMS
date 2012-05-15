@@ -221,35 +221,23 @@ public class AdminController {
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Page is renamed successfully", null);
     }
 
-    //ajax - save page attribute
+    //ajax - save all page attributes
     @RequestMapping()
     @ResponseBody
-    public String savePageAttribute(@RequestParam String value, @RequestParam int id) {
-        //get the attribute
-        PageAttribute attribute = contentService.getPageAttribute(id);
-        if (attribute == null) return ""; //TODO: return error status
+    public String savePageAttributes(@RequestParam Integer pageId, @RequestParam String comment, @RequestParam("attributeId[]") Integer[] attributeIdArray, HttpServletRequest request) {
+        for (Integer attributeId : attributeIdArray) {
+            String attributeValue = request.getParameter("attribute-" + attributeId);
+            Author user = (Author)request.getSession().getAttribute("user");
+            savePageAttribute(attributeId, attributeValue, user.getUsername(), comment);
+        }
 
-        //do not add a new version if the content is exactly same
-        if (value.equals(attribute.getValue())) return ""; //TODO: return status
-
-        //add a new version of the attribute
-        PageAttribute newAttribute = new PageAttribute();
-        newAttribute.setPage(attribute.getPage());
-        newAttribute.setAttribute(attribute.getAttribute());
-        newAttribute.setValue(value);
-        newAttribute.setAuthor("admin");
-        newAttribute.setDate(new Date());
-
-        newAttribute.setComment("added new version");
-        newAttribute.setVersion(attribute.getVersion() + 1);
-        contentService.savePageAttribute(newAttribute);
-
-        //update last modified
-        Page page = attribute.getPage();
+        //update page last modified
+        Page page = contentService.getPage(pageId);
         page.setLastModified(new Date());
         contentService.savePage(page);
 
-        return "";
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Page is saved successfully", null);
     }
 
     //ajax - remove page attribute
@@ -257,8 +245,8 @@ public class AdminController {
     @ResponseBody
     public String removePageAttribute(@RequestParam int id) {
         PageAttribute attribute = contentService.getPageAttribute(id);
-        if (attribute == null) return null; //TODO: return error status
-        if (attribute.getVersion() == 0) return null; //cannot delete zeroth attribute (or template will give error)
+        if (attribute == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Attribute not found", null);
+        if (attribute.getVersion() == 0) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "There is no other version to revert", null); //cannot delete zeroth attribute (or template will give error)
 
         contentService.removePageAttribute(id);
 
@@ -267,7 +255,8 @@ public class AdminController {
         page.setLastModified(new Date());
         contentService.savePage(page);
 
-        return "";
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Attribute is removed successfully", null);
     }
 
     //uploads new item
@@ -492,6 +481,28 @@ public class AdminController {
         //scan the template for ${} placeholders, use some convention for template and global attrs
         //detect the missing template attributes, and add them to the template
         //detect unused attributes and mark them
+    }
+
+    //save page attribute as a new version
+    private void savePageAttribute(Integer id, String value, String author, String comment){
+        //get the attribute
+        PageAttribute attribute = contentService.getPageAttribute(id);
+        if (attribute == null) return;
+
+        //do not add a new version if the content is exactly same
+        if (value.equals(attribute.getValue())) return;
+
+        //add a new version of the attribute
+        PageAttribute newAttribute = new PageAttribute();
+        newAttribute.setPage(attribute.getPage());
+        newAttribute.setAttribute(attribute.getAttribute());
+        newAttribute.setValue(value);
+        newAttribute.setAuthor(author);
+        newAttribute.setDate(new Date());
+
+        newAttribute.setComment(comment);
+        newAttribute.setVersion(attribute.getVersion() + 1);
+        contentService.savePageAttribute(newAttribute);
     }
 
     //SETTERS

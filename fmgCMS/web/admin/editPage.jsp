@@ -13,6 +13,7 @@
         <link rel="stylesheet" href="js/jquery-ui-base/jquery-ui-1.8.20.custom.css">
         <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
         <script type="text/javascript" src="js/jquery-ui-1.8.20.custom.min.js"></script>
+        <script type="text/javascript" src="js/jquery.iframe-post-form.js"></script>
         <script type="text/javascript" src="js/bootstrap/js/bootstrap.js"></script>
         <script type="text/javascript" src="js/scripts.js"></script>
         <script type="text/javascript">
@@ -21,7 +22,7 @@
             var page = null;
             var selectedAttributeId = null;
             var selectedAttributeHistory = null;
-            var pageAttachments = [<c:forEach items="${pageAttachments}" var="attch">{id: ${attch.id}, name: "${attch.name}"},</c:forEach>0];
+            var pageAttachments = null;
             $(function(){editPageReady(${page.id}, '${page.path}')});
         </script>
     </head>
@@ -40,7 +41,7 @@
                                     <a class="btn" href="javascript:uploadAttachmentDialog()"><i class="icon-upload"></i> Upload Attachment</a>
                                     <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
-                                        <li><a href="#"><i class="icon-list"></i> View Attachments</a></li>
+                                        <li><a href="javascript:viewAttachmentsDialog()"><i class="icon-list"></i> View Attachments</a></li>
                                     </ul>
                                 </div>
                                 <div class="btn-group style-display-ib">
@@ -83,8 +84,7 @@
         <!-- Upload Attachment Dialog -->
         <div id="uploadAttachmentDialog" title="Upload Attachment">
             <form id="uploadAttachmentForm" method="POST" action="uploadPageAttachment" enctype="multipart/form-data">
-                <input type="hidden" name="page.id" value="${page.id}"/>
-                <input type="hidden" name="page.path" value="${page.path}"/>
+                <input type="hidden" name="pageId" value="${page.id}"/>
                 <table class="style-full-width">
                     <tr>
                         <td><strong>Select the attachment to upload</strong></td>
@@ -92,11 +92,31 @@
                     <tr>
                         <td>
                             <br/>
-                            <input type="file" name="uploadedattachment" />
+                            <input id="uploadAttachmentDialogFile" type="file" name="pageAttachment" />
+                            <div id="uploadAttachmentDialogProgress" class="progress progress-striped active style-hidden">
+                                <div class="bar" style="width: 0%"></div>
+                            </div>
                         </td>
                     </tr>
                 </table>
             </form>
+        </div>
+
+        <!-- View Attachments Dialog -->
+        <div id="viewAttachmentsDialog" title="View Attachments">
+            <table id="pageAttachments" class="style-full-width">
+                <thead>
+                    <tr>
+                        <th><strong>Attachment Name</strong></th>
+                        <th><strong>Attachment Size</strong></th>
+                        <th><strong>Upload Date</strong></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
         </div>
 
         <!-- Rename Page Dialog -->

@@ -10,11 +10,11 @@ define([
         var Aloha = window.Aloha;
         var GENTICS = window.GENTICS;
         var jQuery = aQuery;
-        
+
         //set global instance, to access from dialog
         window.fmgPlugin =  Plugin.create( 'fmg', {
             imageObj: null,
-                
+
             init: function() {
                 // Executed on plugin initialization
                 var tabFmg = "Resim";
@@ -23,11 +23,11 @@ define([
                 this.addUISrcButtons(tabFmg);
                 this.subscribeEvents();
             },
-            
+
             subscribeEvents: function(){
                 //to use reference to plugin
-                var that = this;             
-                
+                var that = this;
+
                 //triger clickImage when an img tag inside container is clicked
                 Aloha.bind('aloha-editable-created', function( event, editable) {
                     try {
@@ -44,25 +44,25 @@ define([
                     //event.stopPropagation();
                     });
                 });
-                
+
                 //hide plugin tab if an img is unselected
                 Aloha.bind('aloha-selection-changed', function(event, rangeObject, originalEvent) {
-                    var foundMarkup;                    
+                    var foundMarkup;
 
                     if (Aloha.activeEditable !== null) {
-                        foundMarkup = that.findImgMarkup( rangeObject );                                                
+                        foundMarkup = that.findImgMarkup( rangeObject );
 
                         // Enable image specific ui components if the element is an image
                         if (foundMarkup) {
                             that.insertImgButton.hide();
                             FloatingMenu.setScope(that.name);
-                            that.imgSrcField.setTargetObject(foundMarkup, 'src');                            
+                            that.imgSrcField.setTargetObject(foundMarkup, 'src');
                             FloatingMenu.activateTabOfButton('imgsrc');
                         } else {
                             that.insertImgButton.show();
                             that.imgSrcField.setTargetObject(null);
                         }
-                        
+
                         // TODO this should not be necessary here!
                         FloatingMenu.doLayout();
                     }
@@ -78,7 +78,7 @@ define([
                         '.x-combo-list' ).show();
                 });
             },
-            
+
             addUIInsertButton: function(tabId) {
                 var that = this;
                 this.insertImgButton = new Aloha.ui.Button({
@@ -94,37 +94,37 @@ define([
 
                 FloatingMenu.addButton('Aloha.continuoustext', this.insertImgButton, "Insert", 2);
             },
-            
+
             addUISrcButtons: function(tabId) {
                 var that = this;
-                
+
                 //not used
                 var imgSrcLabel = new Aloha.ui.Button({
                     'label': "Source",
                     'tooltip': "Image Source",
                     'size': 'small'
                 });
-                
+
                 //(not used) add the title field for images
                 var imgTitleLabel = new Aloha.ui.Button({
                     'label': "Title",
                     'tooltip': "Image Title",
                     'size': 'small'
-                });			
-                this.imgTitleField = new Aloha.ui.AttributeField();                
+                });
+                this.imgTitleField = new Aloha.ui.AttributeField();
                 this.imgTitleField.setObjectTypeFilter();
-                
+
                 //src field, our precious
                 this.imgSrcField = new Aloha.ui.AttributeField({
                     'name' : 'imgsrc'
                 });
                 //fmg: bind to repository (aloha repositories sucks)
                 //this.imgSrcField.setTemplate( '<span><b>{name}</b><br/>{url}</span>' );
-                //this.imgSrcField.setObjectTypeFilter("fmg-image");			
-                               
+                //this.imgSrcField.setObjectTypeFilter("fmg-image");
+
                 //select buttom
                 this.selectImgButton = new Aloha.ui.Button({
-                    'label' : 'Seç',                    
+                    'label' : 'Seç',
                     'size' : 'small',
                     'onclick' : function () {
                         that.selectFromPopup();
@@ -139,7 +139,7 @@ define([
             },
 
             insertImg: function(){
-                var range = Aloha.Selection.getRangeObject(),                
+                var range = Aloha.Selection.getRangeObject(),
                 imagePluginUrl = Aloha.getPluginUrl('fmg'),
                 imagetag, newImg;
 
@@ -151,10 +151,10 @@ define([
                     GENTICS.Utils.Dom.insertIntoDOM(newImg, range, jQuery(Aloha.activeEditable.obj));
 
                 } else {
-                    alert('Lütfen resim eklemek için eklenecek yere tıklayın.');                
+                    alert('Lütfen resim eklemek için eklenecek yere tıklayın.');
                 }
             },
-            
+
             findImgMarkup: function() {
                 var range = Aloha.Selection.getRangeObject();
                 var rangeTree = range.getRangeTree();
@@ -165,21 +165,21 @@ define([
                 }
                 return undefined;
             },
-            
+
             clickImage: function( e ) {
                 this.imageObj = jQuery(e.target);
                 //this.imageObj.attr('src')
-                
+
                 FloatingMenu.setScope(this.name);
                 this.imgSrcField.setTargetObject(this.imageObj, 'src');
                 FloatingMenu.activateTabOfButton('imgsrc');
-            
+
                 //select the image
                 var range = Aloha.createRange();
-                
+
                 //çok zor oldu, bunu yapmak. text dahil indeksi, parentin altında arasında.
                 //ff, chrome, ve ie9'da çalışıyor.
-                var imgindex = this.imageObj.parent().contents().index(this.imageObj);                
+                var imgindex = this.imageObj.parent().contents().index(this.imageObj);
 
                 //setStart and setEnd take dom node and the offset as parameters
                 range.setStart( this.imageObj.parent().get(0), imgindex);
@@ -189,7 +189,7 @@ define([
                 Aloha.getSelection().removeAllRanges();
                 Aloha.getSelection().addRange( range );
             },
-            
+
             //fmg: select the image from popup, get the images from global
             selectFromPopup: function(){
                 this.selectDialog = $('<div></div>')
@@ -197,32 +197,32 @@ define([
                     autoOpen: false,
                     title: 'Resim Seç',
                     modal: true
-    
+
                 });
 
                 //prepare dialog html from global pageAttachments
                 var dialogHtml = "<p><ul>";
                 var pageAttachments = window.parent.pageAttachments;
-                for (var i = 0; i<pageAttachments.length-1;i++){
+                for (var i = 0; i<pageAttachments.length;i++){
                     dialogHtml += "<li><a href=\"javascript:window.fmgPlugin.onImgSelected("+pageAttachments[i].id+", '"+pageAttachments[i].name+"')\">"+pageAttachments[i].name+"</a></li>";
                 }
                 dialogHtml += "</ul></p>";
-                
+
                 this.selectDialog.html(dialogHtml);
                 this.selectDialog.dialog("option", "buttons", {
                     "İptal": function() {
                         $(this).dialog("close");
-                        
+
                     }
                 });
                 this.selectDialog.dialog('open');
             },
-            
+
             onImgSelected: function(id, name){
                 this.imageObj.attr("src", "page-attachment/"+id+"/"+name);
                 this.selectDialog.dialog("close");
             }
         });
-        
+
         return window.fmgPlugin;
     });

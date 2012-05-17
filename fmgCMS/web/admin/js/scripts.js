@@ -37,6 +37,35 @@ function pagesReady(){
 
 //on edit page ready
 function editPageReady(pageId, pagePath){
+    //to make ajax upload
+    $('#uploadAttachmentForm').iframePostForm({
+        json : false,
+        post : function(){
+            if ($("#uploadAttachmentDialogFile").val() == ""){
+                alert("Please select a file");
+                return false;
+            }
+
+            //fake progress bar :)
+            $("#uploadAttachmentDialogFile").fadeOut('fast', function(){
+                $("#uploadAttachmentDialogProgress").fadeIn('fast');
+                setTimeout("uploadProgress(0)", 100);
+            });
+
+            return true;
+        },
+        complete : function (responseStr){
+            var response = $.parseJSON(responseStr.substring(responseStr.indexOf('{'), responseStr.indexOf('</pre>')));
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                pageAttachments = response.object;
+                $('#uploadAttachmentDialog').dialog('close');
+                showStatusDialog(response.message);
+            }
+        }
+    });
+
     //upload attachment (modal)
     $("#uploadAttachmentDialog").dialog({
         //height: 'auto',
@@ -46,10 +75,27 @@ function editPageReady(pageId, pagePath){
         buttons: [{
             'class': 'btn btn-primary',
             text: messages["upload"][locale],
-            click: uploadAttachment
+            click: function(){
+                $("#uploadAttachmentForm").submit();
+            }
         },{
             'class': 'btn',
             text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //view attachment (modal)
+    $("#viewAttachmentsDialog").dialog({
+        height: 500,
+        width: 570,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
             click: function() {
                 $(this).dialog("close");
             }
@@ -159,6 +205,21 @@ function editPageReady(pageId, pagePath){
         }
     });
 
+    //get the page attachments as json
+    $.ajax({
+        url: 'getPageAttachments',
+        data: 'pageId='+pageId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                pageAttachments = response.object;
+            }
+        }
+    });
+
     //load the page preview iframe
     var pagePreviewSrc = contextPath+pagePath+"?time="+(new Date()).getTime()+"&edit";
     $("#pagePreview").attr("src", pagePreviewSrc);
@@ -213,11 +274,6 @@ function removePage(pageId, goback){
 //view the current page
 function viewPage(){
     window.open(contextPath + page.path);
-}
-
-//upload attachment
-function uploadAttachment(){
-    $("#uploadAttachmentForm").submit();
 }
 
 //save page properties
@@ -311,6 +367,30 @@ function revertPageAttribute(){
     });
 }
 
+//remove page attachment
+function removePageAttachment(attachmentId, elemIndex){
+    if(!confirm(messages["confirm_remove_page_attachment"][locale])) return;
+
+    $.ajax({
+        url: 'removePageAttachment',
+        data: 'attachmentId='+attachmentId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                //hide the attachment row
+                $("#attachment-"+attachmentId).css({
+                    "background-color" : "#fbcdcd"
+                }, 'fast').fadeOut("fast");
+                //remove the element from attachments array
+                pageAttachments.splice(elemIndex,1);
+            }
+        }
+    });
+}
+
 //edit page dialogs-------------------------------------------------------------
 
 //rename dialog, calls renamePage
@@ -320,7 +400,31 @@ function renamePageDialog(){
 
 //upload dialog, calls uploadAttachment
 function uploadAttachmentDialog(){
-    $('#uploadAttachmentDialog').dialog('open')
+    $('#uploadAttachmentDialog').dialog('open');
+
+    //make sure that progres bar is hidden
+    $("#uploadAttachmentDialogProgress").find("div").css("width", "0%");
+    $("#uploadAttachmentDialogProgress").hide();
+    $("#uploadAttachmentDialogFile").show();
+    $("#uploadAttachmentDialogFile").val("");
+}
+
+//view attachments dialog, calls removeAttachment
+function viewAttachmentsDialog(){
+    $('#viewAttachmentsDialog').dialog('open');
+
+    //populate with attachments
+    $('#pageAttachments > tbody').empty();
+    for (var i = 0; i < pageAttachments.length; i++) {
+        var pageAttachmentRow = "<tr id='attachment-"+pageAttachments[i].id+"'>";
+        pageAttachmentRow += "<td>"+pageAttachments[i].name + "</td>";
+        pageAttachmentRow += "<td>"+pageAttachments[i].contentLength + "</td>";
+        pageAttachmentRow += "<td>"+pageAttachments[i].lastModified + "</td>";
+        pageAttachmentRow += "<td><a class='btn' href='javascript:removePageAttachment("+pageAttachments[i].id+","+i+")'>Delete</a></td>";
+        pageAttachmentRow += "</tr>";
+        $('#pageAttachments > tbody').append(pageAttachmentRow);
+    }
+
 }
 
 //save dialog, calls publish/draft/review
@@ -521,6 +625,15 @@ function attributeHistoryById(attributeHistoryId){
     return null;
 }
 
+//set upload progress bar
+function uploadProgress(percent){
+    if (!$("#uploadAttachmentDialogProgress").is(":visible")) return;
+    $("#uploadAttachmentDialogProgress").find("div").css("width", percent+"%");
+    var newPercent = percent+1;
+    if (newPercent>=100) return;
+    progressTimer = setTimeout("uploadProgress("+newPercent+")", 100);
+}
+
 //utility-----------------------------------------------------------------------
 
 //fill a target with item values
@@ -660,5 +773,9 @@ var messages = {
     "confirm_remove_page": {
         en: "This page will be completely removed from the system. This action is permanent. Are you sure?",
         tr: "Bu sayfa sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
+    },
+    "confirm_remove_page_attachment": {
+        en: "This attachment will be completely removed from the system. This action is permanent. Are you sure?",
+        tr: "Bu dosya sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
     }
 };

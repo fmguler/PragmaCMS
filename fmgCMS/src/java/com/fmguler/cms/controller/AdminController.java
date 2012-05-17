@@ -181,7 +181,6 @@ public class AdminController {
         scanPageAttributes(page);
 
         model.addAttribute("page", page);
-        model.addAttribute("pageAttachments", contentService.getPageAttachments(page.getId()));
         return "admin/editPage";
     }
 
@@ -324,15 +323,23 @@ public class AdminController {
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Attribute is reverted successfully", null);
     }
 
-    //uploads new item
+    //ajax - get page attachments
     @RequestMapping()
-    public String uploadPageAttachment(HttpServletRequest request) {
+    @ResponseBody
+    public String getPageAttachments(@RequestParam Integer pageId) {
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", contentService.getPageAttachments(pageId));
+    }
+
+    //ajax - uploads page attachment
+    @RequestMapping()
+    @ResponseBody
+    public String uploadPageAttachment(@RequestParam Integer pageId, HttpServletRequest request) {
         if (request instanceof MultipartHttpServletRequest) {
             MultipartHttpServletRequest multipartReq = (MultipartHttpServletRequest)request;
 
             //which page this attachment belongs to
             Page page = new Page();
-            page.setId(Integer.valueOf(request.getParameter("page.id")));
+            page.setId(pageId);
 
             Iterator it = multipartReq.getFileNames();
             while (it.hasNext()) {
@@ -358,10 +365,10 @@ public class AdminController {
                     IOUtils.copyLarge(is, os);
                 } catch (StorageException ex) {
                     Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Storage service error at uploadPageAttachment", ex);
-                    continue; //TODO: inform the user
+                    return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Error uploading attachment: " + ex.getMessage(), null);
                 } catch (IOException ex) {
                     Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot read from multipart request input stream", ex);
-                    continue; //TODO: inform the user
+                    return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Error uploading attachment: " + ex.getMessage(), null);
                 } finally {
                     IOUtils.closeQuietly(is);
                     IOUtils.closeQuietly(os);
@@ -376,7 +383,20 @@ public class AdminController {
             }
         }
 
-        return "redirect:/admin/editPage?path=" + request.getParameter("page.path");
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Attachment is uploaded successfully", contentService.getPageAttachments(pageId));
+    }
+
+    //remove page attachment
+    @RequestMapping
+    @ResponseBody
+    public String removePageAttachment(@RequestParam int attachmentId) {
+        try {
+            contentService.removePageAttachment(attachmentId);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
+        } catch (Exception ex) { //TODO: service exception
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This page attachment could not be removed. Error: " + ex.getMessage(), null);
+        }
     }
 
     //--------------------------------------------------------------------------

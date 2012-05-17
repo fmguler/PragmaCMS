@@ -167,6 +167,11 @@ public class ContentServiceImpl implements ContentService {
         ven.save(pageAttachment);
     }
 
+    @Override
+    public void removePageAttachment(int id) {
+        ven.delete(id, PageAttachment.class);
+    }
+
     //AUTHOR--------------------------------------------------------------------
     public Author getAuthor(String username) {
         Set joins = new HashSet();

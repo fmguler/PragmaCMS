@@ -93,4 +93,6 @@ public interface ContentService {
     List getPageAttributeHistories(Integer pageId, String attribute);
 
     PageAttributeHistory getPageAttributeHistory(int id);
+
+    void removePageAttachment(int id);
 }

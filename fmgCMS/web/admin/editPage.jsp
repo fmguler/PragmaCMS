@@ -19,6 +19,7 @@
             var locale = 'en';
             var contextPath = '${pageContext.request.contextPath}';
             var pagePath = "${page.path}";
+            var pageId = "${page.id}";
             var pageAttachments = [<c:forEach items="${pageAttachments}" var="attch">{id: ${attch.id}, name: "${attch.name}"},</c:forEach>0];
             $(editPageReady);
         </script>
@@ -62,7 +63,7 @@
                                 &nbsp;&nbsp;
                                 <a class="btn btn-success" href="javascript:saveDialog()"><i class="icon-ok icon-white"></i> Save All</a>
                                 <a class="btn btn-primary" href="javascript:historyDialog()"><i class="icon-list icon-white"></i> History</a>
-                                <a class="btn btn-danger" href="javascript:removePageAttribute()"><i class="icon-remove icon-white"></i> Remove This Version</a>
+                                <a class="btn btn-danger" href="javascript:revertDialog()"><i class="icon-remove icon-white"></i> Revert</a>
                                 <a class="btn btn-info" href="javascript:editHtmlDialog()"><i class="icon-pencil icon-white"></i> Edit HTML</a>
                             </div>
                         </div>
@@ -87,6 +88,18 @@
                 <p>&copy; PragmaCraft 2012</p>
             </footer>
         </div>
+
+        <!-- Page Attributes Form -->
+        <form id="pageAttributesForm">
+            <input type="hidden" name="pageId" value="${page.id}"/>
+            <!-- Hidden page attributes -->
+            <c:forEach items="${page.pageAttributes}" var="attr">
+                <textarea class="style-hidden" name="attribute-${attr.id}" id="attribute-${attr.id}">${fn:escapeXml(attr.value)}</textarea>
+                <input type="hidden" id="attribute-to-id-${attr.attribute}" value="${attr.id}" />
+                <input type="hidden" id="id-to-attribute-${attr.id}" value="${attr.attribute}" />
+                <input type="hidden" id="id-to-version-${attr.id}" value="${attr.version}" />
+            </c:forEach>
+        </form>
 
         <!-- Upload Attachment Dialog -->
         <div id="uploadAttachmentDialog" title="Upload Attachment">
@@ -135,25 +148,36 @@
 
         <!-- Save Dialog -->
         <div id="saveDialog" title="Save Changes">
-            <form id="pageAttributesForm">
-                <input type="hidden" name="pageId" value="${page.id}"/>
-                <table class="style-full-width">
-                    <tr>
-                        <td><strong>Comment:</strong></td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <textarea class="span7" rows="4" name="comment">added new version</textarea>
-                        </td>
-                    </tr>
-                </table>
+            <table class="style-full-width">
+                <tr>
+                    <td><strong>Comment:</strong></td>
+                </tr>
+                <tr>
+                    <td>
+                        <textarea id="saveDialogComment" class="span7" rows="4">added new version</textarea>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-                <!-- Hidden page attributes -->
-                <c:forEach items="${page.pageAttributes}" var="attr">
-                    <textarea class="style-hidden" name="attribute-${attr.id}" id="attribute-${attr.id}">${fn:escapeXml(attr.value)}</textarea>
-                    <input type="hidden" name="attributeId[]" id="attribute-to-id-${attr.attribute}" value="${attr.id}" />
-                    <input type="hidden" id="id-to-attribute-${attr.id}" value="${attr.attribute}" />
-                </c:forEach>
+        <!-- Revert Dialog -->
+        <div id="revertDialog" title="Revert Attribute To Previous Versions">
+            <form id="revertForm">
+                <input type="hidden" id="revertDialogAttributeId" name="attributeId" value=""/>
+                <table id="previousVersions" class="style-full-width">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th><strong>Author</strong></th>
+                            <th><strong>Comment</strong></th>
+                            <th><strong>Date</strong></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
             </form>
         </div>
     </body>

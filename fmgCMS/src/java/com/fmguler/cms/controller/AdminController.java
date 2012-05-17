@@ -224,39 +224,91 @@ public class AdminController {
     //ajax - save all page attributes
     @RequestMapping()
     @ResponseBody
-    public String savePageAttributes(@RequestParam Integer pageId, @RequestParam String comment, @RequestParam("attributeId[]") Integer[] attributeIdArray, HttpServletRequest request) {
-        for (Integer attributeId : attributeIdArray) {
-            String attributeValue = request.getParameter("attribute-" + attributeId);
-            Author user = (Author)request.getSession().getAttribute("user");
-            savePageAttribute(attributeId, attributeValue, user.getUsername(), comment);
+    public String savePageAttributes(@RequestParam Integer pageId, @RequestParam String comment, @RequestParam Boolean publish, HttpServletRequest request) {
+        Author user = (Author)request.getSession().getAttribute("user");
+        Page page = contentService.getPage(pageId);
+        if (page == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null);
+
+        //save updated page attributes
+        List savedAttributes = new LinkedList();
+        Date now = new Date(); //all changes have same date (to view by date in history)
+        List<PageAttribute> pageAttributes = page.getPageAttributes();
+        for (PageAttribute attribute : pageAttributes) {
+            String attributeValue = request.getParameter("attribute-" + attribute.getId());
+            if (attributeValue == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No value specified for: " + attribute.getAttribute(), null);
+
+            //do not add a new version if the content is exactly same
+            if (attributeValue.equals(attribute.getValue())) continue;
+
+            //update the value and add history attribute (revision)
+            PageAttributeHistory attributeHistory = new PageAttributeHistory();
+            attributeHistory.setPage(page);
+            attributeHistory.setAttribute(attribute.getAttribute());
+            attributeHistory.setValue(attributeValue);
+            attributeHistory.setAuthor(user.getUsername());
+            attributeHistory.setDate(now);
+            attributeHistory.setComment(comment);
+            attributeHistory.setVersion(null); //do not try to select max(version), instead we just sort by date and number from 1 to n
+            contentService.savePageAttributeHistory(attributeHistory);
+
+            //update attribute value and version if this is not a draft
+            if (publish) {
+                attribute.setPage(page); //does not include page because it's got from page
+                attribute.setValue(attributeHistory.getValue());
+                attribute.setAuthor(attributeHistory.getAuthor());
+                attribute.setDate(attributeHistory.getDate());
+                attribute.setComment(attributeHistory.getComment());
+                attribute.setVersion(attributeHistory.getId()); //to detect which history attribute this current attribute corresponds to
+                contentService.savePageAttribute(attribute);
+            }
+
+            //to notify user which atts are saved
+            savedAttributes.add(attribute.getAttribute());
         }
 
-        //update page last modified
-        Page page = contentService.getPage(pageId);
-        page.setLastModified(new Date());
-        contentService.savePage(page);
+        //nothing to save
+        if (savedAttributes.isEmpty()) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No attribute is changed, nothing to save", null);
+
+        //update page last modified if this is not a draft
+        if (publish) {
+            page.setLastModified(new Date());
+            contentService.savePage(page);
+        }
 
         //return success
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Page is saved successfully", null);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Saved following attributes successfully;", savedAttributes);
     }
 
-    //ajax - remove page attribute
+    //ajax - page attribute histories
     @RequestMapping()
     @ResponseBody
-    public String removePageAttribute(@RequestParam int id) {
-        PageAttribute attribute = contentService.getPageAttribute(id);
-        if (attribute == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Attribute not found", null);
-        if (attribute.getVersion() == 0) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "There is no other version to revert", null); //cannot delete zeroth attribute (or template will give error)
+    public String getPageAttributeHistories(@RequestParam Integer pageId, @RequestParam String attribute) {
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", contentService.getPageAttributeHistories(pageId, attribute));
+    }
 
-        contentService.removePageAttribute(id);
+    //ajax - revert page attribute to history version
+    @RequestMapping()
+    @ResponseBody
+    public String revertPageAttribute(@RequestParam Integer attributeId, @RequestParam Integer attributeHistoryId) {
+        PageAttribute attribute = contentService.getPageAttribute(attributeId);
+        PageAttributeHistory attributeHistory = contentService.getPageAttributeHistory(attributeHistoryId);
+        if (attribute == null || attributeHistory == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Attribute not found", null);
 
-        //update last modified
+        //revert to this history version
+        attribute.setValue(attributeHistory.getValue());
+        attribute.setAuthor(attributeHistory.getAuthor());
+        attribute.setDate(attributeHistory.getDate());
+        attribute.setComment(attributeHistory.getComment());
+        attribute.setVersion(attributeHistory.getId()); //to detect which history attribute this current attribute corresponds to
+        contentService.savePageAttribute(attribute);
+
+        //update last modified of the page
         Page page = attribute.getPage();
         page.setLastModified(new Date());
         contentService.savePage(page);
 
         //return success
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Attribute is removed successfully", null);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Attribute is reverted successfully", null);
     }
 
     //uploads new item
@@ -481,28 +533,6 @@ public class AdminController {
         //scan the template for ${} placeholders, use some convention for template and global attrs
         //detect the missing template attributes, and add them to the template
         //detect unused attributes and mark them
-    }
-
-    //save page attribute as a new version
-    private void savePageAttribute(Integer id, String value, String author, String comment){
-        //get the attribute
-        PageAttribute attribute = contentService.getPageAttribute(id);
-        if (attribute == null) return;
-
-        //do not add a new version if the content is exactly same
-        if (value.equals(attribute.getValue())) return;
-
-        //add a new version of the attribute
-        PageAttribute newAttribute = new PageAttribute();
-        newAttribute.setPage(attribute.getPage());
-        newAttribute.setAttribute(attribute.getAttribute());
-        newAttribute.setValue(value);
-        newAttribute.setAuthor(author);
-        newAttribute.setDate(new Date());
-
-        newAttribute.setComment(comment);
-        newAttribute.setVersion(attribute.getVersion() + 1);
-        contentService.savePageAttribute(newAttribute);
     }
 
     //SETTERS

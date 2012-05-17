@@ -121,6 +121,25 @@ function editPageReady(){
         }]
     });
 
+    //revert (modal)
+    $("#revertDialog").dialog({
+        height: 500,
+        width: 670,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-danger',
+            text: messages["button_revert_selected"][locale],
+            click: revertPageAttribute
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
     //load the page preview iframe
     var pagePreviewSrc = contextPath+pagePath+"?time="+(new Date()).getTime()+"&edit";
     $("#pagePreview").attr("src", pagePreviewSrc);
@@ -194,8 +213,10 @@ function renamePage(){
 }
 
 //save all page attributes
-function savePageAttributes(){
+function savePageAttributes(publish){
     var pageAttributes =$("#pageAttributesForm").serializeObject() ;
+    pageAttributes.comment = $("#saveDialogComment").val();
+    pageAttributes.publish = publish;
 
     $.ajax({
         url: 'savePageAttributes',
@@ -207,30 +228,36 @@ function savePageAttributes(){
                 showErrorDialog(response.message);
             } else {
                 $('#saveDialog').dialog('close');
-                showStatusDialog(response.message);
-                //TODO: we need to update attribute id's (they're changed)
+
+                //add saved attributes to message
+                var message = response.message+"<br/>";
+                var savedAttrs = response.object;
+
+                message += "<ul>";
+                for (var i=0; i<savedAttrs.length; i++){
+                    message += "<li>"+savedAttrs[i]+"</li>"
+                }
+                message += "</ul>";
+
+                showStatusDialog(message);
             }
         }
     });
 }
 
-//remove the selected page attribute
-function removePageAttribute(){
-    var attributeId = $("#selectedAttributeId").val();
-    if (attributeId=='') return;
-
-    if(!confirm('You will delete this version of the attribute, are you sure?')) return;
-
+//revert attribute to selected history version
+function revertPageAttribute(){
     $.ajax({
-        url: 'removePageAttribute',
-        data: 'id='+attributeId,
+        url: 'revertPageAttribute',
+        data: $("#revertForm").serializeObject(),
         dataType: 'json',
         type: 'POST',
         success: function(response) {
             if (response.status != "0") {
                 showErrorDialog(response.message);
             } else {
-                location.reload();
+                $('#revertDialog').dialog('close');
+                showStatusDialog(response.message);
             }
         }
     });
@@ -245,17 +272,82 @@ function saveDialog(){
 
 //save all page attributes and immediately publish them
 function saveAndPublish(){
-    savePageAttributes();
+    savePageAttributes(true);
 }
 
 //save all page attributes as draft version (don't publish)
 function saveAsDraft(){
-    alert("draft");
+    savePageAttributes(false);
 }
 
 //review changes, diff to published version
 function reviewChanges(){
     alert("review");
+}
+
+//page all attributes history
+function historyDialog(){
+    alert("not implemented yet");
+}
+
+//revert dialog, previews attribute html to prev versions, or calls revertPageAttribute
+function revertDialog(){
+    var attributeId = $("#selectedAttributeId").val();
+    if (attributeId==''){
+        alert("Please select an attribute first.");
+        return;
+    }
+    var attribute = $("#id-to-attribute-"+attributeId).val();
+    var currentVersion = $("#id-to-version-"+attributeId).val();
+
+    //populate the dialog with history records of the current attribute
+    revertDialogPopulate(attributeId, attribute, currentVersion)
+
+    //open the dialog
+    $('#revertDialog').dialog('open');
+}
+
+//populates the revert dialog with the selected attribute history
+var selectedAttributeHistory = null;
+function revertDialogPopulate(attributeId, attribute, currentVersion){
+    $.ajax({
+        url: 'getPageAttributeHistories',
+        data: 'pageId='+pageId+"&attribute="+attribute,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                selectedAttributeHistory = response.object;
+                $('#revertDialogAttributeId').val(attributeId);
+                $('#previousVersions > tbody').empty();
+                for (var i = 0; i < selectedAttributeHistory.length; i++) {
+                    var current = (selectedAttributeHistory[i].id==currentVersion);
+                    var attributeHistoryRow = current?"<tr style='background-color:#00ff00'>":"<tr>";
+                    attributeHistoryRow += "<td><input type='radio' name='attributeHistoryId' value='"+selectedAttributeHistory[i].id+"' "+(current?"checked":"")+" /></td>";
+                    attributeHistoryRow += "<td>"+selectedAttributeHistory[i].author + "</td>";
+                    attributeHistoryRow += "<td>"+selectedAttributeHistory[i].comment + "</td>";
+                    attributeHistoryRow += "<td>"+selectedAttributeHistory[i].date + "</td>";
+                    attributeHistoryRow += "<td><a class='btn' href='javascript:revertAttributePreview(\""+attribute+"\","+attributeId+","+i+")'>Preview</a></td>";
+                    attributeHistoryRow += "</tr>";
+                    $('#previousVersions > tbody').append(attributeHistoryRow);
+                }
+            }
+        }
+    });
+}
+
+//revert attribute to specified version - preview
+function revertAttributePreview(attribute, attributeId, version){
+    var html = selectedAttributeHistory[version].value;
+
+    //update the actual attribute html
+    updateAttributeHtml(attributeId, html);
+
+    //update editable html
+    var editable = $("#pagePreview").contents().find("#attribute-editable-"+attribute);
+    editable.html(html);
 }
 
 //edit page attribute contents (html)
@@ -505,6 +597,10 @@ var messages = {
     "button_review_changes": {
         en: "Review Changes",
         tr: "Değişiklikleri Gözden Geçir"
+    },
+    "button_revert_selected": {
+        en: "Revert To Selected Version",
+        tr: "Seçili Versiyona Geri Dön"
     },
     "confirm_remove_page": {
         en: "This page will be completely removed from the system. This action is permanent. Are you sure?",

@@ -81,4 +81,16 @@ public interface ContentService {
     Author getAuthor(String username);
 
     void removePage(int id);
+
+    void savePageAttributeHistory(PageAttributeHistory pageAttributeHistory);
+
+    /**
+     * Get the previous versions of a page attribute
+     * @param pageId the page id
+     * @param attribute the attribute name
+     * @return all versions of the attribute including current
+     */
+    List getPageAttributeHistories(Integer pageId, String attribute);
+
+    PageAttributeHistory getPageAttributeHistory(int id);
 }

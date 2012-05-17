@@ -31,17 +31,8 @@ public class ContentServiceImpl implements ContentService {
         Criteria criteria = new Criteria();
         criteria.eq("Page.path", path);
 
-        //modify the query
-        String query = ven.getQueryGenerator().generateSelectQuery(Page.class, joins);
-        query += " left join (select page_id as __page_id, attribute as __attribute, max(version) as __max_version from page_attribute group by attribute, page_id) __pa on (__pa.__page_id = page_id and __pa.__attribute = page_page_attributes.attribute)";
-        query += " left join (select template_id as __template_id, attribute as __attribute, max(version) as __max_version from template_attribute group by attribute, template_id) __ta on (__ta.__template_id = page.template_id and __ta.__attribute = page_template_template_attributes.attribute)";
-        query += " where 1=1 ";
-        query += " and (page_page_attributes.version is null or page_page_attributes.version = __pa.__max_version)";
-        query += " and (page_template_template_attributes.version is null or page_template_template_attributes.version = __ta.__max_version) ";
-        query += criteria.criteriaStringToSQL() + " and " + criteria.criteriaToSQL() + criteria.orderStringToSQL();
-
         //get the list
-        List list = ven.getQueryMapper().list(query, criteria.getParameters(), Page.class);
+        List list = ven.list(Page.class, joins, criteria);
 
         if (list.isEmpty()) return null;
         return (Page)list.get(0);
@@ -55,17 +46,8 @@ public class ContentServiceImpl implements ContentService {
         Criteria criteria = new Criteria();
         criteria.eq("Page.id", id);
 
-        //modify the query
-        String query = ven.getQueryGenerator().generateSelectQuery(Page.class, joins);
-        query += " left join (select page_id as __page_id, attribute as __attribute, max(version) as __max_version from page_attribute group by attribute, page_id) __pa on (__pa.__page_id = page_id and __pa.__attribute = page_page_attributes.attribute)";
-        query += " left join (select template_id as __template_id, attribute as __attribute, max(version) as __max_version from template_attribute group by attribute, template_id) __ta on (__ta.__template_id = page.template_id and __ta.__attribute = page_template_template_attributes.attribute)";
-        query += " where 1=1 ";
-        query += " and (page_page_attributes.version is null or page_page_attributes.version = __pa.__max_version)";
-        query += " and (page_template_template_attributes.version is null or page_template_template_attributes.version = __ta.__max_version) ";
-        query += criteria.criteriaStringToSQL() + " and " + criteria.criteriaToSQL() + criteria.orderStringToSQL();
-
         //get the list
-        List list = ven.getQueryMapper().list(query, criteria.getParameters(), Page.class);
+        List list = ven.list(Page.class, joins, criteria);
 
         if (list.isEmpty()) return null;
         return (Page)list.get(0);
@@ -84,8 +66,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public List getPages() {
         Set joins = new HashSet();
-        joins.add("Page.template.templateAttributes");
-        joins.add("Page.pageAttributes");
+        joins.add("Page.template");
         Criteria criteria = new Criteria();
         criteria.orderAsc("Page.path");
         List list = ven.list(Page.class, joins, criteria);
@@ -113,7 +94,6 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public List getTemplates() {
         Set joins = new HashSet();
-        joins.add("Template.templateAttributes");
         Criteria criteria = new Criteria();
         criteria.orderAsc("Template.name");
         List list = ven.list(Template.class, joins, criteria);
@@ -129,8 +109,30 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    public PageAttributeHistory getPageAttributeHistory(int id) {
+        Set joins = new HashSet();
+        return (PageAttributeHistory)ven.get(id, PageAttributeHistory.class, joins);
+    }
+
+    @Override
+    public List getPageAttributeHistories(Integer pageId, String attribute) {
+        Set joins = new HashSet();
+        joins.add("PageAttributeHistory.page");
+        Criteria criteria = new Criteria();
+        criteria.eq("PageAttributeHistory.page.id", pageId);
+        criteria.eq("PageAttributeHistory.attribute", attribute).and();
+        criteria.orderDesc("PageAttributeHistory.date");
+        return ven.list(PageAttributeHistory.class, joins, criteria);
+    }
+
+    @Override
     public void savePageAttribute(PageAttribute pageAttribute) {
         ven.save(pageAttribute);
+    }
+
+    @Override
+    public void savePageAttributeHistory(PageAttributeHistory pageAttributeHistory) {
+        ven.save(pageAttributeHistory);
     }
 
     @Override

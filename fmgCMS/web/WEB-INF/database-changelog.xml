@@ -216,6 +216,7 @@
     <!-- << ATTACHMENT SUPPORT -->
 
     <!-- MILESTONE 0.3 AUTHOR/ETC >> -->
+    <!-- add author table, for login -->
     <changeSet author="fmguler" id="26">
         <createTable schemaName="public" tableName="author">
             <column autoIncrement="true" name="id" type="serial">
@@ -236,6 +237,80 @@
             <column name="last_name" value="Administrator"/>
             <column name="email" value="root@localhost"/>
         </insert>
+    </changeSet>
+    <!-- refactoring versions of page attribute to separate table -->
+    <changeSet author="fmguler" id="28">
+        <createTable schemaName="public" tableName="page_attribute_history">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="page_attribute_history_pkey"/>
+            </column>
+            <column name="page_id" type="int"/>
+            <column name="attribute" type="VARCHAR(1000)"/>
+            <column name="value" type="TEXT"/>
+            <column name="version" type="int"/>
+            <column name="author" type="VARCHAR(1000)"/>
+            <column name="comment" type="VARCHAR(1000)"/>
+            <column name="date" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="29">
+        <addForeignKeyConstraint
+            constraintName="page_attribute_history_page_id_fkey"
+            baseTableSchemaName="public" baseTableName="page_attribute_history" baseColumnNames="page_id"
+            referencedTableSchemaName="public" referencedTableName="page" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <!-- move old versions to history table -->
+    <changeSet author="fmguler" id="30">
+        <sql>
+            insert into page_attribute_history (page_id, attribute, value, version, author, comment, date) select page_id, attribute, value, version, author, comment, date from page_attribute;
+            delete from page_attribute where id in
+            (select pa.id from page_attribute pa
+            join (select page_id as __page_id, attribute as __attribute, max(version) as __max_version from page_attribute group by attribute, page_id) __pa
+            on (__pa.__page_id = pa.page_id and __pa.__attribute = pa.attribute)
+            where pa.version &lt; __pa.__max_version);
+        </sql>
+        <rollback/>
+    </changeSet>
+    <changeSet author="fmguler" id="31">
+        <addUniqueConstraint schemaName="public" tableName="page_attribute" columnNames="page_id, attribute" constraintName="page_attribute_page_id_attribute_unique"/>
+    </changeSet>
+    <!-- refactoring versions of template attribute to separate table -->
+    <changeSet author="fmguler" id="32">
+        <createTable schemaName="public" tableName="template_attribute_history">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="template_attribute_history_pkey"/>
+            </column>
+            <column name="template_id" type="int"/>
+            <column name="attribute" type="VARCHAR(1000)"/>
+            <column name="value" type="VARCHAR(1000)"/>
+            <column name="version" type="int"/>
+            <column name="author" type="VARCHAR(1000)"/>
+            <column name="comment" type="VARCHAR(1000)"/>
+            <column name="date" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="33">
+        <addForeignKeyConstraint
+            constraintName="template_attribute_history_template_id_fkey"
+            baseTableSchemaName="public" baseTableName="template_attribute_history" baseColumnNames="template_id"
+            referencedTableSchemaName="public" referencedTableName="template" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <!-- move old versions to history table -->
+    <changeSet author="fmguler" id="34">
+        <sql>
+            insert into template_attribute_history (template_id, attribute, value, version, author, comment, date) select template_id, attribute, value, version, author, comment, date from template_attribute;
+            delete from template_attribute where id in
+            (select ta.id from template_attribute ta
+            join (select template_id as __template_id, attribute as __attribute, max(version) as __max_version from template_attribute group by attribute, template_id) __ta
+            on (__ta.__template_id = ta.template_id and __ta.__attribute = ta.attribute)
+            where ta.version &lt; __ta.__max_version);
+        </sql>
+        <rollback/>
+    </changeSet>
+    <changeSet author="fmguler" id="35">
+        <addUniqueConstraint schemaName="public" tableName="template_attribute" columnNames="template_id, attribute" constraintName="template_attribute_template_id_attribute_unique"/>
     </changeSet>
     <!-- <<MILESTONE 0.3 AUTHOR/ETC -->
 </databaseChangeLog>

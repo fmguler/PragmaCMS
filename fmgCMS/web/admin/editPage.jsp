@@ -18,10 +18,11 @@
         <script type="text/javascript">
             var locale = 'en';
             var contextPath = '${pageContext.request.contextPath}';
-            var pagePath = "${page.path}";
-            var pageId = "${page.id}";
+            var page = null;
+            var selectedAttributeId = null;
+            var selectedAttributeHistory = null;
             var pageAttachments = [<c:forEach items="${pageAttachments}" var="attch">{id: ${attch.id}, name: "${attch.name}"},</c:forEach>0];
-            $(editPageReady);
+            $(function(){editPageReady(${page.id}, '${page.path}')});
         </script>
     </head>
     <body>
@@ -36,17 +37,17 @@
                             <h2 class="style-display-inline">Editing Page: ${page.path}</h2>
                             <div class="style-float-right">
                                 <div class="btn-group style-display-ib">
-                                    <a class="btn" href="javascript:$('#uploadAttachmentDialog').dialog('open')"><i class="icon-upload"></i> Upload Attachment</a>
+                                    <a class="btn" href="javascript:uploadAttachmentDialog()"><i class="icon-upload"></i> Upload Attachment</a>
                                     <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
                                         <li><a href="#"><i class="icon-list"></i> View Attachments</a></li>
                                     </ul>
                                 </div>
                                 <div class="btn-group style-display-ib">
-                                    <a class="btn" href="javascript:$('#renamePageDialog').dialog('open')"><i class="icon-edit"></i> Rename Page</a>
+                                    <a class="btn" href="javascript:renamePageDialog()"><i class="icon-edit"></i> Rename Page</a>
                                     <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
-                                        <li><a href="${pageContext.request.contextPath}${page.path}" target="_blank"><i class="icon-eye-open"></i> View Page</a></li>
+                                        <li><a href="javascript:viewPage()"><i class="icon-eye-open"></i> View Page</a></li>
                                         <li class="divider"></li>
                                         <li><a href="javascript:removePage(${page.id},true)"><i class="icon-trash"></i> Delete Page</a></li>
                                     </ul>
@@ -61,8 +62,8 @@
                                     </c:forEach>
                                 </select>
                                 &nbsp;&nbsp;
-                                <a class="btn btn-success" href="javascript:saveDialog()"><i class="icon-ok icon-white"></i> Save All</a>
-                                <a class="btn btn-primary" href="javascript:historyDialog()"><i class="icon-list icon-white"></i> History</a>
+                                <a class="btn btn-success" href="javascript:saveDialog()"><i class="icon-ok icon-white"></i> Save Changes</a>
+                                <a class="btn btn-primary" href="javascript:historyDialog()"><i class="icon-list icon-white"></i> Page History</a>
                                 <a class="btn btn-danger" href="javascript:revertDialog()"><i class="icon-remove icon-white"></i> Revert</a>
                                 <a class="btn btn-info" href="javascript:editHtmlDialog()"><i class="icon-pencil icon-white"></i> Edit HTML</a>
                             </div>
@@ -70,16 +71,6 @@
 
                         <div style="height:150px"></div>
 
-                        <%--div>
-                            Attachment:
-                            <select id="selectedAttachmentId">
-                                <option value="">--Select--</option>
-                                <c:forEach items="${pageAttachments}" var="attch">
-                                    <option value="${attch.id}">${attch.name}</option>
-                                </c:forEach>
-                            </select>
-                            <a href="javascript:removePageAttachment()">(remove attachment)</a>
-                        </div--%>
                         <iframe id="pagePreview" src="about:blank" width="100%" height="480" onLoad="onIFrameLoad(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>
                     </div>
                 </div>
@@ -88,18 +79,6 @@
                 <p>&copy; PragmaCraft 2012</p>
             </footer>
         </div>
-
-        <!-- Page Attributes Form -->
-        <form id="pageAttributesForm">
-            <input type="hidden" name="pageId" value="${page.id}"/>
-            <!-- Hidden page attributes -->
-            <c:forEach items="${page.pageAttributes}" var="attr">
-                <textarea class="style-hidden" name="attribute-${attr.id}" id="attribute-${attr.id}">${fn:escapeXml(attr.value)}</textarea>
-                <input type="hidden" id="attribute-to-id-${attr.attribute}" value="${attr.id}" />
-                <input type="hidden" id="id-to-attribute-${attr.id}" value="${attr.attribute}" />
-                <input type="hidden" id="id-to-version-${attr.id}" value="${attr.version}" />
-            </c:forEach>
-        </form>
 
         <!-- Upload Attachment Dialog -->
         <div id="uploadAttachmentDialog" title="Upload Attachment">
@@ -142,7 +121,7 @@
         <!-- Edit Html Dialog -->
         <div id="editHtmlDialog" title="Edit Attribute HTML">
             <div>
-                <textarea class="span7" rows="20" id="selectedAttributeHtml" onchange="onSelectedAttributeHtmlChange()">[No Attribute Selected]</textarea>
+                <textarea class="span7" rows="20" id="editHtmlDialogTextarea" onchange="onEditHtmlDialogTextareaChange()">[No Attribute Selected]</textarea>
             </div>
         </div>
 

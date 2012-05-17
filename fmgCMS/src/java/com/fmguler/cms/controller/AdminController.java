@@ -181,11 +181,20 @@ public class AdminController {
         scanPageAttributes(page);
 
         model.addAttribute("page", page);
-        model.addAttribute("templates", contentService.getTemplates());
         model.addAttribute("pageAttachments", contentService.getPageAttachments(page.getId()));
         return "admin/editPage";
     }
 
+    //ajax - get page
+    @RequestMapping()
+    @ResponseBody
+    public String getPage(@RequestParam Integer pageId) {
+        Page page = contentService.getPage(pageId);
+        if (page == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", page);
+    }
+
+    //ajax - rename page
     @RequestMapping
     @ResponseBody
     public String renamePage(@RequestParam Integer pageId, @RequestParam String newPath, @RequestParam(required = false) String redirect) {
@@ -260,6 +269,7 @@ public class AdminController {
                 attribute.setComment(attributeHistory.getComment());
                 attribute.setVersion(attributeHistory.getId()); //to detect which history attribute this current attribute corresponds to
                 contentService.savePageAttribute(attribute);
+                attribute.setPage(null); //to prevent loop for gson
             }
 
             //to notify user which atts are saved
@@ -276,7 +286,10 @@ public class AdminController {
         }
 
         //return success
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Saved following attributes successfully;", savedAttributes);
+        Map result = new HashMap();
+        result.put("savedAttributes", savedAttributes);
+        result.put("page", page);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Saved following attributes successfully;", result);
     }
 
     //ajax - page attribute histories

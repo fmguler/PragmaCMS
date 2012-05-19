@@ -11,15 +11,18 @@
         <link rel="shortcut icon" href="js/favicon.ico">
         <link rel="stylesheet" href="js/bootstrap/css/bootstrap.css" >
         <link rel="stylesheet" href="js/jquery-ui-base/jquery-ui-1.8.20.custom.css">
+        <link rel="stylesheet" href="js/prettydiff/diffview.css">
         <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
         <script type="text/javascript" src="js/jquery-ui-1.8.20.custom.min.js"></script>
         <script type="text/javascript" src="js/jquery.iframe-post-form.js"></script>
         <script type="text/javascript" src="js/bootstrap/js/bootstrap.js"></script>
+        <script type="text/javascript" src="js/prettydiff/prettydiff-min.js"></script>
         <script type="text/javascript" src="js/scripts.js"></script>
         <script type="text/javascript">
             var locale = 'en';
             var contextPath = '${pageContext.request.contextPath}';
             var page = null;
+            var pageCopy = null;
             var selectedAttributeId = null;
             var selectedAttributeHistory = null;
             var pageAttachments = null;
@@ -35,7 +38,7 @@
                 <div class="row-fluid">
                     <div class="span12">
                         <div class="page-header style-position-fixed">
-                            <h2 class="style-display-inline">Editing Page: ${page.path}</h2>
+                            <h2 class="style-display-inline">Editing Page: <span id="pagePath">${page.path}</span></h2>
                             <div class="style-float-right">
                                 <div class="btn-group style-display-ib">
                                     <a class="btn" href="javascript:uploadAttachmentDialog()"><i class="icon-upload"></i> Upload Attachment</a>
@@ -64,8 +67,7 @@
                                 </select>
                                 &nbsp;&nbsp;
                                 <a class="btn btn-success" href="javascript:saveDialog()"><i class="icon-ok icon-white"></i> Save Changes</a>
-                                <a class="btn btn-primary" href="javascript:historyDialog()"><i class="icon-list icon-white"></i> Page History</a>
-                                <a class="btn btn-danger" href="javascript:revertDialog()"><i class="icon-remove icon-white"></i> Revert</a>
+                                <a class="btn btn-primary" href="javascript:attributeHistoryDialog()"><i class="icon-list icon-white"></i> Attribute History</a>
                                 <a class="btn btn-info" href="javascript:editHtmlDialog()"><i class="icon-pencil icon-white"></i> Edit HTML</a>
                             </div>
                         </div>
@@ -159,25 +161,37 @@
             </table>
         </div>
 
-        <!-- Revert Dialog -->
-        <div id="revertDialog" title="Revert Attribute To Previous Versions">
-            <form id="revertForm">
-                <input type="hidden" id="revertDialogAttributeId" name="attributeId" value=""/>
-                <table id="previousVersions" class="style-full-width">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th><strong>Author</strong></th>
-                            <th><strong>Comment</strong></th>
-                            <th><strong>Date</strong></th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
+        <!-- Attribute History Dialog -->
+        <div id="attributeHistoryDialog" title="Attribute History">
+            <table id="previousVersions" class="style-full-width">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th><strong>Author</strong></th>
+                        <th><strong>Comment</strong></th>
+                        <th><strong>Date</strong></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
 
-                    </tbody>
-                </table>
-            </form>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- View Changes Dialog -->
+        <div id="viewChangesDialog" title="View Changes">
+        </div>
+
+        <!-- Review Changes Dialog -->
+        <div id="reviewChangesDialog" title="Review Changes">
+            <table id="changedAttributes" class="style-full-width">
+                <tbody>
+
+                </tbody>
+            </table>
         </div>
     </body>
 </html>

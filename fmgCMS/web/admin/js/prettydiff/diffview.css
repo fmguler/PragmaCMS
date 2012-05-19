@@ -1,0 +1,82 @@
+
+table.diff {
+    border: 0.1em solid #bbc;
+    border-collapse: collapse;
+}
+table.diff tbody {
+    font-family: 'Courier New', Courier, 'Lucida Console', monospace;
+    font-size: 0.8em;
+}
+table.diff tbody th {
+    background: #eed;
+    border: 0.1em solid #bbc;
+    color: #886;
+    font-family: verdana, arial, 'Bitstream Vera Sans', helvetica, sans-serif;
+    font-weight: normal;
+    padding: 0.5em 0.6em 0px 2.4em;
+    text-align: right;
+    vertical-align: top;
+}
+table.diff thead {
+    background: #efefef;
+    border-bottom: 0.1em solid #bbc;
+    font-family: Verdana;
+    text-align: left;
+}
+table.diff thead th {
+    border-left: 0.1em solid #bbc;
+    padding-left: 2em;
+}
+table.diff tbody td {
+    letter-spacing: 0.1em;
+    padding: 0.5em 0.5em 0px;
+    vertical-align: top;
+    /*FMG: wrap line*/
+    /*white-space: pre;*/
+}
+table.diff tbody td em {
+    font-style: normal;
+    margin: 0px -.09em;
+    padding: 0.05em 0px;
+}
+table.diff .empty {
+    background-color: #ddd;
+}
+table.diff .replace {
+    background-color: #fd8;
+}
+table.diff .replace em {
+    background-color: #ffd;
+    border: 0.1em solid #963;
+    color: #630;
+}
+table.diff .delete {
+    background-color: #e99;
+}
+table.diff .delete em {
+    background-color: #fdd;
+    border: 0.1em solid #700;
+    color: #600;
+}
+table.diff .equal {
+    background-color: #fff;
+}
+table.diff .skip {
+    background-color: #efefef;
+    border: 0.1em solid #aaa;
+    border-right: 0.1em solid #bbc;
+}
+table.diff .insert {
+    background-color: #9e9;
+}
+table.diff .insert em {
+    background-color: #efc;
+    border: 1px solid #070;
+    color: #050;
+}
+table.diff th.author {
+    background: #efefef;
+    border-top: 0.1em solid #bbc;
+    padding: 0.4em;
+    text-align: right;
+}

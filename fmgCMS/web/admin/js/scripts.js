@@ -161,7 +161,7 @@ function editPageReady(pageId, pagePath){
         },{
             'class': 'btn btn-primary',
             text: messages["button_review_changes"][locale],
-            click: reviewChanges
+            click: reviewChangesDialog
         },{
             'class': 'btn',
             text: messages["cancel"][locale],
@@ -171,19 +171,46 @@ function editPageReady(pageId, pagePath){
         }]
     });
 
-    //revert (modal)
-    $("#revertDialog").dialog({
+    //attribute history (modal)
+    $("#attributeHistoryDialog").dialog({
         height: 500,
-        width: 670,
+        width: 700,
         autoOpen: false,
         modal: true,
         buttons: [{
-            'class': 'btn btn-danger',
-            text: messages["button_revert_selected"][locale],
-            click: revertPageAttribute
+            'class': 'btn btn-primary',
+            text: messages["button_view_changes"][locale],
+            click: attributeHistoryDialogViewChanges
         },{
             'class': 'btn',
             text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //view changes (modal)
+    $("#viewChangesDialog").dialog({
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //review changes (modal)
+    $("#reviewChangesDialog").dialog({
+        width: 370,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
             click: function() {
                 $(this).dialog("close");
             }
@@ -201,6 +228,7 @@ function editPageReady(pageId, pagePath){
                 showErrorDialog(response.message);
             } else {
                 page = response.object;
+                pageCopy = $.extend(true, {}, page);
             }
         }
     });
@@ -278,16 +306,17 @@ function viewPage(){
 
 //save page properties
 function renamePage(){
+    var renamePageForm = $("#renamePageForm").serializeObject();
     $.ajax({
         url: 'renamePage',
-        data: $("#renamePageForm").serializeObject(),
+        data: renamePageForm,
         dataType: 'json',
         type: 'POST',
         success: function(response) {
             if (response.status != "0") {
                 showErrorDialog(response.message);
             } else {
-                //TODO: shall we reload page? all paths should be updated
+                $("#pagePath").text(renamePageForm.newPath);
                 $('#renamePageDialog').dialog('close');
                 showStatusDialog(response.message);
             }
@@ -321,18 +350,19 @@ function savePageAttributes(publish){
 
                 //get result
                 var result = response.object;
-                page = result.page;
                 var savedAttrs = result.savedAttributes;
+                page = result.page;
+                pageCopy = $.extend(true, {}, page);
 
                 //add saved attributes to message
                 var message = response.message+"<br/>";
-
                 message += "<ul>";
                 for (var i=0; i<savedAttrs.length; i++){
                     message += "<li>"+savedAttrs[i]+"</li>"
                 }
                 message += "</ul>";
 
+                //show message with saved attrs
                 showStatusDialog(message);
             }
         }
@@ -340,11 +370,12 @@ function savePageAttributes(publish){
 }
 
 //revert attribute to selected history version
-function revertPageAttribute(){
-    var revertForm = $("#revertForm").serializeObject();
+function revertPageAttribute(attributeId, attributeHistoryId){
+    if(!confirm(messages["confirm_revert_page_attribute"][locale])) return;
+
     $.ajax({
         url: 'revertPageAttribute',
-        data: revertForm,
+        data: 'attributeId='+attributeId+'&attributeHistoryId='+attributeHistoryId,
         dataType: 'json',
         type: 'POST',
         success: function(response) {
@@ -355,9 +386,9 @@ function revertPageAttribute(){
                 showStatusDialog(response.message);
 
                 //update the attribute state accordingly
-                var attribute = attributeById(selectedAttributeId);
-                attribute.value = attributeHistoryById(revertForm.attributeHistoryId).value;
-                attribute.version = revertForm.attributeHistoryId;
+                var attribute = attributeById(attributeId);
+                attribute.value = attributeHistoryById(attributeHistoryId).value;
+                attribute.version = attributeHistoryId;
 
                 //update editable html
                 var editable = $("#pagePreview").contents().find("#attribute-editable-"+attribute.attribute);
@@ -398,7 +429,7 @@ function renamePageDialog(){
     $('#renamePageDialog').dialog('open');
 }
 
-//upload dialog, calls uploadAttachment
+//upload dialog
 function uploadAttachmentDialog(){
     $('#uploadAttachmentDialog').dialog('open');
 
@@ -424,7 +455,6 @@ function viewAttachmentsDialog(){
         pageAttachmentRow += "</tr>";
         $('#pageAttachments > tbody').append(pageAttachmentRow);
     }
-
 }
 
 //save dialog, calls publish/draft/review
@@ -433,30 +463,72 @@ function saveDialog(){
 }
 
 //review changes, diff to published version
-function reviewChanges(){
-    alert("review");
+function reviewChangesDialog(){
+    $('#reviewChangesDialog').dialog('open');
+
+    //populate with changed attributes
+    $('#changedAttributes > tbody').empty();
+    var changedAttrCount = 0;
+    for (var i = 0; i < page.pageAttributes.length; i++) {
+        if(page.pageAttributes[i].value == pageCopy.pageAttributes[i].value) continue; //no change
+        var changedAttributeRow = "<tr>";
+        changedAttributeRow += "<td>"+page.pageAttributes[i].attribute + "</td>";
+        changedAttributeRow += "<td><a class='btn' href='javascript:reviewChangesDialogViewChanges("+i+")'>View Changes</a></td>";
+        changedAttributeRow += "<td><a class='btn' href='javascript:reviewChangesDialogRevert("+i+")'>Revert</a></td>";
+        changedAttributeRow += "</tr>";
+        $('#changedAttributes > tbody').append(changedAttributeRow);
+        changedAttrCount++;
+    }
+
+    //no change
+    if(!changedAttrCount){
+        $('#reviewChangesDialog').dialog('close');
+        showStatusDialog("No attribute is changed!");
+    }
 }
 
-//page all attributes history
-function historyDialog(){
-    alert("not implemented yet");
+//view changes between history attributes
+function reviewChangesDialogViewChanges(elemIndex){
+    //diff
+    var api = new Object();
+    api.source = pageCopy.pageAttributes[elemIndex].value;
+    api.diff = page.pageAttributes[elemIndex].value;
+    api.mode = "diff";
+    api.diffview = "inline";
+    api.sourcelabel = "Original"
+    api.difflabel = "Changed"
+    var result = prettydiff(api);
+
+    //open view changes dialog
+    viewChangesDialog(result[0]);
 }
 
-//revert dialog, previews attribute html to prev versions, or calls revertPageAttribute
-function revertDialog(){
+//revert attribute to original version
+function reviewChangesDialogRevert(elemIndex){
+    //update the attribute value
+    var attribute = page.pageAttributes[elemIndex];
+    attribute.value = pageCopy.pageAttributes[elemIndex].value;
+
+    //update editable html
+    var editable = $("#pagePreview").contents().find("#attribute-editable-"+attribute.attribute);
+    editable.html(attribute.value);
+}
+
+//attribute history dialog, previews attribute html to prev versions, or calls revertPageAttribute
+function attributeHistoryDialog(){
     if (!selectedAttributeId){
         alert("Please select an attribute first.");
         return;
     }
     //populate the dialog with history records of the current attribute
-    revertDialogPopulate(attributeById(selectedAttributeId));
+    attributeHistoryDialogPopulate(attributeById(selectedAttributeId));
 
     //open the dialog
-    $('#revertDialog').dialog('open');
+    $('#attributeHistoryDialog').dialog('open');
 }
 
-//populates the revert dialog with the selected attribute history
-function revertDialogPopulate(attribute){
+//populates the history dialog with the selected attribute history
+function attributeHistoryDialogPopulate(attribute){
     $.ajax({
         url: 'getPageAttributeHistories',
         data: 'pageId='+page.id+"&attribute="+attribute.attribute,
@@ -467,16 +539,17 @@ function revertDialogPopulate(attribute){
                 showErrorDialog(response.message);
             } else {
                 selectedAttributeHistory = response.object;
-                $('#revertDialogAttributeId').val(attribute.id);
                 $('#previousVersions > tbody').empty();
                 for (var i = 0; i < selectedAttributeHistory.length; i++) {
                     var current = (selectedAttributeHistory[i].id==attribute.version);
                     var attributeHistoryRow = current?"<tr style='background-color:#00ff00'>":"<tr>";
-                    attributeHistoryRow += "<td><input type='radio' name='attributeHistoryId' value='"+selectedAttributeHistory[i].id+"' "+(current?"checked":"")+" /></td>";
+                    attributeHistoryRow += "<td><input type='radio' name='attribute1' value='"+i+"' "+(current?"checked":"")+" /></td>";
+                    attributeHistoryRow += "<td><input type='radio' name='attribute2' value='"+i+"' "+(i==0?"checked":"")+" /></td>";
                     attributeHistoryRow += "<td>"+selectedAttributeHistory[i].author + "</td>";
                     attributeHistoryRow += "<td>"+selectedAttributeHistory[i].comment + "</td>";
                     attributeHistoryRow += "<td>"+selectedAttributeHistory[i].date + "</td>";
-                    attributeHistoryRow += "<td><a class='btn' href='javascript:revertAttributePreview("+i+")'>Preview</a></td>";
+                    attributeHistoryRow += "<td><a class='btn' href='javascript:attributeHistoryDialogRevert("+i+")'>Revert</a></td>";
+                    attributeHistoryRow += "<td><a class='btn' href='javascript:revertPageAttribute("+attribute.id+","+selectedAttributeHistory[i].id+")'>Publish</a></td>";
                     attributeHistoryRow += "</tr>";
                     $('#previousVersions > tbody').append(attributeHistoryRow);
                 }
@@ -485,8 +558,36 @@ function revertDialogPopulate(attribute){
     });
 }
 
+//view changes between history attributes
+function attributeHistoryDialogViewChanges(){
+    var attr1 = $("#attributeHistoryDialog").find('input:radio[name=attribute1]:checked').val();
+    var attr2 = $("#attributeHistoryDialog").find('input:radio[name=attribute2]:checked').val();
+
+    if (!attr1 || !attr2){
+        alert("Please choose both attributes to be compared.");
+        return;
+    }
+    if (attr1 == attr2){
+        alert("You are trying to compare the attribute with itself. Please select two different attributes to compare.");
+        return;
+    }
+
+    //diff
+    var api = new Object();
+    api.source = selectedAttributeHistory[attr1].value;
+    api.diff = selectedAttributeHistory[attr2].value;
+    api.mode = "diff";
+    api.diffview = "inline";
+    api.sourcelabel = selectedAttributeHistory[attr1].date;
+    api.difflabel = selectedAttributeHistory[attr2].date;
+    var result = prettydiff(api);
+
+    //open view changes dialog
+    viewChangesDialog(result[0]);
+}
+
 //revert attribute to specified version - preview
-function revertAttributePreview(version){
+function attributeHistoryDialogRevert(version){
     //update the attribute value
     var attribute = attributeById(selectedAttributeId);
     attribute.value = selectedAttributeHistory[version].value;
@@ -494,6 +595,32 @@ function revertAttributePreview(version){
     //update editable html
     var editable = $("#pagePreview").contents().find("#attribute-editable-"+attribute.attribute);
     editable.html(attribute.value);
+}
+
+//view changes table
+function viewChangesDialog(changesTable){
+    //set the diff table in the view changes dialog
+    $("#viewChangesDialog").html(changesTable);
+    $("#viewChangesDialog").find("tfoot").remove();
+
+    //show the dialog
+    $('#viewChangesDialog').dialog('option', "height", 600);
+    $('#viewChangesDialog').dialog('option', "width", 800);
+    $('#viewChangesDialog').dialog('open');
+
+
+    //adjust width the table is smaller
+    if($("#viewChangesDialog").find("table").width() < 750){
+        $('#viewChangesDialog').dialog('option', "width", $("#viewChangesDialog").find("table").width()+50);
+    }
+
+    //adjust height the table is smaller
+    if($("#viewChangesDialog").find("table").height() < 550){
+        $('#viewChangesDialog').dialog('option', "height", $("#viewChangesDialog").find("table").height()+110);
+    }
+
+    //center the dialog
+    $('#viewChangesDialog').dialog('option', "position", "center");
 }
 
 //edit page attribute contents (html)
@@ -766,9 +893,9 @@ var messages = {
         en: "Review Changes",
         tr: "Değişiklikleri Gözden Geçir"
     },
-    "button_revert_selected": {
-        en: "Revert To Selected Version",
-        tr: "Seçili Versiyona Geri Dön"
+    "button_view_changes": {
+        en: "View Changes",
+        tr: "Değişiklikleri Göster"
     },
     "confirm_remove_page": {
         en: "This page will be completely removed from the system. This action is permanent. Are you sure?",
@@ -777,5 +904,9 @@ var messages = {
     "confirm_remove_page_attachment": {
         en: "This attachment will be completely removed from the system. This action is permanent. Are you sure?",
         tr: "Bu dosya sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
+    },
+    "confirm_revert_page_attribute": {
+        en: "This attribute will be reverted to selected version, and this version will be published. Are you sure?",
+        tr: "Bu öğe seçili versiyona geri döndürülecek ve bu versiyon yayınlanacak. Emin misiniz?"
     }
 };

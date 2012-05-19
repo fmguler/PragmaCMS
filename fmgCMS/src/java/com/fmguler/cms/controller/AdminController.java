@@ -90,6 +90,13 @@ public class AdminController {
         return "redirect:/admin/pages";
     }
 
+    //without any method - direct entrance like /admin
+    @RequestMapping()
+    public String admin(Model model) {
+        System.out.println("direct entrance");
+        return "redirect:/admin/pages";
+    }
+
     //--------------------------------------------------------------------------
     //PAGES
     //--------------------------------------------------------------------------

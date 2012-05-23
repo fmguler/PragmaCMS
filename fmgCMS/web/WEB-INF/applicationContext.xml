@@ -7,10 +7,10 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
-           
+
     <!-- DAO's are kept in a separate file -->
     <import resource="dao.xml"/>
-    
+
     <!-- Properties file for configuration -->
     <bean id="propertyOverrideConfigurer" class="org.springframework.beans.factory.config.PropertyOverrideConfigurer">
         <property name="location">
@@ -23,21 +23,26 @@
             <value>file:${fmgcms.home}/conf/fmgCMS.properties</value>
         </property>
     </bean>
-    
+
     <!-- APPLICATION SERVICES /////////////////////////////////////////////// -->
 
     <!-- Inventory service, manages inventories-->
     <bean id="contentService" class="com.fmguler.cms.service.content.ContentServiceImpl">
         <property name="dataSource" ref="dataSource" />
     </bean>
-    
+
     <!-- Template service, for templating-->
     <bean id="templateService" class="com.fmguler.cms.service.template.TemplateServiceImpl" init-method="init">
         <property name="templateFolder" value="${fmgcms.home}/data/www" />
     </bean>
-    
+
+    <!-- Resource service, for static resources -->
+    <bean id="resourceService" class="com.fmguler.cms.service.resource.ResourceServiceImpl">
+        <property name="rootFolder" value="${fmgcms.home}/data/www" />
+    </bean>
+
     <!-- INFRASTRUCTURE SERVICES /////////////////////////////////////////////// -->
-    
+
     <!-- Storage service -->
     <bean id="storageService" class="com.fmguler.common.service.storage.StorageServiceImpl" init-method="init" destroy-method="destroy">
         <property  name="storageFolder" value="${fmgcms.home}/data/storage" />
@@ -52,5 +57,5 @@
             </list>
         </property>
     </bean>
-    
+
 </beans>

@@ -9,6 +9,9 @@ package com.fmguler.cms.controller;
 import com.fmguler.cms.helper.CommonController;
 import com.fmguler.cms.service.content.ContentService;
 import com.fmguler.cms.service.content.domain.*;
+import com.fmguler.cms.service.resource.ResourceException;
+import com.fmguler.cms.service.resource.ResourceService;
+import com.fmguler.cms.service.resource.domain.Resource;
 import com.fmguler.cms.service.template.TemplateService;
 import com.fmguler.common.service.storage.StorageException;
 import com.fmguler.common.service.storage.StorageService;
@@ -44,6 +47,7 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 public class AdminController {
     private ContentService contentService;
     private TemplateService templateService;
+    private ResourceService resourceService;
     private StorageService storageService;
 
     //login the user
@@ -139,23 +143,12 @@ public class AdminController {
     }
 
     //--------------------------------------------------------------------------
-    //TEMPLATES
-    //--------------------------------------------------------------------------
-    //list templates
-    @RequestMapping()
-    public String templates(Model model) {
-        List templates = contentService.getTemplates();
-        model.addAttribute("templates", templates);
-        return "admin/templates";
-    }
-
-    //--------------------------------------------------------------------------
     //EDIT PAGE
     //--------------------------------------------------------------------------
     //edit a page
     @RequestMapping("/**/edit")
-    public String editPageRedirect(HttpServletRequest request, HttpServletResponse response, Model model) throws IOException {
-        String path = "";
+    public String editPageRedirect(HttpServletRequest request, HttpServletResponse response, Model model) {
+        String path;
         String contextPath = request.getContextPath();
         String requestUri = request.getRequestURI();
         if (requestUri.startsWith(contextPath)) path = requestUri.substring(contextPath.length());
@@ -168,7 +161,7 @@ public class AdminController {
 
     //edit a page
     @RequestMapping()
-    public String editPage(@RequestParam String path, Model model) throws IOException {
+    public String editPage(@RequestParam String path, Model model) {
         Page page = contentService.getPage(path);
 
         //creating a new page
@@ -407,6 +400,17 @@ public class AdminController {
     }
 
     //--------------------------------------------------------------------------
+    //TEMPLATES
+    //--------------------------------------------------------------------------
+    //list templates
+    @RequestMapping()
+    public String templates(Model model) {
+        List templates = contentService.getTemplates();
+        model.addAttribute("templates", templates);
+        return "admin/templates";
+    }
+
+    //--------------------------------------------------------------------------
     //EDIT TEMPLATE
     //--------------------------------------------------------------------------
     //edit a template
@@ -421,6 +425,62 @@ public class AdminController {
 
         model.addAttribute("template", template);
         return "admin/editTemplate";
+    }
+
+    //--------------------------------------------------------------------------
+    //STATIC RESOURCES
+    //--------------------------------------------------------------------------
+    //list resources
+    @RequestMapping()
+    public String resources(Model model, @RequestParam(required = false) String resourceFolder) {
+        try {
+            if (resourceFolder == null) resourceFolder = "";
+            List resources = resourceService.getResources(resourceFolder);
+            model.addAttribute("resources", resources);
+            model.addAttribute("resourceFolder", resourceFolder.split("/"));
+            return "admin/resources";
+        } catch (ResourceException ex) {
+            if (ex.getErrorCode().equals(ResourceException.ERROR_FOLDER_NOT_FOUND)) {
+                model.addAttribute("errorMessage", "This folder does not exist. Do you want to create this folder?");
+                model.addAttribute("errorAction", "Create Folder");
+                model.addAttribute("errorActionUrl", "resources?createFolder=");
+            } else {
+                model.addAttribute("errorMessage", "Unknown Error. Please report this to us.");
+                model.addAttribute("errorAction", "Go Back");
+                model.addAttribute("errorActionUrl", "resources");
+            }
+            return "admin/error";
+        }
+    }
+
+    //download resource
+    @RequestMapping()
+    public void downloadResource(@RequestParam String resourcePath, HttpServletRequest request, HttpServletResponse response) {
+        InputStream inputStream = null;
+        OutputStream outputStream = null;
+        try {
+            Resource resource = resourceService.getResource(resourcePath);
+
+            //check not exists
+            if (resource == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.setHeader("Content-Disposition", "attachment; filename=" + resource.getName());
+            response.setContentLength(resource.getContentLength());
+            inputStream = resourceService.getInputStream(resourcePath);
+            outputStream = response.getOutputStream();
+            IOUtils.copyLarge(inputStream, outputStream);
+        } catch (ResourceException ex) {
+            Logger.getLogger(ContentController.class.getName()).log(Level.WARNING, "ResourceException while downloading resource", ex);
+        } catch (IOException ex) {
+            Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot write static resource to response output stream", ex);
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+            IOUtils.closeQuietly(outputStream);
+        }
     }
 
     //--------------------------------------------------------------------------
@@ -514,7 +574,7 @@ public class AdminController {
         if (page.getTemplate() == null) return;
 
         String templatePath = page.getTemplate().getName();
-        String templateSource = templateService.getTemplateSource(templatePath);
+        String templateSource = templateService.getSource(templatePath);
 
         //scan template source for attributes
         Set<String> pageAttributes = new HashSet();
@@ -585,6 +645,11 @@ public class AdminController {
     @Autowired
     public void setTemplateService(TemplateService templateService) {
         this.templateService = templateService;
+    }
+
+    @Autowired
+    public void setResourceService(ResourceService resourceService) {
+        this.resourceService = resourceService;
     }
 
     @Autowired

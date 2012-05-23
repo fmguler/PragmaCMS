@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.controller;
@@ -11,10 +11,15 @@ import com.fmguler.cms.service.content.domain.Page;
 import com.fmguler.cms.service.content.domain.PageAttachment;
 import com.fmguler.cms.service.content.domain.PageAttribute;
 import com.fmguler.cms.service.content.domain.TemplateAttribute;
+import com.fmguler.cms.service.resource.ResourceException;
+import com.fmguler.cms.service.resource.ResourceService;
+import com.fmguler.cms.service.resource.domain.Resource;
 import com.fmguler.cms.service.template.TemplateService;
 import com.fmguler.common.service.storage.StorageException;
 import com.fmguler.common.service.storage.StorageService;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -40,6 +45,7 @@ import org.springframework.web.servlet.ModelAndView;
 public class ContentController implements ServletContextAware {
     private ContentService contentService;
     private TemplateService templateService;
+    private ResourceService resourceService;
     private StorageService storageService;
     private ServletContext servletContext;
 
@@ -68,7 +74,10 @@ public class ContentController implements ServletContextAware {
         }
 
         //if the requested resource is static, pipe it from template service
-        if (isStaticResource(path)) {
+        //we decide if this is a static resource based on extension
+        //since htm or html extension can be given to generated pages, they cannot be accessed directly
+        //they can be retrieved as static file by appending ?preview (or any static file not having extension specified in isStaticResource)
+        if (isStaticResource(path) || request.getParameter("preview") != null) {
             handleStaticResource(path, request, response);
             return null;
         }
@@ -95,7 +104,7 @@ public class ContentController implements ServletContextAware {
         //get request last modified header to check not modified
         long cachedResDate = request.getDateHeader("If-Modified-Since");
 
-        //TODO: if the assigned path to the page and it's template path are in different folders like /some-page and /template/page.html 
+        //TODO: if the assigned path to the page and it's template path are in different folders like /some-page and /template/page.html
         //it's resources will use /template as relative path, and return not found. We should implement pages like /some-page/ and look for resources starting with /some-page in /template
 
         //find the template, fill with attributes
@@ -105,9 +114,9 @@ public class ContentController implements ServletContextAware {
 
         if (request.getParameter("edit") != null && request.getSession().getAttribute("user") != null) {
             //inject editor code if this is an edit
-            String templateSource = templateService.getTemplateSource(templateName);
+            String templateSource = templateService.getSource(templateName);
             templateSource = AdminController.injectEditor(templateSource);
-            pageHtml = templateService.mergeFromSource(templateSource, model);
+            pageHtml = templateService.mergeFromSource(templateName, templateSource, model);
         } else if ((cachedResDate != -1) && (cachedResDate < (System.currentTimeMillis() / 1000L * 1000L)) && (cachedResDate >= (page.getLastModified().getTime() / 1000L * 1000L))) {
             //not modified (browser cache)
             response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
@@ -150,21 +159,16 @@ public class ContentController implements ServletContextAware {
 
     //handle static resource, pipe from template resources, handle caching
     private void handleStaticResource(String resourcePath, HttpServletRequest request, HttpServletResponse response) {
-        //TODO: catch template service exception and return 404 if requested resource does not exist.
         //NOTE: some of the following code block is taken from winstone code (StaticResourceServlet.java)
         InputStream inputStream = null;
         OutputStream outputStream = null;
         try {
-            File res = templateService.getResource(resourcePath);
+            Resource resource = resourceService.getResource(resourcePath);
             long cachedResDate = request.getDateHeader("If-Modified-Since");
 
-            if (!res.exists()) {
+            //check not exists
+            if (resource == null) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
-                return;
-            }
-
-            if (res.isDirectory()) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
 
@@ -173,20 +177,22 @@ public class ContentController implements ServletContextAware {
             if (mimeType != null) response.setContentType(mimeType);
 
             //checked last modified of the template resource
-            if ((cachedResDate != -1) && (cachedResDate < (System.currentTimeMillis() / 1000L * 1000L)) && (cachedResDate >= (res.lastModified() / 1000L * 1000L))) {
+            if ((cachedResDate != -1) && (cachedResDate < (System.currentTimeMillis() / 1000L * 1000L)) && (cachedResDate >= (resource.getLastModified().getTime() / 1000L * 1000L))) {
                 response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
                 response.setContentLength(0);
                 response.flushBuffer();
             } else {
                 response.setStatus(HttpServletResponse.SC_OK);
-                response.setContentLength((int)res.length());
-                response.addDateHeader("Last-Modified", res.lastModified());
-                inputStream = new FileInputStream(res);
+                response.setContentLength(resource.getContentLength());
+                response.addDateHeader("Last-Modified", resource.getLastModified().getTime());
+                inputStream = resourceService.getInputStream(resourcePath);
                 outputStream = response.getOutputStream();
                 IOUtils.copyLarge(inputStream, outputStream);
             }
+        } catch (ResourceException ex) {
+            Logger.getLogger(ContentController.class.getName()).log(Level.WARNING, "ResourceException while handling static resource", ex);
         } catch (IOException ex) {
-            Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot write to response output stream", ex);
+            Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot write static resource to response output stream", ex);
         } finally {
             IOUtils.closeQuietly(inputStream);
             IOUtils.closeQuietly(outputStream);
@@ -260,7 +266,7 @@ public class ContentController implements ServletContextAware {
 
         return result;
     }
-    
+
     //SETTERS
     //--------------------------------------------------------------------------
     @Autowired
@@ -271,6 +277,11 @@ public class ContentController implements ServletContextAware {
     @Autowired
     public void setTemplateService(TemplateService templateService) {
         this.templateService = templateService;
+    }
+
+    @Autowired
+    public void setResourceService(ResourceService resourceService) {
+        this.resourceService = resourceService;
     }
 
     @Autowired

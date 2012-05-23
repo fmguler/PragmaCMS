@@ -7,8 +7,8 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>fmgCMS - Templates</title>
         <link rel="shortcut icon" href="js/favicon.ico">
-        <link href="js/bootstrap/css/bootstrap.css" rel="stylesheet">        
-        <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+        <link rel="stylesheet" href="js/bootstrap/css/bootstrap.css">
+        <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
         <script type="text/javascript" src="js/bootstrap/js/bootstrap.js"></script>
     </head>
     <body>
@@ -46,7 +46,7 @@
                         </table>
                     </div>
                 </div>
-            </div>            
+            </div>
             <footer>
                 <p>&copy; PragmaCraft 2012</p>
             </footer>

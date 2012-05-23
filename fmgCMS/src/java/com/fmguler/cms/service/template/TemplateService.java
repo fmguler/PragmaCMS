@@ -1,12 +1,11 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.service.template;
 
-import java.io.File;
 import java.util.Map;
 
 /**
@@ -23,21 +22,14 @@ public interface TemplateService {
     String merge(String templatePath, Map model);
 
     /**
-     * Returns file info for the specified resource of the template
-     * @param resourcePath the path of the resource contained in the template
-     * @return file info, to be used for reading
-     */
-    File getResource(String resourcePath);
-
-    /**
      * Returns the raw source of the template
      * @param templatePath the template (file in the directory)
      * @return the contents of the template
      */
-    String getTemplateSource(String templatePath);
+    String getSource(String templatePath);
 
     /**
      * Merge template with model
      */
-    String mergeFromSource(String templateSource, Map model);
+    String mergeFromSource(String templatePath, String templateSource, Map model);
 }

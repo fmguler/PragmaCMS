@@ -7,7 +7,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>fmgCMS - Pages</title>
         <link rel="shortcut icon" href="js/favicon.ico">
-        <link rel="stylesheet" href="js/bootstrap/css/bootstrap.css" >
+        <link rel="stylesheet" href="js/bootstrap/css/bootstrap.css">
         <link rel="stylesheet" href="js/jquery-ui-base/jquery-ui-1.8.20.custom.css">
         <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
         <script type="text/javascript" src="js/jquery-ui-1.8.20.custom.min.js"></script>

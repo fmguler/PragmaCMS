@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.service.template;
@@ -10,10 +10,8 @@ import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
-import java.io.File;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.io.*;
+import java.util.Date;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,10 +20,10 @@ import org.apache.commons.io.FileUtils;
 /**
  * Handles templating operations, using freemarker.
  * <p>
- * Basically responsible for; 
+ * Basically responsible for;
  * <li>Merge some template (a text file with placeholders) with a model
- * <li>Return resources relative to teplate folder
- * 
+ * <li>Return resources relative to template folder
+ *
  * @author Fatih Mehmet Güler
  */
 public class TemplateServiceImpl implements TemplateService {
@@ -57,10 +55,10 @@ public class TemplateServiceImpl implements TemplateService {
     }
 
     @Override
-    public String mergeFromSource(String templateSource, Map model) {
+    public String mergeFromSource(String templatePath, String templateSource, Map model) {
         try {
             StringWriter sw = new StringWriter();
-            Template template = new Template("template", new StringReader(templateSource), new Configuration());
+            Template template = new Template(templatePath, new StringReader(templateSource), new Configuration());
             template.process(model, sw);
             return sw.toString();
         } catch (TemplateException ex) {
@@ -72,20 +70,14 @@ public class TemplateServiceImpl implements TemplateService {
     }
 
     @Override
-    public String getTemplateSource(String templatePath) {
+    public String getSource(String templatePath) {
         try {
-            File templateFile = getResource(templatePath);
+            File templateFile = new File(templateFolder, templatePath);
             return FileUtils.readFileToString(templateFile, "UTF-8");
         } catch (IOException ex) {
             Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot read template file", ex);
         }
         return "";
-    }
-
-    @Override
-    public File getResource(String resourcePath) {
-        File file = new File(templateFolder, resourcePath);
-        return file;
     }
 
     //--------------------------------------------------------------------------

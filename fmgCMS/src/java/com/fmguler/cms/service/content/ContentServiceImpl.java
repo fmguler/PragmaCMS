@@ -22,7 +22,9 @@ public class ContentServiceImpl implements ContentService {
     private NamedParameterJdbcTemplate template;
     private Ven ven;
 
-    //PAGE----------------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    //PAGE
+    //--------------------------------------------------------------------------
     @Override
     public Page getPage(String path) {
         Set joins = new HashSet();
@@ -83,7 +85,9 @@ public class ContentServiceImpl implements ContentService {
         ven.delete(id, Page.class);
     }
 
-    //TEMPLATE------------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    //TEMPLATE
+    //--------------------------------------------------------------------------
     @Override
     public Template getTemplate(int id) {
         Set joins = new HashSet();
@@ -100,7 +104,9 @@ public class ContentServiceImpl implements ContentService {
         return list;
     }
 
-    //ATTRIBUTE-----------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    //ATTRIBUTE
+    //--------------------------------------------------------------------------
     @Override
     public PageAttribute getPageAttribute(int id) {
         Set joins = new HashSet();
@@ -145,7 +151,9 @@ public class ContentServiceImpl implements ContentService {
         ven.delete(id, PageAttribute.class);
     }
 
-    //ATTACHMENT----------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    //ATTACHMENT
+    //--------------------------------------------------------------------------
     @Override
     public List getPageAttachments(int pageId) {
         Set joins = new HashSet();
@@ -172,7 +180,9 @@ public class ContentServiceImpl implements ContentService {
         ven.delete(id, PageAttachment.class);
     }
 
-    //AUTHOR--------------------------------------------------------------------
+    //--------------------------------------------------------------------------
+    //AUTHOR
+    //--------------------------------------------------------------------------
     public Author getAuthor(String username) {
         Set joins = new HashSet();
         Criteria criteria = new Criteria();
@@ -184,6 +194,7 @@ public class ContentServiceImpl implements ContentService {
 
     //--------------------------------------------------------------------------
     //SETTERS
+    //--------------------------------------------------------------------------
     public void setDataSource(DataSource dataSource) {
         template = new NamedParameterJdbcTemplate(dataSource);
         ven = new Ven();

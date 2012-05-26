@@ -89,7 +89,7 @@
                 <input type="hidden" name="pageId" value="${page.id}"/>
                 <table class="style-full-width">
                     <tr>
-                        <td><strong>Select the attachment to upload</strong></td>
+                        <td>Select the attachment to upload</td>
                     </tr>
                     <tr>
                         <td>

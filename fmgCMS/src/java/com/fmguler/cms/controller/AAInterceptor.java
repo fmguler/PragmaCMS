@@ -1,4 +1,4 @@
-/*
+    /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
  *
@@ -27,6 +27,9 @@ public class AAInterceptor extends HandlerInterceptorAdapter {
         if (!path.endsWith("/edit") && !path.startsWith("/admin")) return true;
         if (path.equals("/admin/login")) return true;
         if (path.equals("/admin/login.jsp")) return true;
+        //we also protect static admin files, but these are required for login
+        if (path.equals("/admin/js/bootstrap/css/bootstrap.css")) return true;
+        if (path.equals("/admin/js/star.png")) return true;
 
         //redirect to login, but continue to this url after login
         Author user = (Author)request.getSession().getAttribute("user");

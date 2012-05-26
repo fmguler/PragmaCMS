@@ -5,7 +5,9 @@
  *  All rights reserved.
  */
 
-//page inits--------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//PAGES INITS
+//------------------------------------------------------------------------------
 
 //on pages ready
 function pagesReady(){
@@ -40,30 +42,8 @@ function editPageReady(pageId, pagePath){
     //to make ajax upload
     $('#uploadAttachmentForm').iframePostForm({
         json : false,
-        post : function(){
-            if ($("#uploadAttachmentDialogFile").val() == ""){
-                alert("Please select a file");
-                return false;
-            }
-
-            //fake progress bar :)
-            $("#uploadAttachmentDialogFile").fadeOut('fast', function(){
-                $("#uploadAttachmentDialogProgress").fadeIn('fast');
-                setTimeout("uploadProgress(0)", 100);
-            });
-
-            return true;
-        },
-        complete : function (responseStr){
-            var response = $.parseJSON(responseStr.substring(responseStr.indexOf('{'), responseStr.indexOf('</pre>')));
-            if (response.status != "0") {
-                showErrorDialog(response.message);
-            } else {
-                pageAttachments = response.object;
-                $('#uploadAttachmentDialog').dialog('close');
-                showStatusDialog(response.message);
-            }
-        }
+        post : uploadAttachmentDialogPost,
+        complete : uploadAttachmentDialogComplete
     });
 
     //upload attachment (modal)
@@ -253,7 +233,75 @@ function editPageReady(pageId, pagePath){
     $("#pagePreview").attr("src", pagePreviewSrc);
 }
 
-//list pages actions------------------------------------------------------------
+//on resources ready
+function resourcesReady(){
+    //upload resource (modal)
+    $("#uploadResourceDialog").dialog({
+        //height: 'auto',
+        width: 370,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["upload"][locale],
+            click: uploadResourceDialogPost
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //add folder
+    $("#addFolderDialog").dialog({
+        //height: 'auto',
+        width: 400,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
+            click: addFolder
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //crawl web page
+    $("#crawlDialog").dialog({
+        //height: 'auto',
+        width: 400,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
+            click: crawlWebPage
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //if this page is opened with addFolder param, open add folder dialog
+    if(addFolderParam){
+        $("#addFolderDialog").find("[name='name']").val(addFolderParam);
+        $('#addFolderDialog').dialog('open');
+    }
+}
+
+//------------------------------------------------------------------------------
+//PAGES ACTIONS
+//------------------------------------------------------------------------------
 
 //add page
 function addPage(){
@@ -297,7 +345,9 @@ function removePage(pageId, goback){
     });
 }
 
-//edit page ajax actions--------------------------------------------------------
+//------------------------------------------------------------------------------
+//EDIT PAGE AJAX ACTIONS
+//------------------------------------------------------------------------------
 
 //view the current page
 function viewPage(){
@@ -422,7 +472,9 @@ function removePageAttachment(attachmentId, elemIndex){
     });
 }
 
-//edit page dialogs-------------------------------------------------------------
+//------------------------------------------------------------------------------
+//EDIT PAGE DIALOGS
+//------------------------------------------------------------------------------
 
 //rename dialog, calls renamePage
 function renamePageDialog(){
@@ -438,6 +490,34 @@ function uploadAttachmentDialog(){
     $("#uploadAttachmentDialogProgress").hide();
     $("#uploadAttachmentDialogFile").show();
     $("#uploadAttachmentDialogFile").val("");
+}
+
+//called on upload dialog post
+function uploadAttachmentDialogPost(){
+    if ($("#uploadAttachmentDialogFile").val() == ""){
+        alert("Please select a file");
+        return false;
+    }
+
+    //fake progress bar :)
+    $("#uploadAttachmentDialogFile").fadeOut('fast', function(){
+        $("#uploadAttachmentDialogProgress").fadeIn('fast');
+        setTimeout("uploadProgress('#uploadAttachmentDialogProgress', 0)", 100);
+    });
+
+    return true;
+}
+
+//called on upload dialog complete
+function uploadAttachmentDialogComplete(responseStr){
+    var response = $.parseJSON(responseStr.substring(responseStr.indexOf('{'), responseStr.indexOf('</pre>')));
+    if (response.status != "0") {
+        showErrorDialog(response.message);
+    } else {
+        pageAttachments = response.object;
+        $('#uploadAttachmentDialog').dialog('close');
+        showStatusDialog(response.message);
+    }
 }
 
 //view attachments dialog, calls removeAttachment
@@ -637,7 +717,9 @@ function editHtmlDialog(){
     $('#editHtmlDialog').dialog('open');
 }
 
-//edit page events--------------------------------------------------------------
+//------------------------------------------------------------------------------
+//EDIT PAGE EVENTS
+//------------------------------------------------------------------------------
 
 //display selected attribute textarea
 function onSelectedAttributeChange(){
@@ -723,7 +805,9 @@ function onIFrameLoad(url, path){
     return false;
 }
 
-//edit page utility-------------------------------------------------------------
+//------------------------------------------------------------------------------
+//EDIT PAGE UTILITY
+//------------------------------------------------------------------------------
 
 //attribute by id
 function attributeById(attributeId){
@@ -753,15 +837,111 @@ function attributeHistoryById(attributeHistoryId){
 }
 
 //set upload progress bar
-function uploadProgress(percent){
-    if (!$("#uploadAttachmentDialogProgress").is(":visible")) return;
-    $("#uploadAttachmentDialogProgress").find("div").css("width", percent+"%");
+function uploadProgress(progressBar, percent){
+    if (!$(progressBar).is(":visible")) return;
+    $(progressBar).find("div").css("width", percent+"%");
     var newPercent = percent+1;
     if (newPercent>=100) return;
-    progressTimer = setTimeout("uploadProgress("+newPercent+")", 100);
+    setTimeout("uploadProgress('"+progressBar+"',"+newPercent+")", 100);
 }
 
-//utility-----------------------------------------------------------------------
+//------------------------------------------------------------------------------
+//RESOURCES ACTIONS
+//------------------------------------------------------------------------------
+
+//upload dialog
+function uploadResourceDialog(){
+    $('#uploadResourceDialog').dialog('open');
+
+    //make sure that progres bar is hidden
+    $("#uploadResourceDialogProgress").find("div").css("width", "0%");
+    $("#uploadResourceDialogProgress").hide();
+    $("#uploadResourceDialogFile").show();
+    $("#uploadResourceDialogFile").val("");
+}
+
+//called on upload dialog post
+function uploadResourceDialogPost(){
+    if ($("#uploadResourceDialogFile").val() == ""){
+        alert("Please select a file");
+        return;
+    }
+
+    //post the form, start upload
+    $("#uploadResourceForm").submit();
+
+    //fake progress bar :)
+    $("#uploadResourceDialogFile").fadeOut('fast', function(){
+        $("#uploadResourceDialogProgress").fadeIn('fast');
+        setTimeout("uploadProgress('#uploadResourceDialogProgress',0)", 100);
+    });
+}
+
+//add folder
+function addFolder(){
+    var addFolderForm =  $("#addFolderForm").serializeObject();
+    $.ajax({
+        url: 'addFolder',
+        data: addFolderForm,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.href = 'resources?resourceFolder='+resourceFolder+'/'+addFolderForm.name;
+            }
+        }
+    });
+}
+
+//remove resource, if folder=true remove folder
+function removeResource(name, folder){
+    if(!folder && !confirm(messages["confirm_remove_resource"][locale])) return;
+    if(folder && !confirm(messages["confirm_remove_resource_folder"][locale])) return;
+
+    //create the data like this or there will be encoding problem.
+    var data = new Object();
+    data.resourcePath = resourceFolder + '/' +name;
+
+    //remove via ajax
+    $.ajax({
+        url: 'removeResource',
+        data: data,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.href = 'resources?resourceFolder='+resourceFolder;
+            }
+        }
+    });
+}
+
+//crawl web page
+function crawlWebPage(){
+    var crawlForm =  $("#crawlForm").serializeObject();
+    $.ajax({
+        url: 'crawlWebPage',
+        data: crawlForm,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                $('#crawlDialog').dialog('close');
+                showStatusDialog(response.message);
+            }
+        }
+    });
+}
+
+//------------------------------------------------------------------------------
+//COMMON UTILITY
+//------------------------------------------------------------------------------
 
 //fill a target with item values
 function fillRecursively(targetPrefix, item){
@@ -843,7 +1023,9 @@ function getParameterByName(name){
         return decodeURIComponent(results[1].replace(/\+/g, " "));
 }
 
-//I18N messages-----------------------------------------------------------------
+//------------------------------------------------------------------------------
+//118N MESSAGES
+//------------------------------------------------------------------------------
 var messages = {
     "error": {
         en: "Error",
@@ -908,5 +1090,13 @@ var messages = {
     "confirm_revert_page_attribute": {
         en: "This attribute will be reverted to selected version, and this version will be published. Are you sure?",
         tr: "Bu öğe seçili versiyona geri döndürülecek ve bu versiyon yayınlanacak. Emin misiniz?"
+    },
+    "confirm_remove_resource": {
+        en: "This resource will be completely removed from the system. This action is permanent. Are you sure?",
+        tr: "Bu kaynak sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
+    },
+    "confirm_remove_resource_folder": {
+        en: "This resource folder will be completely removed from the system. This action is permanent. Are you sure?",
+        tr: "Bu kaynak dizini sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
     }
 };

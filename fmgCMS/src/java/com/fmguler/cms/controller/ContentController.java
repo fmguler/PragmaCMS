@@ -20,6 +20,8 @@ import com.fmguler.common.service.storage.StorageService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -149,7 +151,12 @@ public class ContentController implements ServletContextAware {
         String requestUri = request.getRequestURI();
         if (requestUri.startsWith(contextPath)) path = requestUri.substring(contextPath.length());
         else path = requestUri;
-        return path;
+        try {
+            return URLDecoder.decode(path, "UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            Logger.getLogger(ContentController.class.getName()).log(Level.WARNING, "Could not url decode path: " + path, ex);
+            return path;
+        }
     }
 
     //check if the given path is a static resource, e.g. js, css, image
@@ -167,7 +174,7 @@ public class ContentController implements ServletContextAware {
             long cachedResDate = request.getDateHeader("If-Modified-Since");
 
             //check not exists
-            if (resource == null) {
+            if (resource == null || resource.getDirectory()) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
@@ -192,7 +199,7 @@ public class ContentController implements ServletContextAware {
         } catch (ResourceException ex) {
             Logger.getLogger(ContentController.class.getName()).log(Level.WARNING, "ResourceException while handling static resource", ex);
         } catch (IOException ex) {
-            Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot write static resource to response output stream", ex);
+            Logger.getLogger(ContentController.class.getName()).log(Level.WARNING, "Cannot write static resource to response output stream", ex);
         } finally {
             IOUtils.closeQuietly(inputStream);
             IOUtils.closeQuietly(outputStream);
@@ -239,9 +246,9 @@ public class ContentController implements ServletContextAware {
                 IOUtils.copyLarge(inputStream, outputStream);
             }
         } catch (StorageException ex) {
-            Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Storage service error at handlePageAttachment", ex);
+            Logger.getLogger(ContentController.class.getName()).log(Level.WARNING, "Storage service error at handlePageAttachment", ex);
         } catch (IOException ex) {
-            Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot write to response output stream", ex);
+            Logger.getLogger(ContentController.class.getName()).log(Level.WARNING, "Cannot write to response output stream", ex);
         } finally {
             IOUtils.closeQuietly(inputStream);
             IOUtils.closeQuietly(outputStream);

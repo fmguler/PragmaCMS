@@ -10,8 +10,10 @@ import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
-import java.io.*;
-import java.util.Date;
+import java.io.File;
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -82,6 +84,7 @@ public class TemplateServiceImpl implements TemplateService {
 
     //--------------------------------------------------------------------------
     //SETTERS
+    //--------------------------------------------------------------------------
     public void setTemplateFolder(String templateFolder) {
         this.templateFolder = templateFolder;
     }

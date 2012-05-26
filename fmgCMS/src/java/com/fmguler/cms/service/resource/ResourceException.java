@@ -15,7 +15,9 @@ import com.fmguler.common.service.ServiceException;
  */
 public class ResourceException extends ServiceException {
     public static final String ERROR_RESOURCE_NOT_FOUND = "rs-resource-not-found";
-    public static final String ERROR_FOLDER_NOT_FOUND = "rs-folder-not-found";
+    public static final String ERROR_FOLDER_ALREADY_EXISTS = "rs-folder-exists";
+    public static final String ERROR_EXTRACT_FAILED = "rs-extract-failed";
+    public static final String ERROR_CRAWL_FAILED = "rs-crawl-failed";
     public static final String ERROR_UNKNOWN = "rs-unknown";
 
     public ResourceException(String errorCode) {

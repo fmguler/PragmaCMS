@@ -17,7 +17,11 @@
         <script type="text/javascript">
             var locale = 'en';
             var contextPath = '${pageContext.request.contextPath}';
+            var resourceFolder = '${resourceFolder}';
+            var addFolderParam = '${addFolderParam}';
+            $(resourcesReady);
         </script>
+
     </head>
     <body>
         <c:set var="viewMenuResources" value="active" />
@@ -30,14 +34,16 @@
                         <div class="page-header">
                             <h1 style="display: inline">List of Resources</h1>
                             <div style="float: right">
+                                <a href="javascript:$('#addFolderDialog').dialog('open')" class="btn btn-large">Add Folder</a>
+                                <a href="javascript:$('#crawlDialog').dialog('open')" class="btn btn-warning btn-large">Crawl Web Page</a>
                                 <a href="javascript:$('#uploadResourceDialog').dialog('open')" class="btn btn-primary btn-large">Upload Resource</a>
                             </div>
                         </div>
                         <h2>
                             Folder: <a href="resources">home</a>
-                            <c:forEach items="${resourceFolder}" varStatus="i">
+                            <c:forEach items="${resourceFolderArray}" varStatus="i">
                                 ${i.index == 0 ? '' : '/'}
-                                <a href="resources?resourceFolder=<c:forEach begin="1" end="${i.index}" varStatus="j">/${resourceFolder[j.index]}</c:forEach>">${resourceFolder[i.index]}</a>
+                                <a href="resources?resourceFolder=<c:forEach begin="1" end="${i.index}" varStatus="j">/${resourceFolderArray[j.index]}</c:forEach>">${resourceFolderArray[i.index]}</a>
                             </c:forEach>
                         </h2>
                         <table class="table table-striped">
@@ -60,7 +66,7 @@
                                                 <a class="btn" href="resources?resourceFolder=${resource.folder}${resource.name}"><i class="icon-folder-open"></i> Open</a>
                                                 <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                                 <ul class="dropdown-menu">
-                                                    <li><a href="javascript:removeFolder(${resource.name})"><i class="icon-trash"></i> Delete Folder</a></li>
+                                                    <li><a href="javascript:removeResource('${resource.name}', true)"><i class="icon-trash"></i> Delete Folder</a></li>
                                                 </ul>
                                             </div>
                                         </td>
@@ -80,7 +86,7 @@
                                                 <ul class="dropdown-menu">
                                                     <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Resource</a></li>
                                                     <li class="divider"></li>
-                                                    <li><a href="javascript:removeResource(${resource.name})"><i class="icon-trash"></i> Delete Resource</a></li>
+                                                    <li><a href="javascript:removeResource('${resource.name}')"><i class="icon-trash"></i> Delete Resource</a></li>
                                                 </ul>
                                             </div>
                                         </td>
@@ -94,6 +100,60 @@
             <footer>
                 <p>&copy; PragmaCraft 2012</p>
             </footer>
+        </div>
+
+        <!-- Upload Resource Dialog -->
+        <div id="uploadResourceDialog" title="Upload Resource">
+            <form id="uploadResourceForm" method="POST" action="uploadResource" enctype="multipart/form-data">
+                <input type="hidden" name="resourceFolder" value="${resourceFolder}"/>
+                <table class="style-full-width">
+                    <tr>
+                        <td>
+                            Select the file to upload. You can upload zip files, they will be extracted to current folder.
+                            Please note that items with same name will be overwritten.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <br/>
+                            <input id="uploadResourceDialogFile" type="file" name="resource" />
+                            <div id="uploadResourceDialogProgress" class="progress progress-striped active style-hidden">
+                                <div class="bar" style="width: 0%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+
+        <!-- Add Folder Dialog -->
+        <div id="addFolderDialog" title="Add Folder">
+            <form id="addFolderForm">
+                <input type="hidden" name="baseFolder" value="${resourceFolder}"/>
+                <table class="style-full-width">
+                    <tr>
+                        <td><strong>Name:</strong></td>
+                        <td><input type="text" name="name" value="new folder"/></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+
+        <!-- Crawl Dialog -->
+        <div id="crawlDialog" title="Crawl Web Page">
+            <form id="crawlForm">
+                <input type="hidden" name="baseFolder" value="${resourceFolder}"/>
+                <table class="style-full-width">
+                    <tr>
+                        <td><strong>Page URL:</strong></td>
+                        <td><input type="text" name="pageUrl" value="http://"/></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Whole Site:</strong></td>
+                        <td><input type="checkbox" name="followLinks" value="false" /></td>
+                    </tr>
+                </table>
+            </form>
         </div>
     </body>
 </html>

@@ -364,10 +364,10 @@ public class AdminController {
                     is = multipartFile.getInputStream();
                     IOUtils.copyLarge(is, os);
                 } catch (StorageException ex) {
-                    Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Storage service error at uploadPageAttachment", ex);
+                    Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Storage service error at uploadPageAttachment", ex);
                     return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Error uploading attachment: " + ex.getMessage(), null);
                 } catch (IOException ex) {
-                    Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot read from multipart request input stream", ex);
+                    Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Cannot read from multipart request input stream", ex);
                     return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Error uploading attachment: " + ex.getMessage(), null);
                 } finally {
                     IOUtils.closeQuietly(is);
@@ -432,20 +432,32 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //list resources
     @RequestMapping()
-    public String resources(Model model, @RequestParam(required = false) String resourceFolder) {
+    public String resources(Model model, @RequestParam(required = false) String resourceFolder, @RequestParam(required = false) String addFolder) {
         try {
-            if (resourceFolder == null) resourceFolder = "";
+            //partition the add folder /a/b/c to /a/b and c
+            if (addFolder != null && addFolder.contains("/")) {
+                resourceFolder = addFolder.substring(0, addFolder.lastIndexOf("/"));
+                addFolder = addFolder.substring(addFolder.lastIndexOf("/") + 1);
+            }
+
+            //check resource folder, it has to start with a slash
+            if (resourceFolder == null) resourceFolder = "/";
+            if (!resourceFolder.startsWith("/")) resourceFolder = "/" + resourceFolder;
+
+            //get the resources in this folder, files and folders
             List resources = resourceService.getResources(resourceFolder);
             model.addAttribute("resources", resources);
-            model.addAttribute("resourceFolder", resourceFolder.split("/"));
+            model.addAttribute("resourceFolder", resourceFolder);
+            model.addAttribute("resourceFolderArray", resourceFolder.split("/"));
+            model.addAttribute("addFolderParam", addFolder);
             return "admin/resources";
         } catch (ResourceException ex) {
-            if (ex.getErrorCode().equals(ResourceException.ERROR_FOLDER_NOT_FOUND)) {
+            if (ex.getErrorCode().equals(ResourceException.ERROR_RESOURCE_NOT_FOUND)) {
                 model.addAttribute("errorMessage", "This folder does not exist. Do you want to create this folder?");
                 model.addAttribute("errorAction", "Create Folder");
-                model.addAttribute("errorActionUrl", "resources?createFolder=");
+                model.addAttribute("errorActionUrl", "resources?addFolder=" + ex.getErrorParam());
             } else {
-                model.addAttribute("errorMessage", "Unknown Error. Please report this to us.");
+                model.addAttribute("errorMessage", "Unknown Error. Please report this to us: " + ex.getMessage());
                 model.addAttribute("errorAction", "Go Back");
                 model.addAttribute("errorActionUrl", "resources");
             }
@@ -462,11 +474,12 @@ public class AdminController {
             Resource resource = resourceService.getResource(resourcePath);
 
             //check not exists
-            if (resource == null) {
+            if (resource == null || resource.getDirectory()) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
 
+            //pipe the resource as attachment
             response.setStatus(HttpServletResponse.SC_OK);
             response.setHeader("Content-Disposition", "attachment; filename=" + resource.getName());
             response.setContentLength(resource.getContentLength());
@@ -474,12 +487,131 @@ public class AdminController {
             outputStream = response.getOutputStream();
             IOUtils.copyLarge(inputStream, outputStream);
         } catch (ResourceException ex) {
-            Logger.getLogger(ContentController.class.getName()).log(Level.WARNING, "ResourceException while downloading resource", ex);
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException while downloading resource", ex);
         } catch (IOException ex) {
-            Logger.getLogger(ContentController.class.getName()).log(Level.SEVERE, "Cannot write static resource to response output stream", ex);
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Cannot write static resource to response output stream", ex);
         } finally {
             IOUtils.closeQuietly(inputStream);
             IOUtils.closeQuietly(outputStream);
+        }
+    }
+
+    //upload resource
+    @RequestMapping()
+    public String uploadResource(@RequestParam String resourceFolder, HttpServletRequest request, Model model) {
+        if (request instanceof MultipartHttpServletRequest) {
+            MultipartHttpServletRequest multipartReq = (MultipartHttpServletRequest)request;
+
+            //get the folder
+            Resource folder = resourceService.getResource(resourceFolder);
+
+            //check folder
+            if (folder == null || !folder.getDirectory()) {
+                model.addAttribute("errorMessage", "This folder does not exist. Do you want to create this folder?");
+                model.addAttribute("errorAction", "Create Folder");
+                model.addAttribute("errorActionUrl", "resources?addFolder=" + resourceFolder);
+                return "admin/error";
+            }
+
+            //handle upload
+            Iterator it = multipartReq.getFileNames();
+            while (it.hasNext()) {
+                String fileName = (String)it.next();
+                MultipartFile multipartFile = multipartReq.getFile(fileName);
+                String originalName = multipartFile.getOriginalFilename();
+
+                //the path of the uploaded resource NOTE: resource service will overwrite existing resources
+                String resourcePath = resourceFolder + "/" + originalName;
+
+                //pipe uploaded data to resource output stream (original upload)
+                InputStream is = null;
+                OutputStream os = null;
+                try {
+                    os = resourceService.getOutputStream(resourcePath);
+                    is = multipartFile.getInputStream();
+                    IOUtils.copyLarge(is, os);
+                    IOUtils.closeQuietly(is);
+                    IOUtils.closeQuietly(os);
+
+                    //if this is a zip file, extract it
+                    if (originalName.endsWith(".zip")) {
+                        resourceService.extractZip(resourcePath, false, true);
+                    }
+                } catch (ResourceException ex) {
+                    Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Resource service error at uploadResource", ex);
+                    model.addAttribute("errorMessage", "Unknown Error. Please report this to us: " + ex.getMessage());
+                    model.addAttribute("errorAction", "Go Back");
+                    model.addAttribute("errorActionUrl", "resources?resourceFolder=" + resourceFolder);
+                    return "admin/error";
+                } catch (IOException ex) {
+                    Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Cannot read from multipart request input stream", ex);
+                    model.addAttribute("errorMessage", "Unknown Error. Please report this to us: " + ex.getMessage());
+                    model.addAttribute("errorAction", "Go Back");
+                    model.addAttribute("errorActionUrl", "resources?resourceFolder=" + resourceFolder);
+                    return "admin/error";
+                } finally {
+                    IOUtils.closeQuietly(is);
+                    IOUtils.closeQuietly(os);
+                }
+            }
+        }
+
+        //return success
+        return "redirect:resources?resourceFolder=" + resourceFolder;
+    }
+
+    //ajax - add folder
+    @RequestMapping
+    @ResponseBody
+    public String addFolder(@RequestParam String baseFolder, @RequestParam String name) {
+        try {
+            Resource resource = resourceService.getResource(baseFolder);
+            if (resource == null || !resource.getDirectory()) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Base folder does not exist", null);
+
+            //add the folder
+            resourceService.addFolder(baseFolder + "/" + name);
+
+            //return success
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
+        } catch (ResourceException ex) {
+            if (ex.getErrorCode().equals(ResourceException.ERROR_FOLDER_ALREADY_EXISTS)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Folder already exists", null);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add folder: " + ex.getMessage(), null);
+        }
+    }
+
+    //ajax - remove resouce
+    @RequestMapping
+    @ResponseBody
+    public String removeResource(@RequestParam String resourcePath) {
+        try {
+            Resource resource = resourceService.getResource(resourcePath);
+            if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource does not exist", null);
+
+            //remove the resource (also removes folders)
+            resourceService.removeResource(resourcePath);
+
+            //return success
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
+        } catch (ResourceException ex) {
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not remove resource: " + ex.getMessage(), null);
+        }
+    }
+
+    //ajax - crawl web page
+    @RequestMapping
+    @ResponseBody
+    public String crawlWebPage(@RequestParam String baseFolder, @RequestParam String pageUrl, @RequestParam(required = false) String followLinks) {
+        try {
+            Resource resource = resourceService.getResource(baseFolder);
+            if (resource == null || !resource.getDirectory()) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Base folder does not exist", null);
+
+            //crawl web page, asynchronously
+            resourceService.crawlWebPage(baseFolder, pageUrl, followLinks != null);
+
+            //return success
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Started crawling web page. Reload page to see crawled resources.", null);
+        } catch (ResourceException ex) {
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not crawl web page, error: " + ex.getMessage(), null);
         }
     }
 

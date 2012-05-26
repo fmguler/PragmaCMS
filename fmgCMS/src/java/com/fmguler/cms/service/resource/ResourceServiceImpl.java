@@ -40,14 +40,14 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public List getResources(String resourceFolder) throws ResourceException {
+    public List getResources(Resource resourceFolder) throws ResourceException {
         List result = new LinkedList();
 
-        File folder = resourcePathToFile(resourceFolder);
-        if (!folder.exists()) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resourceFolder, null);
-        if (!folder.isDirectory()) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resourceFolder, null);
+        File folder = resourcePathToFile(resourceFolder.toResourcePath()); //always check path again
+        if (!folder.exists()) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resourceFolder.toResourcePath(), null);
+        if (!folder.isDirectory()) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resourceFolder.toResourcePath(), null);
         File[] files = folder.listFiles();
-        if (files == null) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resourceFolder, null);
+        if (files == null) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resourceFolder.toResourcePath(), null);
 
         //sort according to names
         Arrays.sort(files, new Comparator<File>() {
@@ -66,16 +66,22 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public void addFolder(String resourceFolder) throws ResourceException {
-        File folder = resourcePathToFile(resourceFolder);
-        if (folder.exists()) throw new ResourceException(ResourceException.ERROR_FOLDER_ALREADY_EXISTS);
-        if (!folder.mkdirs()) throw new ResourceException(ResourceException.ERROR_UNKNOWN);
+    public void addFolder(Resource parentFolder, String folderName) throws ResourceException {
+        try {
+            File folder = resourcePathToFile(parentFolder.toResourcePath()); //always check path again
+            File newFolder = new File(folder, folderName);
+            if (!newFolder.getCanonicalPath().startsWith(rootFolder)) throw new ResourceException(ResourceException.ERROR_UNKNOWN);
+            if (newFolder.exists()) throw new ResourceException(ResourceException.ERROR_FOLDER_ALREADY_EXISTS);
+            if (!newFolder.mkdirs()) throw new ResourceException(ResourceException.ERROR_UNKNOWN);
+        } catch (IOException ex) {
+            throw new ResourceException(ResourceException.ERROR_UNKNOWN, ex); //file.canonicalpath throws exception, dont know why
+        }
     }
 
     @Override
-    public void removeResource(String resourcePath) throws ResourceException {
+    public void removeResource(Resource resource) throws ResourceException {
         try {
-            File file = resourcePathToFile(resourcePath);
+            File file = resourcePathToFile(resource.toResourcePath()); //always check path again
             if (!file.exists()) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND);
             FileUtils.forceDelete(file);
         } catch (IOException ex) {
@@ -84,29 +90,29 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public InputStream getInputStream(String resourcePath) throws ResourceException {
+    public InputStream getInputStream(Resource resource) throws ResourceException {
         try {
-            File file = resourcePathToFile(resourcePath);
+            File file = resourcePathToFile(resource.toResourcePath()); //always check path again
             return new FileInputStream(file);
         } catch (FileNotFoundException ex) {
-            throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resourcePath, ex);
+            throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resource.toResourcePath(), ex);
         }
     }
 
     @Override
-    public OutputStream getOutputStream(String resourcePath) throws ResourceException {
+    public OutputStream getOutputStream(Resource resource) throws ResourceException {
         try {
-            File file = resourcePathToFile(resourcePath);
+            File file = resourcePathToFile(resource.toResourcePath()); //always check path again
             return new FileOutputStream(file);
         } catch (FileNotFoundException ex) {
-            throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resourcePath, ex);
+            throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, resource.toResourcePath(), ex);
         }
     }
 
     @Override
-    public void extractZip(String zipResourcePath, boolean createFolder, boolean removeZip) throws ResourceException {
+    public void extractZip(Resource zipResource, boolean createFolder, boolean removeZip) throws ResourceException {
         try {
-            File zipFile = resourcePathToFile(zipResourcePath);
+            File zipFile = resourcePathToFile(zipResource.toResourcePath()); //always check path again
             FileInputStream inputStream = new FileInputStream(zipFile);
 
             //create a folder or extract to place
@@ -140,8 +146,8 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public void crawlWebPage(String baseFolder, final String pageUrl, final boolean followLinks) throws ResourceException {
-        final File crawlFolder = resourcePathToFile(baseFolder);
+    public void crawlWebPage(Resource parentFolder, final String pageUrl, final boolean followLinks) throws ResourceException {
+        final File crawlFolder = resourcePathToFile(parentFolder.toResourcePath());
         new Thread(new Runnable() {
             public void run() {
                 SimpleWebCrawler crawler = new SimpleWebCrawler();
@@ -159,7 +165,22 @@ public class ResourceServiceImpl implements ResourceService {
     private Resource fileToResource(File file) throws ResourceException {
         try {
             //make sure that path cannot go out of root folder using ..\
+            file = file.getCanonicalFile();
             String canonicalPath = file.getCanonicalPath();
+            if (!canonicalPath.startsWith(rootFolder)) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND);
+
+            //special treatment for home folder /
+            if (canonicalPath.equals(rootFolder)) {
+                Resource resource = new Resource();
+                resource.setFolder("");
+                resource.setName("");
+                resource.setContentLength(0);
+                resource.setLastModified(new Date(file.lastModified()));
+                resource.setDirectory(true);
+                return resource;
+            }
+
+            //extract folder
             String resourceFolder = canonicalPath.substring(rootFolder.length(), canonicalPath.length() - file.getName().length());
             resourceFolder = resourceFolder.replaceAll("\\\\", "/"); // I hate back slashes
 
@@ -173,8 +194,6 @@ public class ResourceServiceImpl implements ResourceService {
             return resource;
         } catch (IOException ex) {
             throw new ResourceException(ResourceException.ERROR_UNKNOWN, ex); //file.canonicalpath throws exception, dont know why
-        } catch (StringIndexOutOfBoundsException ex) {
-            throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, "", ex); //trying to go out of root folder
         }
     }
 
@@ -182,22 +201,20 @@ public class ResourceServiceImpl implements ResourceService {
     private File resourcePathToFile(String resourcePath) throws ResourceException {
         try {
             //make sure that path cannot go out of root folder using ..\
+            if (resourcePath == null) resourcePath = "";
             File file = new File(rootFolder, resourcePath);
             String canonicalPath = file.getCanonicalPath();
-            //will throw out of bound ex if the path is outside
-            canonicalPath.substring(rootFolder.length(), canonicalPath.length() - file.getName().length());
+            if (!canonicalPath.startsWith(rootFolder)) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND);
             return file;
         } catch (IOException ex) {
             throw new ResourceException(ResourceException.ERROR_UNKNOWN, ex); //file.canonicalpath throws exception, dont know why
-        } catch (StringIndexOutOfBoundsException ex) {
-            throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, "", ex); //trying to go out of root folder
         }
     }
 
     //--------------------------------------------------------------------------
     //SETTERS
     //--------------------------------------------------------------------------
-    public void setRootFolder(String rootFolder) {
-        this.rootFolder = rootFolder;
+    public void setRootFolder(String rootFolder) throws IOException {
+        this.rootFolder = new File(rootFolder).getCanonicalPath();
     }
 }

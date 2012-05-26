@@ -244,7 +244,7 @@ function resourcesReady(){
         buttons: [{
             'class': 'btn btn-primary',
             text: messages["upload"][locale],
-            click: uploadResourceDialogPost
+            click: uploadResource
         },{
             'class': 'btn',
             text: messages["cancel"][locale],
@@ -849,19 +849,8 @@ function uploadProgress(progressBar, percent){
 //RESOURCES ACTIONS
 //------------------------------------------------------------------------------
 
-//upload dialog
-function uploadResourceDialog(){
-    $('#uploadResourceDialog').dialog('open');
-
-    //make sure that progres bar is hidden
-    $("#uploadResourceDialogProgress").find("div").css("width", "0%");
-    $("#uploadResourceDialogProgress").hide();
-    $("#uploadResourceDialogFile").show();
-    $("#uploadResourceDialogFile").val("");
-}
-
-//called on upload dialog post
-function uploadResourceDialogPost(){
+//upload the resource, with regular submit
+function uploadResource(){
     if ($("#uploadResourceDialogFile").val() == ""){
         alert("Please select a file");
         return;
@@ -889,7 +878,7 @@ function addFolder(){
             if (response.status != "0") {
                 showErrorDialog(response.message);
             } else {
-                location.href = 'resources?resourceFolder='+resourceFolder+'/'+addFolderForm.name;
+                location.href = 'resources?resourceFolder='+resourceFolder+addFolderForm.name;
             }
         }
     });

@@ -41,8 +41,8 @@
                         </div>
                         <h2>
                             Folder: <a href="resources">home</a>
-                            <c:forEach items="${resourceFolderArray}" varStatus="i">
-                                ${i.index == 0 ? '' : '/'}
+                            <c:forEach items="${resourceFolderArray}" begin="1" varStatus="i">
+                                /
                                 <a href="resources?resourceFolder=<c:forEach begin="1" end="${i.index}" varStatus="j">/${resourceFolderArray[j.index]}</c:forEach>">${resourceFolderArray[i.index]}</a>
                             </c:forEach>
                         </h2>

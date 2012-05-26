@@ -105,4 +105,10 @@ public class Resource {
         this.directory = directory;
     }
 
+    /**
+     * @return the path of this resource
+     */
+    public String toResourcePath() {
+        return folder + name + (directory ? "/" : "");
+    }
 }

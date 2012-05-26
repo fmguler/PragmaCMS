@@ -8,7 +8,7 @@
         <title>fmgCMS - Error</title>
         <link rel="shortcut icon" href="js/favicon.ico">
         <link href="js/bootstrap/css/bootstrap.css" rel="stylesheet">
-        <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+        <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
         <script type="text/javascript" src="js/bootstrap/js/bootstrap.js"></script>
     </head>
     <body>

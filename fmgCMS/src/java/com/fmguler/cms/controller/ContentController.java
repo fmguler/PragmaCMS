@@ -180,7 +180,7 @@ public class ContentController implements ServletContextAware {
             }
 
             //set the mime type
-            String mimeType = servletContext.getMimeType(resourcePath.toLowerCase());
+            String mimeType = servletContext.getMimeType(resource.getName().toLowerCase());
             if (mimeType != null) response.setContentType(mimeType);
 
             //checked last modified of the template resource
@@ -192,7 +192,7 @@ public class ContentController implements ServletContextAware {
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.setContentLength(resource.getContentLength());
                 response.addDateHeader("Last-Modified", resource.getLastModified().getTime());
-                inputStream = resourceService.getInputStream(resourcePath);
+                inputStream = resourceService.getInputStream(resource);
                 outputStream = response.getOutputStream();
                 IOUtils.copyLarge(inputStream, outputStream);
             }

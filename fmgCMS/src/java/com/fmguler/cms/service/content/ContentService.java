@@ -95,4 +95,8 @@ public interface ContentService {
     PageAttributeHistory getPageAttributeHistory(int id);
 
     void removePageAttachment(int id);
+
+    void saveTemplate(Template template);
+
+    void removeTemplate(int id);
 }

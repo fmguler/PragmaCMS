@@ -104,6 +104,16 @@ public class ContentServiceImpl implements ContentService {
         return list;
     }
 
+    @Override
+    public void saveTemplate(Template template) {
+        ven.save(template);
+    }
+
+    @Override
+    public void removeTemplate(int id) {
+        ven.delete(id, Template.class);
+    }
+
     //--------------------------------------------------------------------------
     //ATTRIBUTE
     //--------------------------------------------------------------------------

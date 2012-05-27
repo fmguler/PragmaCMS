@@ -8,8 +8,16 @@
         <title>fmgCMS - Templates</title>
         <link rel="shortcut icon" href="js/favicon.ico">
         <link rel="stylesheet" href="js/bootstrap/css/bootstrap.css">
+        <link rel="stylesheet" href="js/jquery-ui-base/jquery-ui-1.8.20.custom.css">
         <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
+        <script type="text/javascript" src="js/jquery-ui-1.8.20.custom.min.js"></script>
         <script type="text/javascript" src="js/bootstrap/js/bootstrap.js"></script>
+        <script type="text/javascript" src="js/scripts.js"></script>
+        <script type="text/javascript">
+            var locale = 'en';
+            var contextPath = '${pageContext.request.contextPath}';
+            $(templatesReady);
+        </script>
     </head>
     <body>
         <c:set var="viewMenuTemplates" value="active" />
@@ -20,7 +28,10 @@
                 <div class="row">
                     <div class="span12">
                         <div class="page-header">
-                            <h1>List of Templates</h1>
+                            <h1 style="display: inline">List of Templates</h1>
+                            <div style="float: right">
+                                <a href="javascript:$('#addTemplateDialog').dialog('open')" class="btn btn-primary btn-large">Add Template</a>
+                            </div>
                         </div>
                         <table class="table table-striped">
                             <tr>
@@ -28,16 +39,16 @@
                                 <th>Actions</th>
                             </tr>
                             <c:forEach items="${templates}" var="template">
-                                <tr>
+                                <tr id="template-${template.id}">
                                     <td><a href="editTemplate?id=${template.id}">${template.name}</a></td>
                                     <td>
                                         <div class="btn-group">
-                                            <a class="btn btn-primary" href="editTemplate?id=${template.id}"><i class="icon-pencil icon-white"></i> Edit Template</a>
-                                            <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+                                            <a class="btn" href="editTemplate?id=${template.id}"><i class="icon-edit"></i> Edit Template</a>
+                                            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                             <ul class="dropdown-menu">
-                                                <li><a href="viewTemplate?id=${template.id}" target="_blank"><i class="icon-eye-open"></i> View Template</a></li>
+                                                <li><a href="${pageContext.request.contextPath}/${template.name}?preview" target="_blank"><i class="icon-eye-open"></i> View Template</a></li>
                                                 <li class="divider"></li>
-                                                <li><a href="#"><i class="icon-trash"></i> Delete Template</a></li>
+                                                <li><a href="javascript:removeTemplate(${template.id})"><i class="icon-trash"></i> Delete Template</a></li>
                                             </ul>
                                         </div>
                                     </td>
@@ -50,6 +61,18 @@
             <footer>
                 <p>&copy; PragmaCraft 2012</p>
             </footer>
+        </div>
+
+        <!-- Add Template Dialog -->
+        <div id="addTemplateDialog" title="Add Template">
+            <form id="addTemplateForm">
+                <table class="style-full-width">
+                    <tr>
+                        <td><strong>Resource Path:</strong></td>
+                        <td><input type="text" name="path" value=""/></td>
+                    </tr>
+                </table>
+            </form>
         </div>
     </body>
 </html>

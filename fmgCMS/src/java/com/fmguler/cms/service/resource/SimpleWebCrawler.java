@@ -98,7 +98,7 @@ public class SimpleWebCrawler {
             //get the file name, add .html to unnamed pages, or ones with .php, etc
             String fileName = url.getPath();
             if (fileName.isEmpty() || fileName.endsWith("/")) fileName += "index.html";
-            //if (page && !fileName.endsWith(".htm") && !fileName.endsWith(".html")) fileName += ".html";
+            if (page && !fileName.endsWith(".htm") && !fileName.endsWith(".html")) fileName += ".html";
 
             //save to the file
             File file = new File(folder, fileName);

@@ -53,6 +53,7 @@ public class ResourceServiceImpl implements ResourceService {
         Arrays.sort(files, new Comparator<File>() {
             public int compare(File f1, File f2) {
                 if (!f1.isDirectory() && f2.isDirectory()) return 1;
+                if (f1.isDirectory() && !f2.isDirectory()) return -1;
                 return f1.getName().compareTo(f2.getName());
             }
         });

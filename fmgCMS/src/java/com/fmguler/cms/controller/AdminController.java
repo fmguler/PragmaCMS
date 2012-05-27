@@ -400,34 +400,6 @@ public class AdminController {
     }
 
     //--------------------------------------------------------------------------
-    //TEMPLATES
-    //--------------------------------------------------------------------------
-    //list templates
-    @RequestMapping()
-    public String templates(Model model) {
-        List templates = contentService.getTemplates();
-        model.addAttribute("templates", templates);
-        return "admin/templates";
-    }
-
-    //--------------------------------------------------------------------------
-    //EDIT TEMPLATE
-    //--------------------------------------------------------------------------
-    //edit a template
-    @RequestMapping()
-    public String editTemplate(@RequestParam int id, Model model) {
-        Template template = contentService.getTemplate(id);
-
-        //return 404
-        if (template == null) {
-            return null;
-        }
-
-        model.addAttribute("template", template);
-        return "admin/editTemplate";
-    }
-
-    //--------------------------------------------------------------------------
     //STATIC RESOURCES
     //--------------------------------------------------------------------------
     //list resources
@@ -621,6 +593,61 @@ public class AdminController {
         } catch (ResourceException ex) {
             return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not crawl web page, error: " + ex.getMessage(), null);
         }
+    }
+
+    //--------------------------------------------------------------------------
+    //TEMPLATES
+    //--------------------------------------------------------------------------
+    //list templates
+    @RequestMapping()
+    public String templates(Model model) {
+        List templates = contentService.getTemplates();
+        model.addAttribute("templates", templates);
+        return "admin/templates";
+    }
+
+    @RequestMapping
+    @ResponseBody
+    public String addTemplate(@RequestParam String path) {
+        Resource resource = resourceService.getResource(path);
+        if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No HTML resource exists for given path.", null);
+
+        //save the template
+        Template template = new Template();
+        template.setName(resource.toResourcePath());
+        contentService.saveTemplate(template);
+
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", template);
+    }
+
+    //remove template
+    @RequestMapping
+    @ResponseBody
+    public String removeTemplate(@RequestParam int templateId, Model model) {
+        try {
+            contentService.removeTemplate(templateId);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
+        } catch (Exception ex) { //TODO: service exception
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This template could not be removed. Error: " + ex.getMessage(), null);
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    //EDIT TEMPLATE
+    //--------------------------------------------------------------------------
+    //edit a template
+    @RequestMapping()
+    public String editTemplate(@RequestParam int id, Model model) {
+        Template template = contentService.getTemplate(id);
+
+        //return 404
+        if (template == null) {
+            return null;
+        }
+
+        model.addAttribute("template", template);
+        return "admin/editTemplate";
     }
 
     //--------------------------------------------------------------------------

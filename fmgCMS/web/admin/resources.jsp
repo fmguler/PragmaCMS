@@ -1,6 +1,7 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<%@taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
 
 <!DOCTYPE html>
 <html>
@@ -85,6 +86,9 @@
                                                 <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                                 <ul class="dropdown-menu">
                                                     <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Resource</a></li>
+                                                    <c:if test="${fn:endsWith(resource.name, '.htm')||fn:endsWith(resource.name, '.html')}">
+                                                        <li><a href="templates?addTemplate=${resource.folder}${resource.name}"><i class="icon-ok"></i> Set as Template</a></li>
+                                                    </c:if>
                                                     <li class="divider"></li>
                                                     <li><a href="javascript:removeResource('${resource.name}')"><i class="icon-trash"></i> Delete Resource</a></li>
                                                 </ul>
@@ -109,8 +113,10 @@
                 <table class="style-full-width">
                     <tr>
                         <td>
-                            Select the file to upload. You can upload zip files, they will be extracted to current folder.
-                            Please note that items with same name will be overwritten.
+                            <p>
+                                Select the file to upload. You can upload zip files, they will be extracted to current folder.
+                                <em>Please note that items with same name will be overwritten. Add a new folder if you're not sure.</em>
+                            </p>
                         </td>
                     </tr>
                     <tr>
@@ -144,6 +150,15 @@
             <form id="crawlForm">
                 <input type="hidden" name="baseFolder" value="${resourceFolder}"/>
                 <table class="style-full-width">
+                    <tr>
+                        <td colspan="2">
+                            <p>
+                                Enter the the page URL to crawl. You can crawl the whole site, but this may take too long.
+                                All of the page resources will be downloaded to the current folder.
+                                <em>Please note that items with same name will be overwritten. Add a new folder if you're not sure.</em>
+                            </p>
+                        </td>
+                    </tr>
                     <tr>
                         <td><strong>Page URL:</strong></td>
                         <td><input type="text" name="pageUrl" value="http://"/></td>

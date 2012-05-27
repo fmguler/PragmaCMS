@@ -299,6 +299,34 @@ function resourcesReady(){
     }
 }
 
+//on templates ready
+function templatesReady(){
+    //add template
+    $("#addTemplateDialog").dialog({
+        //height: 'auto',
+        width: 400,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
+            click: addTemplate
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //if this page is opened with addTemplate param, open add template dialog
+    if(window.location.href.indexOf("addTemplate")>0){
+        $("#addTemplateDialog").find("[name=path]").val(getParameterByName("addTemplate"));
+        $('#addTemplateDialog').dialog('open');
+    }
+}
+
 //------------------------------------------------------------------------------
 //PAGES ACTIONS
 //------------------------------------------------------------------------------
@@ -929,6 +957,52 @@ function crawlWebPage(){
 }
 
 //------------------------------------------------------------------------------
+//TEMPLATES ACTIONS
+//------------------------------------------------------------------------------
+
+//add template
+function addTemplate(){
+    $.ajax({
+        url: 'addTemplate',
+        data: $("#addTemplateForm").serializeObject(),
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.href = 'templates';
+            }
+        }
+    });
+}
+
+//remove template
+function removeTemplate(templateId, goback){
+    if(!confirm(messages["confirm_remove_template"][locale])) return;
+
+    $.ajax({
+        url: 'removeTemplate',
+        data: 'templateId='+templateId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                //we're in edit template mode, go back to template list
+                if (goback) location.href = 'templates';
+
+                //hide the template row
+                $("#template-"+templateId).css({
+                    "background-color" : "#fbcdcd"
+                }, 'fast').fadeOut("fast");
+            }
+        }
+    });
+}
+
+//------------------------------------------------------------------------------
 //COMMON UTILITY
 //------------------------------------------------------------------------------
 
@@ -1087,5 +1161,9 @@ var messages = {
     "confirm_remove_resource_folder": {
         en: "This resource folder will be completely removed from the system. This action is permanent. Are you sure?",
         tr: "Bu kaynak dizini sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
+    },
+    "confirm_remove_template": {
+        en: "Warning! This template will be completely removed from the system with all the pages using it. This action is permanent. Are you sure?",
+        tr: "Uyarı! Bu şablon tüm sayfalarıyla birlikte sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
     }
 };

@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.service.content.domain;
@@ -17,6 +17,7 @@ import java.util.List;
 public class Template {
     private Integer id;
     private String name;
+    private String path;
     private List templateAttributes = new VenList(TemplateAttribute.class, "template");
 
     /**
@@ -64,6 +65,20 @@ public class Template {
     @Override
     public String toString() {
         return "Template: " + name + " attributes: {" + getTemplateAttributes() + "}";
+    }
+
+    /**
+     * @return the path
+     */
+    public String getPath() {
+        return path;
+    }
+
+    /**
+     * @param path the path to set
+     */
+    public void setPath(String path) {
+        this.path = path;
     }
 
 }

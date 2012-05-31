@@ -78,8 +78,8 @@ public class ContentController implements ServletContextAware {
         //if the requested resource is static, pipe it from template service
         //we decide if this is a static resource based on extension
         //since htm or html extension can be given to generated pages, they cannot be accessed directly
-        //they can be retrieved as static file by appending ?preview (or any static file not having extension specified in isStaticResource)
-        if (isStaticResource(path) || request.getParameter("preview") != null) {
+        //they can be retrieved as static file by appending ?static (or any static file not having extension specified in isStaticResource)
+        if (isStaticResource(path) || request.getParameter("static") != null) {
             handleStaticResource(path, request, response);
             return null;
         }
@@ -110,15 +110,16 @@ public class ContentController implements ServletContextAware {
         //it's resources will use /template as relative path, and return not found. We should implement pages like /some-page/ and look for resources starting with /some-page in /template
 
         //find the template, fill with attributes
-        String templateName = page.getTemplate().getName();
+        String templatePath = page.getTemplate().getPath();
         Map model = getPageAttributesMap(page);
-        String pageHtml = "";
+        String pageHtml;
 
+        //generate the page content - edit/cache/regular
         if (request.getParameter("edit") != null && request.getSession().getAttribute("user") != null) {
             //inject editor code if this is an edit
-            String templateSource = templateService.getSource(templateName);
-            templateSource = AdminController.injectEditor(templateSource);
-            pageHtml = templateService.mergeFromSource(templateName, templateSource, model);
+            String templateSource = templateService.getSource(templatePath);
+            templateSource = AdminController.injectEditor(templateSource, true, request.getContextPath());
+            pageHtml = templateService.mergeFromSource(templatePath, templateSource, model);
         } else if ((cachedResDate != -1) && (cachedResDate < (System.currentTimeMillis() / 1000L * 1000L)) && (cachedResDate >= (page.getLastModified().getTime() / 1000L * 1000L))) {
             //not modified (browser cache)
             response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
@@ -127,7 +128,7 @@ public class ContentController implements ServletContextAware {
             return null;
         } else {
             //regular merge
-            pageHtml = templateService.merge(templateName, model);
+            pageHtml = templateService.merge(templatePath, model);
         }
 
         //write the page to the response
@@ -182,6 +183,18 @@ public class ContentController implements ServletContextAware {
             //set the mime type
             String mimeType = servletContext.getMimeType(resource.getName().toLowerCase());
             if (mimeType != null) response.setContentType(mimeType);
+
+            //inject editor code if this is an edit
+            if (request.getParameter("edit") != null && request.getSession().getAttribute("user") != null) {
+                String templateHtml = IOUtils.toString(resourceService.getInputStream(resource), "UTF-8");
+                templateHtml = AdminController.injectInspector(templateHtml, request.getContextPath());
+                response.setCharacterEncoding("UTF-8");
+                response.setContentType("text/html");
+                byte[] content = templateHtml.getBytes("UTF-8");
+                response.setContentLength(content.length);
+                response.getOutputStream().write(content);
+                return;
+            }
 
             //checked last modified of the template resource
             if ((cachedResDate != -1) && (cachedResDate < (System.currentTimeMillis() / 1000L * 1000L)) && (cachedResDate >= (resource.getLastModified().getTime() / 1000L * 1000L))) {

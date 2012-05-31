@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.controller;
@@ -48,7 +48,7 @@ public class DefaultServletController implements ServletContextAware {
 
     //check if the given path is a static resource, e.g. js, css, image
     private boolean isStaticResource(String path) {
-        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico|cur)");
+        return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico|cur|html)");
     }
 
     //to get named dispatcher

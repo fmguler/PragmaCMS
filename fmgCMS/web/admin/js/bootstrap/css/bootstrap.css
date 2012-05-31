@@ -5029,6 +5029,11 @@ body {
     width: 100%;
 }
 
+/* width 600*/
+.style-width-600 {
+    width: 600px;
+}
+
 /* hidden */
 .style-hidden {
     display:none;

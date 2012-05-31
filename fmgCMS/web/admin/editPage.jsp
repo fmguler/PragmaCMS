@@ -38,7 +38,9 @@
                 <div class="row-fluid">
                     <div class="span12">
                         <div class="page-header style-position-fixed">
-                            <h2 class="style-display-inline">Editing Page: <span id="pagePath">${page.path}</span></h2>
+                            <div class="style-display-ib style-width-600">
+                                <h2 class="style-display-inline">Editing Page: <span id="pagePath">${page.path}</span></h2>
+                            </div>
                             <div class="style-float-right">
                                 <div class="btn-group style-display-ib">
                                     <a class="btn" href="javascript:uploadAttachmentDialog()"><i class="icon-upload"></i> Upload Attachment</a>
@@ -48,10 +50,13 @@
                                     </ul>
                                 </div>
                                 <div class="btn-group style-display-ib">
-                                    <a class="btn" href="javascript:renamePageDialog()"><i class="icon-edit"></i> Rename Page</a>
-                                    <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+                                    <a class="btn btn-success" href="javascript:saveDialog()"><i class="icon-ok icon-white"></i> Save Changes</a>
+                                    <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
-                                        <li><a href="javascript:viewPage()"><i class="icon-eye-open"></i> View Page</a></li>
+                                        <li><a href="javascript:reviewChangesDialog()"><i class="icon-check"></i> Review Changes</a></li>
+                                        <li class="divider"></li>
+                                        <li><a href="javascript:viewPage()"><i class="icon-search"></i> View Page</a></li>
+                                        <li><a href="javascript:renamePageDialog()"><i class="icon-edit"></i> Rename Page</a></li>
                                         <li class="divider"></li>
                                         <li><a href="javascript:removePage(${page.id},true)"><i class="icon-trash"></i> Delete Page</a></li>
                                     </ul>
@@ -66,13 +71,12 @@
                                     </c:forEach>
                                 </select>
                                 &nbsp;&nbsp;
-                                <a class="btn btn-success" href="javascript:saveDialog()"><i class="icon-ok icon-white"></i> Save Changes</a>
                                 <a class="btn btn-primary" href="javascript:attributeHistoryDialog()"><i class="icon-list icon-white"></i> Attribute History</a>
-                                <a class="btn btn-info" href="javascript:editHtmlDialog()"><i class="icon-pencil icon-white"></i> Edit HTML</a>
+                                <a class="btn btn-info" href="javascript:editHtmlDialog()"><i class="icon-pencil icon-white"></i> Edit Attribute HTML</a>
                             </div>
                         </div>
 
-                        <div style="height:150px"></div>
+                        <div id="page-header-placeholder"></div>
 
                         <iframe id="pagePreview" src="about:blank" width="100%" height="480" onLoad="onIFrameLoad(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>
                     </div>

@@ -50,7 +50,7 @@
                                             <a class="btn" href="${pageContext.request.contextPath}${page.path}/edit"><i class="icon-edit"></i> Edit Page</a>
                                             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                             <ul class="dropdown-menu">
-                                                <li><a href="${pageContext.request.contextPath}${page.path}" target="_blank"><i class="icon-eye-open"></i> View Page</a></li>
+                                                <li><a href="${pageContext.request.contextPath}${page.path}" target="_blank"><i class="icon-search"></i> View Page</a></li>
                                                 <li class="divider"></li>
                                                 <li><a href="javascript:removePage(${page.id})"><i class="icon-trash"></i> Delete Page</a></li>
                                             </ul>

@@ -76,13 +76,13 @@
                                 <c:if test="${!resource.directory}">
                                     <tr>
                                         <td>
-                                            <a href="${pageContext.request.contextPath}${resource.folder}${resource.name}?preview">${resource.name}</a>
+                                            <a href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static">${resource.name}</a>
                                         </td>
                                         <td><fmt:formatDate value="${resource.lastModified}" pattern="dd.MM.yyyy HH:mm" /></td>
                                         <td>${resource.contentLength}</td>
                                         <td>
                                             <div class="btn-group">
-                                                <a class="btn" href="${pageContext.request.contextPath}${resource.folder}${resource.name}?preview"><i class="icon-file"></i> Open</a>
+                                                <a class="btn" href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static"><i class="icon-file"></i> Open</a>
                                                 <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                                 <ul class="dropdown-menu">
                                                     <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Resource</a></li>

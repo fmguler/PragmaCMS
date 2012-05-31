@@ -119,7 +119,7 @@ public class AdminController {
     public String addPage(Page page) {
         if (page.getId() != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This page already exists", null);
         if (!page.getPath().startsWith("/")) page.setPath("/" + page.getPath());
-        if (!page.getPath().substring(1).matches("[A-Za-z0-9\\-]{0,61}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<br/><li>Dash (-)", null);
+        if (!page.getPath().substring(1).matches("[A-Za-z0-9\\-]{0,255}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<br/><li>Dash (-)", null);
         if (contentService.getPage(page.getPath()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A page with this path already exists", null);
 
         //save the page
@@ -204,7 +204,7 @@ public class AdminController {
 
         //path validity checks (same as addPage)
         if (!newPath.startsWith("/")) newPath = "/" + newPath;
-        if (!newPath.substring(1).matches("[A-Za-z0-9\\-]{0,61}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<br/><li>Dash (-)", null);
+        if (!newPath.substring(1).matches("[A-Za-z0-9\\-]{0,255}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<br/><li>Dash (-)", null);
 
         //add a redirect page with old path pointing to renamed page
         if (redirect != null) {
@@ -608,13 +608,14 @@ public class AdminController {
 
     @RequestMapping
     @ResponseBody
-    public String addTemplate(@RequestParam String path) {
+    public String addTemplate(@RequestParam String name, @RequestParam String path) {
         Resource resource = resourceService.getResource(path);
         if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No HTML resource exists for given path.", null);
 
         //save the template
         Template template = new Template();
-        template.setName(resource.toResourcePath());
+        template.setName(name);
+        template.setPath(resource.toResourcePath());
         contentService.saveTemplate(template);
 
         //return success
@@ -638,16 +639,50 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //edit a template
     @RequestMapping()
-    public String editTemplate(@RequestParam int id, Model model) {
-        Template template = contentService.getTemplate(id);
+    public String editTemplate(@RequestParam int id, @RequestParam(required = false) String ofPage, Model model) {
+        Template template;
 
-        //return 404
+        //if ofPage parameter is set, edit the template of this page
+        if (ofPage != null) {
+            Page page = contentService.getPage(ofPage);
+            template = page == null ? null : page.getTemplate();
+        } else template = contentService.getTemplate(id);
+
+        //no such template
         if (template == null) {
-            return null;
+            model.addAttribute("errorMessage", "This template does not exist. You should add the template first.");
+            model.addAttribute("errorAction", "Add Template");
+            model.addAttribute("errorActionUrl", "templates");
+            return "admin/error";
         }
 
         model.addAttribute("template", template);
         return "admin/editTemplate";
+    }
+
+    //ajax - get template
+    @RequestMapping()
+    @ResponseBody
+    public String getTemplate(@RequestParam Integer templateId) {
+        Template template = contentService.getTemplate(templateId);
+        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", template);
+    }
+
+    //ajax - rename template
+    @RequestMapping
+    @ResponseBody
+    public String renameTemplate(@RequestParam Integer templateId, @RequestParam String name) {
+        Template template = contentService.getTemplate(templateId);
+        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+        if (template.getName().equals(name)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "You did not change the name...", null);
+
+        //change the name and save
+        template.setName(name);
+        contentService.saveTemplate(template);
+
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template is renamed successfully", null);
     }
 
     //--------------------------------------------------------------------------
@@ -684,12 +719,11 @@ public class AdminController {
      * @param pageHtml the page html
      * @return injected page html
      */
-    public static String injectEditor(String pageHtml) {
+    public static String injectEditor(String pageHtml, boolean editPage, String contextPath) {
         String disclaimer = "<!-- Edited by fmgCMS -->";
         String editorScript = ""
-                + "<script type=\"text/javascript\" src=\"admin/js/jquery-1.7.2.min.js\"></script>\n"
-                + "<script type=\"text/javascript\" src=\"admin/js/jquery-ui-1.8.20.custom.min.js\"></script>\n"
-                + "<script type=\"text/javascript\" src=\"admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
+                + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/jquery-ui-1.8.20.custom.min.js\"></script>\n"
+                + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
                 + "common/table,\n"
                 + "common/list,\n"
                 + "common/link,\n"
@@ -704,9 +738,9 @@ public class AdminController {
                 //+ "common/abbr\">\n"
                 + "\">\n"
                 + "</script>\n"
-                + "<script type=\"text/javascript\" src=\"admin/js/make-editable.js\"></script>\n"
-                + "<link href=\"admin/js/jquery-ui-base/jquery-ui-1.8.20.custom.css\" type=\"text/css\" rel=\"stylesheet\" />\n"
-                + "<link href=\"admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
+                + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/make-editable.js\"></script>\n"
+                + "<link href=\"" + contextPath + "/admin/js/jquery-ui-base/jquery-ui-1.8.20.custom.css\" type=\"text/css\" rel=\"stylesheet\" />\n"
+                + "<link href=\"" + contextPath + "/admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
 
         //inject editor code
         StringBuffer pageBuffer = new StringBuffer(pageHtml);
@@ -721,12 +755,30 @@ public class AdminController {
         while (matcher.find()) {
             String attribute = matcher.group(1);
             if (attribute.startsWith("i_")) continue; //do not edit invisible attributes
-            if (attribute.startsWith("t_")) continue; //do not edit template attributes
-            matcher.appendReplacement(sb, "<div id=\"attribute-editable-$1\" onclick=\"window.parent.onAlohaClick('$1')\" class=\"editable\">\\${$1}</div>");
+            if (editPage && attribute.startsWith("t_")) continue; //do not edit template attributes in edit page mode
+            if (editPage || attribute.startsWith("t_")) matcher.appendReplacement(sb, "<div id=\"attribute-editable-$1\" onclick=\"window.parent.onAlohaClick('$1')\" class=\"editable\">\\${$1}</div>"); //do not edit page attributes in edit template mode
         }
         matcher.appendTail(sb);
 
         return sb.toString();
+    }
+
+    /**
+     * Inject inspector code to template html
+     * @param templateHtml the template html
+     * @return injected page html
+     */
+    public static String injectInspector(String templateHtml, String contextPath) {
+        String disclaimer = "<!-- Edited by fmgCMS -->";
+        String editorScript = ""
+                + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/firebug-lite/build/firebug-lite-debug.js\"></script>";
+
+        //inject inspector code
+        StringBuilder pageBuffer = new StringBuilder(templateHtml);
+        pageBuffer.insert(0, disclaimer);
+        pageBuffer.insert(pageBuffer.indexOf("</head>"), editorScript);
+
+        return pageBuffer.toString();
     }
 
     //PRIVATE
@@ -740,7 +792,7 @@ public class AdminController {
         //new page, template not selected yet (this shouldn't happen anymore, but be safe)
         if (page.getTemplate() == null) return;
 
-        String templatePath = page.getTemplate().getName();
+        String templatePath = page.getTemplate().getPath();
         String templateSource = templateService.getSource(templatePath);
 
         //scan template source for attributes

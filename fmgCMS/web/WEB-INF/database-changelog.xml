@@ -312,5 +312,17 @@
     <changeSet author="fmguler" id="35">
         <addUniqueConstraint schemaName="public" tableName="template_attribute" columnNames="template_id, attribute" constraintName="template_attribute_template_id_attribute_unique"/>
     </changeSet>
+    <!-- add path field to template, copy from name field -->
+    <changeSet author="fmguler" id="36">
+        <addColumn tableName="template" schemaName="public">
+            <column name="path" type="varchar(1000)" />
+        </addColumn>
+    </changeSet>
+    <changeSet author="fmguler" id="37">
+        <sql>
+            update template set path = '/' || name;
+        </sql>
+        <rollback/>
+    </changeSet>
     <!-- <<MILESTONE 0.3 AUTHOR/ETC -->
 </databaseChangeLog>

@@ -327,6 +327,48 @@ function templatesReady(){
     }
 }
 
+//on edit template ready
+function editTemplateReady(templateId, templatePath){
+    //rename template (modal)
+    $("#renameTemplateDialog").dialog({
+        //height: 'auto',
+        width: 470,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["save"][locale],
+            click: renameTemplate
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //get the template as json
+    $.ajax({
+        url: 'getTemplate',
+        data: 'templateId='+templateId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                template = response.object;
+                templateCopy = $.extend(true, {}, template);
+            }
+        }
+    });
+
+    //load the page preview iframe
+    var templatePreviewSrc = contextPath+templatePath+"?time="+(new Date()).getTime()+"&static&edit";
+    $("#templatePreview").attr("src", templatePreviewSrc);
+}
+
 //------------------------------------------------------------------------------
 //PAGES ACTIONS
 //------------------------------------------------------------------------------
@@ -382,7 +424,7 @@ function viewPage(){
     window.open(contextPath + page.path);
 }
 
-//save page properties
+//rename page path
 function renamePage(){
     var renamePageForm = $("#renamePageForm").serializeObject();
     $.ajax({
@@ -567,11 +609,19 @@ function viewAttachmentsDialog(){
 
 //save dialog, calls publish/draft/review
 function saveDialog(){
+    //tell aloha to update current attribute value
+    $("#pagePreview")[0].contentWindow.forceAlohaChange();
+
+    //show the dialog
     $('#saveDialog').dialog('open');
 }
 
 //review changes, diff to published version
 function reviewChangesDialog(){
+    //tell aloha to update current attribute value
+    $("#pagePreview")[0].contentWindow.forceAlohaChange();
+
+    //show the dialog
     $('#reviewChangesDialog').dialog('open');
 
     //populate with changed attributes
@@ -738,6 +788,9 @@ function editHtmlDialog(){
         return;
     }
 
+    //tell aloha to update current attribute value
+    $("#pagePreview")[0].contentWindow.forceAlohaChange();
+
     //update the textarea
     $("#editHtmlDialogTextarea").val(attributeById(selectedAttributeId).value);
 
@@ -820,6 +873,7 @@ function onIFrameLoad(url, path){
         $(".content").width(iframeWidth);
         $(".container").width(iframeWidth);
         $(".page-header").width(iframeWidth);
+        $("#page-header-placeholder").height($(".page-header").outerHeight());
 
         //resize iframe to actual content
         $("#pagePreview").width(iframeWidth);
@@ -1000,6 +1054,92 @@ function removeTemplate(templateId, goback){
             }
         }
     });
+}
+
+//------------------------------------------------------------------------------
+//EDIT TEMPLATE AJAX ACTIONS
+//------------------------------------------------------------------------------
+
+//view the current template
+function viewTemplate(){
+    window.open(contextPath + template.path+"?static");
+}
+
+//rename template
+function renameTemplate(){
+    var renameTemplateForm = $("#renameTemplateForm").serializeObject();
+    $.ajax({
+        url: 'renameTemplate',
+        data: renameTemplateForm,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                $("#templateName").text(renameTemplateForm.name);
+                $('#renameTemplateDialog').dialog('close');
+                showStatusDialog(response.message);
+            }
+        }
+    });
+}
+
+//------------------------------------------------------------------------------
+//EDIT TEMPLATE DIALOGS
+//------------------------------------------------------------------------------
+
+//rename dialog, calls renameTemplate
+function renameTemplateDialog(){
+    $('#renameTemplateDialog').dialog('open');
+}
+
+//------------------------------------------------------------------------------
+//EDIT TEMPLATE EVENTS
+//------------------------------------------------------------------------------
+
+//called when preview iframe is loaded
+function onTemplateIFrameLoad(url, path){
+    //initial opening, no src
+    if (url == 'about:blank') return true;
+
+    //prevent links
+    $("#templatePreview").contents().find("a").click(function(event) {
+        if ($(event.currentTarget).parents().hasClass('aloha-floatingmenu')) return true; //do not meddle aloha
+        if (!confirm("Any unchanged changes will be lost if you navigate away from this page, are you sure?")) event.preventDefault();
+    });
+
+    //an edit mode page is opened, adjust the host page
+    if (url.substring(url.length-5, url.length)=="&edit"){
+        var iframeWidth = $("#templatePreview").contents().find("body")[0].scrollWidth;
+        var iframeHeight = $("#templatePreview").contents().find("body")[0].scrollHeight;
+
+        //adjust page elems width
+        $(".content").width(iframeWidth);
+        $(".container").width(iframeWidth);
+        $(".page-header").width(iframeWidth);
+        $("#fbTop").hide();
+        $("#page-header-placeholder").height($(".page-header").outerHeight());
+
+        //resize iframe to actual content
+        $("#templatePreview").width(iframeWidth);
+        $("#templatePreview").height(iframeHeight+100);
+
+        return true;
+    }
+
+    //a link is clicked within the iframe, reopen the template of this page in edit mode
+    location.href = "editTemplate?id=0&ofPage=" + (path.substring(contextPath.length, path.length));
+    return false;
+}
+
+//------------------------------------------------------------------------------
+//EDIT TEMPLATE UTILITY
+//------------------------------------------------------------------------------
+
+//inspect element from the preview frame
+function inspectElement(){
+    $("#templatePreview")[0].contentWindow.Firebug.Inspector.toggleInspect();
 }
 
 //------------------------------------------------------------------------------

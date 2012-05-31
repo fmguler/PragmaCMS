@@ -42,3 +42,9 @@ $(function(){
         return false;
     });
 });
+
+//force aloha to trigger content change event (to send latest html)
+function forceAlohaChange(){
+    //this triggers aloha-smart-content-changed event
+    if (Aloha.activeEditable) Aloha.activeEditable.blur();
+}

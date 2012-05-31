@@ -1,5 +1,6 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
 
 <!DOCTYPE html>
 <html>
@@ -35,18 +36,20 @@
                         </div>
                         <table class="table table-striped">
                             <tr>
-                                <th>Template</th>
+                                <th>Name</th>
+                                <th>Resource Path</th>
                                 <th>Actions</th>
                             </tr>
                             <c:forEach items="${templates}" var="template">
                                 <tr id="template-${template.id}">
-                                    <td><a href="editTemplate?id=${template.id}">${template.name}</a></td>
+                                    <td><a href="editTemplate?id=${template.id}">${fn:escapeXml(template.name)}</a></td>
+                                    <td>${template.path}</td>
                                     <td>
                                         <div class="btn-group">
                                             <a class="btn" href="editTemplate?id=${template.id}"><i class="icon-edit"></i> Edit Template</a>
                                             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                             <ul class="dropdown-menu">
-                                                <li><a href="${pageContext.request.contextPath}/${template.name}?preview" target="_blank"><i class="icon-eye-open"></i> View Template</a></li>
+                                                <li><a href="${pageContext.request.contextPath}${template.path}?static" target="_blank"><i class="icon-search"></i> View Template</a></li>
                                                 <li class="divider"></li>
                                                 <li><a href="javascript:removeTemplate(${template.id})"><i class="icon-trash"></i> Delete Template</a></li>
                                             </ul>
@@ -67,6 +70,10 @@
         <div id="addTemplateDialog" title="Add Template">
             <form id="addTemplateForm">
                 <table class="style-full-width">
+                    <tr>
+                        <td><strong>Template Name:</strong></td>
+                        <td><input type="text" name="name" value=""/></td>
+                    </tr>
                     <tr>
                         <td><strong>Resource Path:</strong></td>
                         <td><input type="text" name="path" value=""/></td>

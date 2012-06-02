@@ -23,7 +23,7 @@
             var templateCopy = null;
             var selectedAttributeId = null;
             var selectedAttributeHistory = null;
-            var templateAttachments = null;
+            var selectedElement = null;
             $(function(){editTemplateReady(${template.id}, '${template.path}')});
         </script>
     </head>
@@ -45,7 +45,7 @@
                                     <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
                                         <li><a href="javascript:void()"><i class="icon-plus"></i> Make Attribute</a></li>
-                                        <li><a href="javascript:void()"><i class="icon-pencil"></i> Edit HTML</a></li>
+                                        <li><a href="javascript:editTemplateHtmlDialog()"><i class="icon-pencil"></i> Edit HTML</a></li>
                                         <li><a href="javascript:void()"><i class="icon-font"></i> Edit Inline</a></li>
                                     </ul>
                                 </div>
@@ -89,6 +89,13 @@
                     </tr>
                 </table>
             </form>
+        </div>
+
+        <!-- Edit Template Html Dialog -->
+        <div id="editTemplateHtmlDialog" title="Edit Template HTML">
+            <div>
+                <textarea class="span7" rows="20" id="editTemplateHtmlDialogTextarea" onchange="onEditTemplateHtmlDialogTextareaChange()">[No Attribute Selected]</textarea>
+            </div>
         </div>
     </body>
 </html>

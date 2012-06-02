@@ -348,6 +348,25 @@ function editTemplateReady(templateId, templatePath){
         }]
     });
 
+    //edit template html (modal)
+    $("#editTemplateHtmlDialog").dialog({
+        //height: 'auto',
+        width: 570,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn',
+            text: messages["apply"][locale],
+            click: function() {}
+        },{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
     //get the template as json
     $.ajax({
         url: 'getTemplate',
@@ -1085,6 +1104,11 @@ function renameTemplate(){
     });
 }
 
+//inspect element from the preview frame
+function inspectElement(){
+    $("#templatePreview")[0].contentWindow.Firebug.Inspector.toggleInspect();
+}
+
 //------------------------------------------------------------------------------
 //EDIT TEMPLATE DIALOGS
 //------------------------------------------------------------------------------
@@ -1094,9 +1118,42 @@ function renameTemplateDialog(){
     $('#renameTemplateDialog').dialog('open');
 }
 
+//edit template element html
+function editTemplateHtmlDialog(){
+    if (!selectedElement){
+        alert("Please select an element first.");
+        return;
+    }
+
+    //update the textarea
+    $("#editTemplateHtmlDialogTextarea").val($(selectedElement).html());
+
+    //show the dialog
+    $('#editTemplateHtmlDialog').dialog('open');
+}
+
 //------------------------------------------------------------------------------
 //EDIT TEMPLATE EVENTS
 //------------------------------------------------------------------------------
+
+//called when an html element is selected via inspect or tree
+function onElementSelected(elem){
+    //alert($(elem).html());
+    selectedElement = elem;
+    editTemplateHtmlDialog();
+    //console.log(getTemplateHTML());
+}
+
+//on attribute textarea value change, update preview
+function onEditTemplateHtmlDialogTextareaChange(){
+    if (!selectedElement) return;
+
+    //update the element html
+    $(selectedElement).html($("#editTemplateHtmlDialogTextarea").val());
+
+    //update the tree
+    $("#templatePreview")[0].contentWindow.Firebug.HTML.fmgUpdateTree();
+}
 
 //called when preview iframe is loaded
 function onTemplateIFrameLoad(url, path){
@@ -1136,12 +1193,18 @@ function onTemplateIFrameLoad(url, path){
 //------------------------------------------------------------------------------
 //EDIT TEMPLATE UTILITY
 //------------------------------------------------------------------------------
-
-//inspect element from the preview frame
-function inspectElement(){
-    $("#templatePreview")[0].contentWindow.Firebug.Inspector.toggleInspect();
+function getTemplateHTML () {
+    var htmlStartTag = function () {
+        var attrs = $("#templatePreview").contents().find('html')[0].attributes;
+        var result = '<html';
+        $.each(attrs, function() {
+            result += ' ' + this.name + '="' + this.value + '"';
+        });
+        result += '>';
+        return result;
+    }
+    return htmlStartTag() + $("#templatePreview").contents().find('html').html() + '</html>';
 }
-
 //------------------------------------------------------------------------------
 //COMMON UTILITY
 //------------------------------------------------------------------------------

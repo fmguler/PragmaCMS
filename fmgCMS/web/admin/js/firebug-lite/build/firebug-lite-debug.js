@@ -13767,6 +13767,9 @@ Firebug.Inspector =
 
         //Firebug.Console.log(targ);
         Firebug.Inspector.stopInspecting();
+
+        //fmg:
+        window.parent.onElementSelected(targ);
     },
 
     onInspecting: function(e)
@@ -24250,6 +24253,14 @@ if (Firebug.ignoreFirebugElements)
 
 Firebug.HTML = extend(Firebug.Module,
 {
+    fmgUpdateTree: function(){
+        //redraw the whole thing
+        var rootNode = FBL.Firebug.browser.document.documentElement;
+        var html = [];
+        FBL.Firebug.HTML.appendTreeNode(rootNode, html);
+        $("fbHTML").innerHTML = html.join("");
+        FBL.Firebug.HTML.selectTreeNode(FBL.Firebug.context.persistedState.selectedHTMLElementId);
+    },
     appendTreeNode: function(nodeArray, html)
     {
         var reTrim = /^\s+|\s+$/g;
@@ -24728,6 +24739,9 @@ Firebug.HTML.onTreeClick = function (e)
                           (targ.parentNode.previousSibling || targ);
 
             selectElement(targ.parentNode.parentNode);
+
+            //fmg:
+            window.parent.onElementSelected(ElementCache.get(targ.parentNode.parentNode.id));
 
             if (control.className.indexOf('nodeControl') == -1)
                 return;

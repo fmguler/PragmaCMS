@@ -29,6 +29,10 @@ import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -639,7 +643,7 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //edit a template
     @RequestMapping()
-    public String editTemplate(@RequestParam int id, @RequestParam(required = false) String ofPage, Model model) {
+    public String editTemplate(@RequestParam int id, @RequestParam(required = false) String ofPage, Model model, HttpServletRequest request) {
         Template template;
 
         //if ofPage parameter is set, edit the template of this page
@@ -656,17 +660,52 @@ public class AdminController {
             return "admin/error";
         }
 
+        //get the original unmodified html (scripts can modify DOM)
+        InputStream inputStream = null;
+        String templateHtml = null;
+        try {
+            Resource resource = resourceService.getResource(template.getPath());
+            inputStream = resourceService.getInputStream(resource);
+            templateHtml = IOUtils.toString(inputStream, "UTF-8");
+        } catch (ResourceException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for templateHtml", ex);
+            model.addAttribute("errorMessage", "Unknown Error. Please report this to us: " + ex.getMessage());
+            model.addAttribute("errorAction", "Go Back");
+            model.addAttribute("errorActionUrl", "resources");
+            return "admin/error";
+        } catch (IOException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error reading template resource for templateHtml", ex);
+            model.addAttribute("errorMessage", "Unknown Error. Please report this to us: " + ex.getMessage());
+            model.addAttribute("errorAction", "Go Back");
+            model.addAttribute("errorActionUrl", "resources");
+            return "admin/error";
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
+
+        //NOTE: we add custom attributes to all elements to detect where to merge changes
+        //BECAUSE: scripts can modify DOM, we cannot know which element corresponds to which element in the original html
+        Document templateDocument = Jsoup.parse(templateHtml);
+        templateDocument.outputSettings().prettyPrint(false);
+        templateDocument.head().append("<script id=\"fmgcms-injected-script\" type=\"text/javascript\" src=\"" + request.getContextPath() + "/admin/js/firebug-lite/build/firebug-lite-debug.js\"></script>");
+        int templateElemCounter = 0;
+        Elements allElements = templateDocument.getAllElements();
+        for (Element elem : allElements) {
+            if (elem.tagName().equals("html")) continue; //do not directly edit html tag
+            elem.attr("fmgcms-id", "" + templateElemCounter);
+            templateElemCounter++;
+        }
+
+        //will be loaded by preview iframe (ContentController.handleStaticResource - edit)
+        request.getSession().setAttribute("templateHtml:" + template.getPath(), templateDocument.html());
+
+        //will be used as server side state for this template
+        request.getSession().setAttribute("templateDocument:" + template.getId(), templateDocument);
+        request.getSession().setAttribute("templateElemCounter:" + template.getId(), templateElemCounter);
+
+        //return regular template obj
         model.addAttribute("template", template);
         return "admin/editTemplate";
-    }
-
-    //ajax - get template
-    @RequestMapping()
-    @ResponseBody
-    public String getTemplate(@RequestParam Integer templateId) {
-        Template template = contentService.getTemplate(templateId);
-        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", template);
     }
 
     //ajax - rename template
@@ -683,6 +722,115 @@ public class AdminController {
 
         //return success
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template is renamed successfully", null);
+    }
+
+    //ajax - get template element html
+    @RequestMapping()
+    @ResponseBody
+    public String getTemplateElementHtml(@RequestParam int templateId, @RequestParam int elemId, HttpServletRequest request) {
+        Document templateDocument = (Document)request.getSession().getAttribute("templateDocument:" + templateId);
+        if (templateDocument == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template document in session, please report this error to us", null);
+        Elements elements = templateDocument.getElementsByAttributeValue("fmgcms-id", "" + elemId);
+        if (elements.isEmpty()) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template element with this id, please report this error to us", null);
+
+        //clone the element (do not modify original), remove custom id, return html
+        Element element = elements.first().clone();
+        element.getAllElements().removeAttr("fmgcms-id");
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", element.html());
+    }
+
+    //ajax - update template element html
+    @RequestMapping()
+    @ResponseBody
+    public String updateTemplateElementHtml(@RequestParam int templateId, @RequestParam int elemId, @RequestParam String html, HttpServletRequest request) {
+        Document templateDocument = (Document)request.getSession().getAttribute("templateDocument:" + templateId);
+        if (templateDocument == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template document in session, please report this error to us", null);
+        Elements elements = templateDocument.getElementsByAttributeValue("fmgcms-id", "" + elemId);
+        if (elements.isEmpty()) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template element with this id, please report this error to us", null);
+        Integer templateElemCounter = (Integer)request.getSession().getAttribute("templateElemCounter:" + templateId);
+        if (templateElemCounter == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template element index in session, please report this error to us", null);
+
+        //update the element html
+        Element element = elements.first();
+        element.html(html);
+
+        //regenerate custom attributes
+        Elements allElements = element.getAllElements();
+        for (Element elem : allElements) {
+            if (elem.attr("fmgcms-id").equals(element.attr("fmgcms-id"))) continue; //skip self
+            elem.attr("fmgcms-id", "" + templateElemCounter);
+            templateElemCounter++;
+        }
+        request.getSession().setAttribute("templateElemMaxId:" + templateId, templateElemCounter);
+
+        //return success, with the regenerated element html
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", element.html());
+    }
+
+    //ajax - make attribute
+    @RequestMapping
+    @ResponseBody
+    public String saveTemplate(@RequestParam Integer templateId, @RequestParam String comment, @RequestParam Boolean publish, HttpServletRequest request) {
+        Template template = contentService.getTemplate(templateId);
+        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+        Document templateDocument = (Document)request.getSession().getAttribute("templateDocument:" + templateId);
+        if (templateDocument == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template document in session, please report this error to us", null);
+
+        //clone the element (do not modify original - can save again), remove custom id and script, get html
+        Document docCopy = templateDocument.clone();
+        docCopy.getAllElements().removeAttr("fmgcms-id");
+        docCopy.head().getElementById("fmgcms-injected-script").remove();
+        String templateHtml = docCopy.html();
+
+        //scan submitted template html for attributes
+        Set<String> pageAttributes = new HashSet();
+        Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
+        Matcher matcher = pattern.matcher(templateHtml);
+        while (matcher.find()) {
+            String attr = matcher.group(1);
+            if (attr.startsWith("t_")) continue;
+            else pageAttributes.add(attr);
+        }
+
+        //get the current template source
+        String templateSource = templateService.getSource(template.getPath());
+
+        //scan template source for attributes
+        Set<String> existingPageAttributes = new HashSet();
+        matcher = pattern.matcher(templateSource);
+        while (matcher.find()) {
+            String attr = matcher.group(1);
+            if (attr.startsWith("t_")) continue;
+            else existingPageAttributes.add(attr);
+        }
+
+        //detect added attributes
+        for (String attr : existingPageAttributes) {
+            if (pageAttributes.contains(attr)) pageAttributes.remove(attr);
+        }
+
+        //TODO: save new template html
+        Resource resource = resourceService.getResource(template.getPath());
+        if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource corresponding to this template is not found", null);
+        OutputStream os = null;
+        try {
+            os = resourceService.getOutputStream(resource);
+            os.write(templateHtml.getBytes("UTF-8"));
+            os.close();
+        } catch (ResourceException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at saveTemplate write to resource os", ex);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+        } catch (IOException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at saveTemplate write to resource os", ex);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+        } finally {
+            IOUtils.closeQuietly(os);
+        }
+
+        //return success
+        Map result = new HashMap();
+        result.put("addedAttributes", pageAttributes);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template is saved successfully. Following attributes are added;", result);
     }
 
     //--------------------------------------------------------------------------
@@ -720,7 +868,6 @@ public class AdminController {
      * @return injected page html
      */
     public static String injectEditor(String pageHtml, boolean editPage, String contextPath) {
-        String disclaimer = "<!-- Edited by fmgCMS -->";
         String editorScript = ""
                 + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/jquery-ui-1.8.20.custom.min.js\"></script>\n"
                 + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
@@ -744,7 +891,6 @@ public class AdminController {
 
         //inject editor code
         StringBuffer pageBuffer = new StringBuffer(pageHtml);
-        pageBuffer.insert(0, disclaimer);
         pageBuffer.insert(pageBuffer.indexOf("</head>"), editorScript);
 
         //replace placeholders with editable
@@ -761,24 +907,6 @@ public class AdminController {
         matcher.appendTail(sb);
 
         return sb.toString();
-    }
-
-    /**
-     * Inject inspector code to template html
-     * @param templateHtml the template html
-     * @return injected page html
-     */
-    public static String injectInspector(String templateHtml, String contextPath) {
-        String disclaimer = "<!-- Edited by fmgCMS -->";
-        String editorScript = ""
-                + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/firebug-lite/build/firebug-lite-debug.js\"></script>";
-
-        //inject inspector code
-        StringBuilder pageBuffer = new StringBuilder(templateHtml);
-        pageBuffer.insert(0, disclaimer);
-        pageBuffer.insert(pageBuffer.indexOf("</head>"), editorScript);
-
-        return pageBuffer.toString();
     }
 
     //PRIVATE

@@ -328,7 +328,7 @@ function templatesReady(){
 }
 
 //on edit template ready
-function editTemplateReady(templateId, templatePath){
+function editTemplateReady(templatePath){
     //rename template (modal)
     $("#renameTemplateDialog").dialog({
         //height: 'auto',
@@ -348,6 +348,42 @@ function editTemplateReady(templateId, templatePath){
         }]
     });
 
+    //action (modal)
+    $("#actionDialog").dialog({
+        //height: 'auto',
+        width: 470,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-success',
+            text: messages["button_make_attribute"][locale],
+            click: function() {
+                $(this).dialog("close");
+                makeAttributeDialog();
+            }
+        },{
+            'class': 'btn btn-inverse',
+            text: messages["button_edit_html"][locale],
+            click: function() {
+                $(this).dialog("close");
+                editTemplateHtmlDialog();
+            }
+        },{
+            'class': 'btn btn-primary',
+            text: messages["button_edit_inline"][locale],
+            click: function() {
+                $(this).dialog("close");
+                editTemplateInlineDialog();
+            }
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
     //edit template html (modal)
     $("#editTemplateHtmlDialog").dialog({
         //height: 'auto',
@@ -355,37 +391,71 @@ function editTemplateReady(templateId, templatePath){
         autoOpen: false,
         modal: true,
         buttons: [{
-            'class': 'btn',
-            text: messages["apply"][locale],
-            click: function() {}
-        },{
             'class': 'btn btn-primary',
-            text: messages["ok"][locale],
+            text: messages["update"][locale],
+            click: editTemplateHtmlDialogUpdate
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
             click: function() {
                 $(this).dialog("close");
             }
         }]
     });
 
-    //get the template as json
-    $.ajax({
-        url: 'getTemplate',
-        data: 'templateId='+templateId,
-        dataType: 'json',
-        type: 'POST',
-        success: function(response) {
-            if (response.status != "0") {
-                showErrorDialog(response.message);
-            } else {
-                template = response.object;
-                templateCopy = $.extend(true, {}, template);
+    //make attribute (modal)
+    $("#makeAttributeDialog").dialog({
+        //height: 'auto',
+        width: 470,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["button_make_attribute"][locale],
+            click: makeAttribute
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
             }
-        }
+        }]
+    });
+
+    //save template (modal)
+    $("#saveTemplateDialog").dialog({
+        //height: 'auto',
+        width: 570,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-success',
+            text: messages["button_save_and_publish"][locale],
+            click: function(){
+                saveTemplate(true);
+            }
+        },{
+            'class': 'btn btn-inverse',
+            text: messages["button_save_as_draft"][locale],
+            click: function(){
+                saveTemplate(false);
+            }
+        },{
+            'class': 'btn btn-primary',
+            text: messages["button_review_changes"][locale],
+            click: reviewTemplateChangesDialog
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
     });
 
     //load the page preview iframe
     var templatePreviewSrc = contextPath+templatePath+"?time="+(new Date()).getTime()+"&static&edit";
-    $("#templatePreview").attr("src", templatePreviewSrc);
+    $("#page-header-placeholder").after('<iframe id="templatePreview" src="'+templatePreviewSrc+'" width="100%" height="480" onLoad="onTemplateIFrameLoad(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>');
 }
 
 //------------------------------------------------------------------------------
@@ -880,7 +950,7 @@ function onIFrameLoad(url, path){
     //prevent links
     $("#pagePreview").contents().find("a").click(function(event) {
         if ($(event.currentTarget).parents().hasClass('aloha-floatingmenu')) return true; //do not meddle aloha
-        if (!confirm("Any unchanged changes will be lost if you navigate away from this page, are you sure?")) event.preventDefault();
+        if (!confirm("Any unsaved changes will be lost if you navigate away from this page, are you sure?")) event.preventDefault();
     });
 
     //an edit mode page is opened, adjust the host page
@@ -896,7 +966,7 @@ function onIFrameLoad(url, path){
 
         //resize iframe to actual content
         $("#pagePreview").width(iframeWidth);
-        $("#pagePreview").height(iframeHeight+30);
+        $("#pagePreview").height(iframeHeight+100);
 
         return true;
     }
@@ -1080,8 +1150,8 @@ function removeTemplate(templateId, goback){
 //------------------------------------------------------------------------------
 
 //view the current template
-function viewTemplate(){
-    window.open(contextPath + template.path+"?static");
+function viewTemplate(templatePath){
+    window.open(contextPath + templatePath + "?static");
 }
 
 //rename template
@@ -1109,6 +1179,108 @@ function inspectElement(){
     $("#templatePreview")[0].contentWindow.Firebug.Inspector.toggleInspect();
 }
 
+//make attribute
+function makeAttribute(){
+    var attribute = $("#makeAttributeDialogAttribute").val();
+    if(!/^[\w\-]{3,100}$/.test(attribute)){
+        showErrorDialog("Attribute should not contain spaces or special characters");
+        return;
+    }
+
+    //get the element id
+    var elemId = getSelectedElementId();
+    if (!elemId) return;
+
+    //save the new attribute html
+    //NOTE: not yet used, can be used to update existing pages' default values
+    /*
+    $.ajax({
+        url: 'getTemplateElementHtml',
+        data: 'templateId='+templateId+'&elemId='+elemId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                //fail silently
+            } else {
+                var newAttribute = new Object();
+                newAttribute.attribute = attribute;
+                newAttribute.html = response.object;
+                newAttributes.push(newAttribute);
+            }
+        }
+    });
+    */
+
+    //update the html in server
+    var data = new Object();
+    data.templateId = templateId;
+    data.elemId = elemId;
+    data.html = ("${"+attribute+"}");
+
+    $.ajax({
+        url: 'updateTemplateElementHtml',
+        data: data,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                //the new html fragment
+                $(selectedElement).html(response.object);
+                //update the tree
+                $("#templatePreview")[0].contentWindow.Firebug.HTML.fmgUpdateTree();
+                //close the dialog
+                $('#makeAttributeDialog').dialog('close');
+            }
+        }
+    });
+}
+
+//save template
+function saveTemplate(publish){
+    var templateForm = new Object();
+    templateForm.templateId = templateId;
+    templateForm.comment = $("#saveTemplateDialogComment").val();
+    templateForm.publish = publish;
+
+    if (!publish){
+        alert("This feature is not implemented yet, sorry...");
+        return;
+    }
+
+    //save with ajax
+    $.ajax({
+        url: 'saveTemplate',
+        data: templateForm,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                $('#saveTemplateDialog').dialog('close');
+
+                //get result
+                var result = response.object;
+                var addedAttrs = result.addedAttributes;
+
+                //add added attributes to message
+                var message = response.message+"<br/>";
+                message += "<ul>";
+                for (var i=0; i<addedAttrs.length; i++){
+                    message += "<li>"+addedAttrs[i]+"</li>"
+                }
+                message += "</ul>";
+
+                //show message with saved attrs
+                showStatusDialog(message);
+            }
+        }
+    });
+}
+
 //------------------------------------------------------------------------------
 //EDIT TEMPLATE DIALOGS
 //------------------------------------------------------------------------------
@@ -1120,16 +1292,100 @@ function renameTemplateDialog(){
 
 //edit template element html
 function editTemplateHtmlDialog(){
+    //get the element id
+    var elemId = getSelectedElementId();
+    if (!elemId) return;
+
+    //show the dialog
+    $("#editTemplateHtmlDialogTextarea").val("Please wait...");
+    $('#editTemplateHtmlDialog').dialog('open');
+
+    //populate the textarea with the actual html of the selected element
+    editTemplateHtmlDialogPopulate(elemId);
+}
+
+//populate the edit template html dialog with the actual html of the selected element
+function editTemplateHtmlDialogPopulate(elemId){
+    $.ajax({
+        url: 'getTemplateElementHtml',
+        data: 'templateId='+templateId+'&elemId='+elemId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                $('#editTemplateHtmlDialog').dialog('close');
+                showErrorDialog(response.message);
+            } else {
+                $("#editTemplateHtmlDialogTextarea").val(response.object);
+            }
+        }
+    });
+}
+
+//on element textarea value change
+function editTemplateHtmlDialogUpdate(){
+    //get the element id
+    var elemId = getSelectedElementId();
+    if (!elemId) return;
+
+    //update the html in server and regenerate children
+    var data = new Object();
+    data.templateId = templateId;
+    data.elemId = elemId;
+    data.html = $("#editTemplateHtmlDialogTextarea").val();
+
+    $.ajax({
+        url: 'updateTemplateElementHtml',
+        data: data,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                //the new html fragment
+                $(selectedElement).html(response.object);
+                //update the tree
+                $("#templatePreview")[0].contentWindow.Firebug.HTML.fmgUpdateTree();
+                //close the dialog
+                $('#editTemplateHtmlDialog').dialog('close');
+            }
+        }
+    });
+}
+
+//edit template element inline
+function editTemplateInlineDialog(){
+    alert("This feature is not implemented yet, sorry...");
+}
+
+//make template element attribute
+function makeAttributeDialog(){
     if (!selectedElement){
         alert("Please select an element first.");
         return;
     }
 
-    //update the textarea
-    $("#editTemplateHtmlDialogTextarea").val($(selectedElement).html());
+    if (!getSelectedElementId()) return;
 
     //show the dialog
-    $('#editTemplateHtmlDialog').dialog('open');
+    $('#makeAttributeDialog').dialog('open');
+}
+
+//save template dialog, calls saveTemplate / reviewTemplateChanges
+function saveTemplateDialog(){
+    //show the dialog
+    $('#saveTemplateDialog').dialog('open');
+}
+
+//review template changes, diff to published version
+function reviewTemplateChangesDialog(){
+    alert("This feature is not implemented yet, sorry...");
+}
+
+//template history, list previous versions, view changes
+function templateHistoryDialog(){
+    alert("This feature is not implemented yet, sorry...");
 }
 
 //------------------------------------------------------------------------------
@@ -1138,21 +1394,19 @@ function editTemplateHtmlDialog(){
 
 //called when an html element is selected via inspect or tree
 function onElementSelected(elem){
-    //alert($(elem).html());
     selectedElement = elem;
-    editTemplateHtmlDialog();
-    //console.log(getTemplateHTML());
+    if (selectedElement.tagName == 'HTML') return;
+    $('#actionDialog').dialog('open');
 }
 
-//on attribute textarea value change, update preview
-function onEditTemplateHtmlDialogTextareaChange(){
-    if (!selectedElement) return;
+//called when inspecting starts
+function onStartInspecting(){
+    $("#inspectButton").text("Inspecting...");
+}
 
-    //update the element html
-    $(selectedElement).html($("#editTemplateHtmlDialogTextarea").val());
-
-    //update the tree
-    $("#templatePreview")[0].contentWindow.Firebug.HTML.fmgUpdateTree();
+//called when inspecting stops
+function onStopInspecting(){
+    $("#inspectButton").text("Inspect Element");
 }
 
 //called when preview iframe is loaded
@@ -1163,10 +1417,10 @@ function onTemplateIFrameLoad(url, path){
     //prevent links
     $("#templatePreview").contents().find("a").click(function(event) {
         if ($(event.currentTarget).parents().hasClass('aloha-floatingmenu')) return true; //do not meddle aloha
-        if (!confirm("Any unchanged changes will be lost if you navigate away from this page, are you sure?")) event.preventDefault();
+        if (!confirm("Any unsaved changes will be lost if you navigate away from this page, are you sure?")) event.preventDefault();
     });
 
-    //an edit mode page is opened, adjust the host page
+    //a template is opened, adjust the host page
     if (url.substring(url.length-5, url.length)=="&edit"){
         var iframeWidth = $("#templatePreview").contents().find("body")[0].scrollWidth;
         var iframeHeight = $("#templatePreview").contents().find("body")[0].scrollHeight;
@@ -1175,7 +1429,6 @@ function onTemplateIFrameLoad(url, path){
         $(".content").width(iframeWidth);
         $(".container").width(iframeWidth);
         $(".page-header").width(iframeWidth);
-        $("#fbTop").hide();
         $("#page-header-placeholder").height($(".page-header").outerHeight());
 
         //resize iframe to actual content
@@ -1193,18 +1446,34 @@ function onTemplateIFrameLoad(url, path){
 //------------------------------------------------------------------------------
 //EDIT TEMPLATE UTILITY
 //------------------------------------------------------------------------------
-function getTemplateHTML () {
-    var htmlStartTag = function () {
-        var attrs = $("#templatePreview").contents().find('html')[0].attributes;
-        var result = '<html';
-        $.each(attrs, function() {
-            result += ' ' + this.name + '="' + this.value + '"';
-        });
-        result += '>';
-        return result;
+
+//get the id of the selected element
+function getSelectedElementId(){
+    if (!selectedElement){
+        alert("Please select an element first.");
+        return null;
     }
-    return htmlStartTag() + $("#templatePreview").contents().find('html').html() + '</html>';
+
+    //get the element id
+    var elemId = $(selectedElement).attr("fmgcms-id");
+    var elemChanged = !elemId;
+
+    //if this node is script generated, it won't have element id, find the nearest parent element which has it
+    while(!elemId){
+        selectedElement = selectedElement.parentNode;
+        if (!selectedElement){
+            alert("You cannot modify this element!");
+            return null; //this shouldn't happen
+        }
+        elemId = $(selectedElement).attr("fmgcms-id");
+    }
+
+    //select the current element on tree if it is changed
+    if (elemChanged) $("#templatePreview")[0].contentWindow.Firebug.HTML.select(selectedElement)
+
+    return elemId;
 }
+
 //------------------------------------------------------------------------------
 //COMMON UTILITY
 //------------------------------------------------------------------------------
@@ -1329,6 +1598,10 @@ var messages = {
         en: "Apply",
         tr: "Uygula"
     },
+    "update": {
+        en: "Update",
+        tr: "Güncelle"
+    },
     "button_save_and_publish": {
         en: "Save and Publish",
         tr: "Kaydet ve Yayınla"
@@ -1344,6 +1617,18 @@ var messages = {
     "button_view_changes": {
         en: "View Changes",
         tr: "Değişiklikleri Göster"
+    },
+    "button_edit_html": {
+        en: "Edit HTML",
+        tr: "HTML Düzenle"
+    },
+    "button_edit_inline": {
+        en: "Edit Inline",
+        tr: "Anlık Düzenle"
+    },
+    "button_make_attribute": {
+        en: "Make Attribute",
+        tr: "Öğe Yap"
     },
     "confirm_remove_page": {
         en: "This page will be completely removed from the system. This action is permanent. Are you sure?",

@@ -19,12 +19,10 @@
         <script type="text/javascript">
             var locale = 'en';
             var contextPath = '${pageContext.request.contextPath}';
-            var template = null;
-            var templateCopy = null;
-            var selectedAttributeId = null;
-            var selectedAttributeHistory = null;
+            var templateId = ${template.id};
+            var newAttributes = new Array();
             var selectedElement = null;
-            $(function(){editTemplateReady(${template.id}, '${template.path}')});
+            $(function(){editTemplateReady('${template.path}')});
         </script>
     </head>
     <body>
@@ -41,22 +39,22 @@
                             </div>
                             <div class="style-float-right">
                                 <div class="btn-group style-display-ib">
-                                    <a class="btn btn-primary" href="javascript:inspectElement()"><i class="icon-map-marker icon-white"></i> Inspect Element</a>
+                                    <a class="btn btn-primary" href="javascript:inspectElement()"><i class="icon-map-marker icon-white"></i> <span id ="inspectButton">Inspect Element</span></a>
                                     <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
-                                        <li><a href="javascript:void()"><i class="icon-plus"></i> Make Attribute</a></li>
+                                        <li><a href="javascript:makeAttributeDialog()"><i class="icon-plus"></i> Make Attribute</a></li>
                                         <li><a href="javascript:editTemplateHtmlDialog()"><i class="icon-pencil"></i> Edit HTML</a></li>
-                                        <li><a href="javascript:void()"><i class="icon-font"></i> Edit Inline</a></li>
+                                        <li><a href="javascript:editTemplateInlineDialog()"><i class="icon-font"></i> Edit Inline</a></li>
                                     </ul>
                                 </div>
                                 <div class="btn-group style-display-ib">
                                     <a class="btn btn-success" href="javascript:saveTemplateDialog()"><i class="icon-ok icon-white"></i> Save Changes</a>
                                     <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
-                                        <li><a href="javascript:void()"><i class="icon-check"></i> Review Changes</a></li>
-                                        <li><a href="javascript:void()"><i class="icon-list"></i> Template History</a></li>
+                                        <li><a href="javascript:reviewTemplateChangesDialog()"><i class="icon-check"></i> Review Changes</a></li>
+                                        <li><a href="javascript:templateHistoryDialog()"><i class="icon-list"></i> Template History</a></li>
                                         <li class="divider"></li>
-                                        <li><a href="javascript:viewTemplate()"><i class="icon-search"></i> View Template</a></li>
+                                        <li><a href="javascript:viewTemplate('${template.path}')"><i class="icon-search"></i> View Template</a></li>
                                         <li><a href="javascript:renameTemplateDialog()"><i class="icon-edit"></i> Rename Template</a></li>
                                         <li class="divider"></li>
                                         <li><a href="javascript:removeTemplate(${template.id},true)"><i class="icon-trash"></i> Delete Template</a></li>
@@ -65,10 +63,7 @@
                             </div>
                             <div id="inspector-holder"></div>
                         </div>
-
                         <div id="page-header-placeholder"></div>
-
-                        <iframe id="templatePreview" src="about:blank" width="100%" height="480" onLoad="onTemplateIFrameLoad(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>
                     </div>
                 </div>
             </div>
@@ -91,11 +86,41 @@
             </form>
         </div>
 
+        <!-- Action Dialog -->
+        <div id="actionDialog" title="Choose Action">
+            <p>What do you want to do with the selected element?</p>
+        </div>
+
+        <!-- Make Attribute Dialog -->
+        <div id="makeAttributeDialog" title="Make Attribute">
+            <table class="style-full-width">
+                <tr>
+                    <td><strong>Attribute:</strong></td>
+                    <td class="span1"></td>
+                    <td><input id="makeAttributeDialogAttribute" class="span3" type="text" name="attribute" value=""/></td>
+                </tr>
+            </table>
+        </div>
+
         <!-- Edit Template Html Dialog -->
         <div id="editTemplateHtmlDialog" title="Edit Template HTML">
             <div>
-                <textarea class="span7" rows="20" id="editTemplateHtmlDialogTextarea" onchange="onEditTemplateHtmlDialogTextareaChange()">[No Attribute Selected]</textarea>
+                <textarea class="span7" rows="20" id="editTemplateHtmlDialogTextarea">[No Attribute Selected]</textarea>
             </div>
+        </div>
+
+        <!-- Save Template Dialog -->
+        <div id="saveTemplateDialog" title="Save Template Changes">
+            <table class="style-full-width">
+                <tr>
+                    <td><strong>Comment:</strong></td>
+                </tr>
+                <tr>
+                    <td>
+                        <textarea id="saveTemplateDialogComment" class="span7" rows="4">added new version</textarea>
+                    </td>
+                </tr>
+            </table>
         </div>
     </body>
 </html>

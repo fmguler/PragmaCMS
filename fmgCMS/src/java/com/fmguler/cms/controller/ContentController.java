@@ -184,15 +184,15 @@ public class ContentController implements ServletContextAware {
             String mimeType = servletContext.getMimeType(resource.getName().toLowerCase());
             if (mimeType != null) response.setContentType(mimeType);
 
-            //inject editor code if this is an edit
+            //return preprocessed template html if this is an edit
             if (request.getParameter("edit") != null && request.getSession().getAttribute("user") != null) {
-                String templateHtml = IOUtils.toString(resourceService.getInputStream(resource), "UTF-8");
-                templateHtml = AdminController.injectInspector(templateHtml, request.getContextPath());
+                String templateHtml = (String)request.getSession().getAttribute("templateHtml:" + resourcePath);
+                if (templateHtml == null) templateHtml = "Error: cannot find template html in session, please report this error to us";
                 response.setCharacterEncoding("UTF-8");
                 response.setContentType("text/html");
-                byte[] content = templateHtml.getBytes("UTF-8");
-                response.setContentLength(content.length);
-                response.getOutputStream().write(content);
+                byte[] templateBytes = templateHtml.getBytes("UTF-8");
+                response.setContentLength(templateBytes.length);
+                response.getOutputStream().write(templateBytes);
                 return;
             }
 

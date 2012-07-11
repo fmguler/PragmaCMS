@@ -19,10 +19,12 @@
         <script type="text/javascript">
             var locale = 'en';
             var contextPath = '${pageContext.request.contextPath}';
-            var templateId = ${template.id};
+            var template = null;
+            var templateHtml = null;
+            var templateHistory = null;
             var newAttributes = new Array();
             var selectedElement = null;
-            $(function(){editTemplateReady('${template.path}')});
+            $(function(){editTemplateReady(${template.id}, '${template.path}')});
         </script>
     </head>
     <body>
@@ -42,9 +44,9 @@
                                     <a class="btn btn-primary" href="javascript:inspectElement()"><i class="icon-map-marker icon-white"></i> <span id ="inspectButton">Inspect Element</span></a>
                                     <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
-                                        <li><a href="javascript:makeAttributeDialog()"><i class="icon-plus"></i> Make Attribute</a></li>
                                         <li><a href="javascript:editTemplateHtmlDialog()"><i class="icon-pencil"></i> Edit HTML</a></li>
                                         <li><a href="javascript:editTemplateInlineDialog()"><i class="icon-font"></i> Edit Inline</a></li>
+                                        <li><a href="javascript:makeAttributeDialog()"><i class="icon-plus"></i> Make Attribute</a></li>
                                     </ul>
                                 </div>
                                 <div class="btn-group style-display-ib">
@@ -52,6 +54,7 @@
                                     <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">
                                         <li><a href="javascript:reviewTemplateChangesDialog()"><i class="icon-check"></i> Review Changes</a></li>
+                                        <li><a href="javascript:revertTemplateChanges()"><i class="icon-repeat"></i> Revert Changes</a></li>
                                         <li><a href="javascript:templateHistoryDialog()"><i class="icon-list"></i> Template History</a></li>
                                         <li class="divider"></li>
                                         <li><a href="javascript:viewTemplate('${template.path}')"><i class="icon-search"></i> View Template</a></li>
@@ -121,6 +124,30 @@
                     </td>
                 </tr>
             </table>
+        </div>
+
+        <!-- Template History Dialog -->
+        <div id="templateHistoryDialog" title="Template History">
+            <table id="previousVersions" class="style-full-width">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th><strong>Author</strong></th>
+                        <th><strong>Comment</strong></th>
+                        <th><strong>Date</strong></th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+
+        <!-- View Changes Dialog -->
+        <div id="viewChangesDialog" title="View Changes">
         </div>
     </body>
 </html>

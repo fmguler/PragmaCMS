@@ -6,6 +6,7 @@
  */
 package com.fmguler.cms.service.template;
 
+import java.io.OutputStream;
 import java.util.Map;
 
 /**
@@ -19,17 +20,33 @@ public interface TemplateService {
      * @param model the data, with attribute names and values
      * @return merged string
      */
-    String merge(String templatePath, Map model);
+    String merge(String templatePath, Map model) throws TemplateException;
 
     /**
      * Returns the raw source of the template
-     * @param templatePath the template (file in the directory)
+     * @param templatePath the template path (file in the directory)
      * @return the contents of the template
      */
-    String getSource(String templatePath);
+    String getSource(String templatePath) throws TemplateException;
 
     /**
      * Merge template with model
      */
-    String mergeFromSource(String templatePath, String templateSource, Map model);
+    String mergeFromSource(String templatePath, String templateSource, Map model) throws TemplateException;
+
+    ;
+
+    /**
+     * Write template source (create/overwrite)
+     * @param templatePath the template path
+     * @return the os to write source
+     * @throws TemplateException any error
+     */
+    OutputStream getSourceOutputStream(String templatePath) throws TemplateException;
+
+    /**
+     * Remove the template source (delete)
+     * @param templatePath the template path
+     */
+    void removeSource(String templatePath);
 }

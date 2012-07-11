@@ -12,6 +12,7 @@ import com.fmguler.cms.service.content.domain.*;
 import com.fmguler.cms.service.resource.ResourceException;
 import com.fmguler.cms.service.resource.ResourceService;
 import com.fmguler.cms.service.resource.domain.Resource;
+import com.fmguler.cms.service.template.TemplateException;
 import com.fmguler.cms.service.template.TemplateService;
 import com.fmguler.common.service.storage.StorageException;
 import com.fmguler.common.service.storage.StorageService;
@@ -327,6 +328,16 @@ public class AdminController {
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Attribute is reverted successfully", null);
     }
 
+    //ajax - remove page attribute history
+    @RequestMapping()
+    @ResponseBody
+    public String removePageAttributeHistory(@RequestParam Integer attributeHistoryId) {
+        PageAttributeHistory attributeHistory = contentService.getPageAttributeHistory(attributeHistoryId);
+        if (attributeHistory == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Attribute History not found", null);
+        contentService.removePageAttributeHistory(attributeHistoryId);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Attribute History is removed successfully", null);
+    }
+
     //ajax - get page attachments
     @RequestMapping()
     @ResponseBody
@@ -615,12 +626,49 @@ public class AdminController {
     public String addTemplate(@RequestParam String name, @RequestParam String path) {
         Resource resource = resourceService.getResource(path);
         if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No HTML resource exists for given path.", null);
+        if (contentService.getTemplate(path) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Another template with this resource path already exists. If you want to use the same resource you can duplicate it in the resources menu.", null);
 
         //save the template
         Template template = new Template();
         template.setName(name);
         template.setPath(resource.toResourcePath());
         contentService.saveTemplate(template);
+
+        //copy the resource html as template file
+        InputStream is = null;
+        OutputStream os = null;
+        String templateHtml;
+        try {
+            is = resourceService.getInputStream(resource);
+            templateHtml = IOUtils.toString(is, "UTF-8");
+            Document templateDocument = Jsoup.parse(templateHtml);
+            templateDocument.outputSettings().prettyPrint(false);
+
+            //add initial history record
+            TemplateHistory templateHistory = new TemplateHistory();
+            templateHistory.setTemplate(template);
+            templateHistory.setHtml(templateHtml);
+            templateHistory.setAuthor("admin");
+            templateHistory.setComment("template is added");
+            templateHistory.setDate(new Date());
+            contentService.saveTemplateHistory(templateHistory);
+
+            //save processed form as template file
+            os = templateService.getSourceOutputStream(template.getId() + ".ftl");
+            os.write(processTemplate(templateDocument).getBytes("UTF-8"));
+        } catch (ResourceException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at addTemplate cannot read resource", ex);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
+        } catch (TemplateException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at addTemplate cannot write to template source os", ex);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
+        } catch (IOException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at addTemplate cannot write to template source os", ex);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
+        } finally {
+            IOUtils.closeQuietly(is);
+            IOUtils.closeQuietly(os);
+        }
 
         //return success
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", template);
@@ -632,6 +680,7 @@ public class AdminController {
     public String removeTemplate(@RequestParam int templateId, Model model) {
         try {
             contentService.removeTemplate(templateId);
+            templateService.removeSource(templateId + ".ftl");
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
         } catch (Exception ex) { //TODO: service exception
             return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This template could not be removed. Error: " + ex.getMessage(), null);
@@ -708,6 +757,57 @@ public class AdminController {
         return "admin/editTemplate";
     }
 
+    //ajax - get template
+    @RequestMapping()
+    @ResponseBody
+    public String getTemplate(@RequestParam Integer templateId) {
+        Template template = contentService.getTemplate(templateId);
+        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", template);
+    }
+
+    //ajax - get template html original or current
+    @RequestMapping()
+    @ResponseBody
+    public String getTemplateHtml(@RequestParam Integer templateId, @RequestParam Boolean original, HttpServletRequest request) {
+        Template template = contentService.getTemplate(templateId);
+        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+
+        //resulting template html
+        String templateHtml = null;
+
+        if (original) {
+            //get the original unmodified html
+            InputStream inputStream = null;
+            try {
+                Resource resource = resourceService.getResource(template.getPath());
+                inputStream = resourceService.getInputStream(resource);
+                templateHtml = IOUtils.toString(inputStream, "UTF-8");
+            } catch (ResourceException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for templateHtml", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template resource not found: " + ex.getMessage(), null);
+            } catch (IOException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error reading template resource for templateHtml", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template resource not found: " + ex.getMessage(), null);
+            } finally {
+                IOUtils.closeQuietly(inputStream);
+            }
+        } else {
+            //current html
+            Document templateDocument = (Document)request.getSession().getAttribute("templateDocument:" + templateId);
+            if (templateDocument == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template document in session, please report this error to us", null);
+
+            //clone the element (do not modify original - can save again), remove custom id and script, get html
+            Document docCopy = templateDocument.clone();
+            docCopy.getAllElements().removeAttr("fmgcms-id");
+            docCopy.head().getElementById("fmgcms-injected-script").remove();
+            templateHtml = docCopy.html();
+        }
+
+        //return the result
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", templateHtml);
+    }
+
     //ajax - rename template
     @RequestMapping
     @ResponseBody
@@ -771,6 +871,7 @@ public class AdminController {
     @RequestMapping
     @ResponseBody
     public String saveTemplate(@RequestParam Integer templateId, @RequestParam String comment, @RequestParam Boolean publish, HttpServletRequest request) {
+        Author user = (Author)request.getSession().getAttribute("user");
         Template template = contentService.getTemplate(templateId);
         if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
         Document templateDocument = (Document)request.getSession().getAttribute("templateDocument:" + templateId);
@@ -782,55 +883,174 @@ public class AdminController {
         docCopy.head().getElementById("fmgcms-injected-script").remove();
         String templateHtml = docCopy.html();
 
-        //scan submitted template html for attributes
-        Set<String> pageAttributes = new HashSet();
-        Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
-        Matcher matcher = pattern.matcher(templateHtml);
-        while (matcher.find()) {
-            String attr = matcher.group(1);
-            if (attr.startsWith("t_")) continue;
-            else pageAttributes.add(attr);
-        }
+        //TODO: scan attr
 
-        //get the current template source
-        String templateSource = templateService.getSource(template.getPath());
+        //add history record
+        TemplateHistory templateHistory = new TemplateHistory();
+        templateHistory.setTemplate(template);
+        templateHistory.setHtml(templateHtml);
+        templateHistory.setAuthor(user.getUsername());
+        templateHistory.setComment(comment);
+        templateHistory.setDate(new Date());
+        contentService.saveTemplateHistory(templateHistory);
 
-        //scan template source for attributes
-        Set<String> existingPageAttributes = new HashSet();
-        matcher = pattern.matcher(templateSource);
-        while (matcher.find()) {
-            String attr = matcher.group(1);
-            if (attr.startsWith("t_")) continue;
-            else existingPageAttributes.add(attr);
-        }
+        //the result
+        Map result = new HashMap();
 
-        //detect added attributes
-        for (String attr : existingPageAttributes) {
-            if (pageAttributes.contains(attr)) pageAttributes.remove(attr);
-        }
+        //update template html and version if this is not a draft
+        if (publish) {
+            //save new template html to resource
+            Resource resource = resourceService.getResource(template.getPath());
+            if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource corresponding to this template is not found", null);
+            OutputStream os = null;
+            try {
+                os = resourceService.getOutputStream(resource);
+                os.write(templateHtml.getBytes("UTF-8"));
+                os.close();
+            } catch (ResourceException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at saveTemplate write to resource os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+            } catch (IOException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at saveTemplate write to resource os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+            } finally {
+                IOUtils.closeQuietly(os);
+            }
 
-        //TODO: save new template html
-        Resource resource = resourceService.getResource(template.getPath());
-        if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource corresponding to this template is not found", null);
-        OutputStream os = null;
-        try {
-            os = resourceService.getOutputStream(resource);
-            os.write(templateHtml.getBytes("UTF-8"));
-            os.close();
-        } catch (ResourceException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at saveTemplate write to resource os", ex);
-            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
-        } catch (IOException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at saveTemplate write to resource os", ex);
-            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
-        } finally {
-            IOUtils.closeQuietly(os);
+            //process the new template html and save it as template file
+            try {
+                os = templateService.getSourceOutputStream(template.getId() + ".ftl");
+                os.write(processTemplate(docCopy).getBytes("UTF-8"));
+                os.close();
+            } catch (TemplateException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at saveTemplate write to template source os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+            } catch (IOException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at saveTemplate write to template source os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+            } finally {
+                IOUtils.closeQuietly(os);
+            }
+
+            //set this version as the current version
+            template.setVersion(templateHistory.getId());
+            contentService.saveTemplate(template);
+
+            //return updated objects if published (state change)
+            result.put("template", template);
+            result.put("templateHtml", templateHtml);
         }
 
         //return success
-        Map result = new HashMap();
-        result.put("addedAttributes", pageAttributes);
+        result.put("addedAttributes", new LinkedList());
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template is saved successfully. Following attributes are added;", result);
+    }
+
+    //ajax - template histories
+    @RequestMapping()
+    @ResponseBody
+    public String getTemplateHistories(@RequestParam Integer templateId) {
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", contentService.getTemplateHistories(templateId));
+    }
+
+    //ajax - revert template to history version
+    @RequestMapping()
+    @ResponseBody
+    public String revertTemplate(@RequestParam Integer templateId, @RequestParam Integer templateHistoryId, @RequestParam Boolean publish, HttpServletRequest request) {
+        Template template = contentService.getTemplate(templateId);
+        TemplateHistory templateHistory = contentService.getTemplateHistory(templateHistoryId);
+        if (template == null || templateHistory == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+
+        //the html to revert to
+        String templateHtml = templateHistory.getHtml();
+
+        //NOTE: this is kind of merge of editTemplate and saveTemplate (parts are copied from those blocks)
+        //save the templateHtml as in saveTemplate
+        //set the templateDocument as in editTemplate
+
+        //>>>FROM EDITTEMPLATE>>>
+        Document templateDocument = Jsoup.parse(templateHtml);
+        templateDocument.outputSettings().prettyPrint(false);
+        templateDocument.head().append("<script id=\"fmgcms-injected-script\" type=\"text/javascript\" src=\"" + request.getContextPath() + "/admin/js/firebug-lite/build/firebug-lite-debug.js\"></script>");
+        int templateElemCounter = 0;
+        Elements allElements = templateDocument.getAllElements();
+        for (Element elem : allElements) {
+            if (elem.tagName().equals("html")) continue; //do not directly edit html tag
+            elem.attr("fmgcms-id", "" + templateElemCounter);
+            templateElemCounter++;
+        }
+
+        //will be loaded by preview iframe (ContentController.handleStaticResource - edit)
+        request.getSession().setAttribute("templateHtml:" + template.getPath(), templateDocument.html());
+
+        //will be used as server side state for this template
+        request.getSession().setAttribute("templateDocument:" + template.getId(), templateDocument);
+        request.getSession().setAttribute("templateElemCounter:" + template.getId(), templateElemCounter);
+
+        //>>>FROM SAVETEMPLATE>>>
+
+        //the result
+        Map result = new HashMap();
+        if (publish) {
+            //save new template html to resource
+            Resource resource = resourceService.getResource(template.getPath());
+            if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource corresponding to this template is not found", null);
+            OutputStream os = null;
+            try {
+                os = resourceService.getOutputStream(resource);
+                os.write(templateHtml.getBytes("UTF-8"));
+                os.close();
+            } catch (ResourceException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at saveTemplate write to resource os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+            } catch (IOException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at saveTemplate write to resource os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+            } finally {
+                IOUtils.closeQuietly(os);
+            }
+
+            //clone the element (do not modify original - can save again), remove custom id and script, get html
+            Document docCopy = templateDocument.clone();
+            docCopy.getAllElements().removeAttr("fmgcms-id");
+            docCopy.head().getElementById("fmgcms-injected-script").remove();
+
+            //process the new template html and save it as template file
+            try {
+                os = templateService.getSourceOutputStream(template.getId() + ".ftl");
+                os.write(processTemplate(docCopy).getBytes("UTF-8"));
+                os.close();
+            } catch (TemplateException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at saveTemplate write to template source os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+            } catch (IOException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at saveTemplate write to template source os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not save template, error: " + ex.getMessage(), null);
+            } finally {
+                IOUtils.closeQuietly(os);
+            }
+
+            //set this version as the current version
+            template.setVersion(templateHistory.getId());
+            contentService.saveTemplate(template);
+
+            //return updated objects if published (state change)
+            result.put("template", template);
+            result.put("templateHtml", templateHtml);
+        }
+
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template is reverted successfully", result);
+    }
+
+    //ajax - remove template history
+    @RequestMapping()
+    @ResponseBody
+    public String removeTemplateHistory(@RequestParam Integer templateHistoryId) {
+        TemplateHistory templateHistory = contentService.getTemplateHistory(templateHistoryId);
+        if (templateHistory == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template History not found", null);
+        contentService.removeTemplateHistory(templateHistoryId);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template History is removed successfully", null);
     }
 
     //--------------------------------------------------------------------------
@@ -920,30 +1140,27 @@ public class AdminController {
         //new page, template not selected yet (this shouldn't happen anymore, but be safe)
         if (page.getTemplate() == null) return;
 
-        String templatePath = page.getTemplate().getPath();
-        String templateSource = templateService.getSource(templatePath);
+        String templateSource;
+        try {
+            templateSource = templateService.getSource(page.getTemplate().getId() + ".ftl");
+        } catch (TemplateException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Cannot get template source at scanPageAttributes", ex);
+            return;
+        }
 
         //scan template source for attributes
         Set<String> pageAttributes = new HashSet();
-        Set<String> templateAttributes = new HashSet();
         Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
         Matcher matcher = pattern.matcher(templateSource);
         while (matcher.find()) {
             String attribute = matcher.group(1);
-            if (attribute.startsWith("t_")) templateAttributes.add(attribute);
-            else pageAttributes.add(attribute);
+            pageAttributes.add(attribute);
         }
 
         //detect missing attributes
         List<PageAttribute> existingPageAttributes = page.getPageAttributes();
         for (PageAttribute attr : existingPageAttributes) {
             if (pageAttributes.contains(attr.getAttribute())) pageAttributes.remove(attr.getAttribute());
-        }
-
-        //detect missing template attributes
-        List<TemplateAttribute> existingTemplateAttributes = page.getTemplate().getTemplateAttributes();
-        for (TemplateAttribute attr : existingTemplateAttributes) {
-            if (templateAttributes.contains(attr.getAttribute())) templateAttributes.remove(attr.getAttribute());
         }
 
         //add missing attributes to page
@@ -959,20 +1176,6 @@ public class AdminController {
             contentService.savePageAttribute(pageAttribute);
             page.getPageAttributes().add(pageAttribute);
         }
-
-        //add missing attributes to template
-        for (String attribute : templateAttributes) {
-            TemplateAttribute templateAttribute = new TemplateAttribute();
-            templateAttribute.setAttribute(attribute);
-            templateAttribute.setAuthor("admin");
-            templateAttribute.setComment("attribute is scanned");
-            templateAttribute.setDate(new Date());
-            templateAttribute.setTemplate(page.getTemplate());
-            templateAttribute.setValue("");
-            templateAttribute.setVersion(0);
-            contentService.saveTemplateAttribute(templateAttribute);
-            page.getTemplate().getTemplateAttributes().add(templateAttribute);
-        }
     }
 
     //scan template attributes
@@ -980,6 +1183,12 @@ public class AdminController {
         //scan the template for ${} placeholders, use some convention for template and global attrs
         //detect the missing template attributes, and add them to the template
         //detect unused attributes and mark them
+    }
+
+    //process template - make links absolute
+    private String processTemplate(Document templateDocument) {
+        //TODO: make paths absolute
+        return templateDocument.html();
     }
 
     //SETTERS

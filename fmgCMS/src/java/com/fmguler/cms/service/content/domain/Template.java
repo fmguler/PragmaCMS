@@ -6,9 +6,6 @@
  */
 package com.fmguler.cms.service.content.domain;
 
-import com.fmguler.ven.util.VenList;
-import java.util.List;
-
 /**
  * Represents each template in the system.
  * Every page has a template.
@@ -18,7 +15,7 @@ public class Template {
     private Integer id;
     private String name;
     private String path;
-    private List templateAttributes = new VenList(TemplateAttribute.class, "template");
+    private Integer version;
 
     /**
      * @return the id
@@ -48,23 +45,9 @@ public class Template {
         this.name = name;
     }
 
-    /**
-     * @return the templateAttributes
-     */
-    public List getTemplateAttributes() {
-        return templateAttributes;
-    }
-
-    /**
-     * @param templateAttributes the templateAttributes to set
-     */
-    public void setTemplateAttributes(List templateAttributes) {
-        this.templateAttributes = templateAttributes;
-    }
-
     @Override
     public String toString() {
-        return "Template: " + name + " attributes: {" + getTemplateAttributes() + "}";
+        return "Template: " + name + " path: " + path;
     }
 
     /**
@@ -81,4 +64,17 @@ public class Template {
         this.path = path;
     }
 
+    /**
+     * @return the version
+     */
+    public Integer getVersion() {
+        return version;
+    }
+
+    /**
+     * @param version the version to set
+     */
+    public void setVersion(Integer version) {
+        this.version = version;
+    }
 }

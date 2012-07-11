@@ -10,7 +10,6 @@ import com.fmguler.cms.service.content.ContentService;
 import com.fmguler.cms.service.content.domain.Page;
 import com.fmguler.cms.service.content.domain.PageAttachment;
 import com.fmguler.cms.service.content.domain.PageAttribute;
-import com.fmguler.cms.service.content.domain.TemplateAttribute;
 import com.fmguler.cms.service.resource.ResourceException;
 import com.fmguler.cms.service.resource.ResourceService;
 import com.fmguler.cms.service.resource.domain.Resource;
@@ -110,7 +109,7 @@ public class ContentController implements ServletContextAware {
         //it's resources will use /template as relative path, and return not found. We should implement pages like /some-page/ and look for resources starting with /some-page in /template
 
         //find the template, fill with attributes
-        String templatePath = page.getTemplate().getPath();
+        String templatePath = page.getTemplate().getId() + ".ftl";
         Map model = getPageAttributesMap(page);
         String pageHtml;
 
@@ -272,13 +271,7 @@ public class ContentController implements ServletContextAware {
     private Map getPageAttributesMap(Page page) {
         Map result = new HashMap();
 
-        Iterator it = page.getTemplate().getTemplateAttributes().iterator();
-        while (it.hasNext()) {
-            TemplateAttribute attribute = (TemplateAttribute)it.next();
-            result.put(attribute.getAttribute(), attribute.getValue());
-        }
-
-        it = page.getPageAttributes().iterator();
+        Iterator it = page.getPageAttributes().iterator();
         while (it.hasNext()) {
             PageAttribute attribute = (PageAttribute)it.next();
             result.put(attribute.getAttribute(), attribute.getValue());

@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
- *  Copyright 2011 PragmaCraft LLC.
- * 
+ *  Copyright 2012 PragmaCraft LLC.
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.service.content.domain;
@@ -9,16 +9,13 @@ package com.fmguler.cms.service.content.domain;
 import java.util.Date;
 
 /**
- * Attributes of a template.
- * 
+ * Versions of template html
  * @author Fatih Mehmet Güler
  */
-public class TemplateAttribute {
+public class TemplateHistory {
     private Integer id;
     private Template template;
-    private String attribute;
-    private String value;
-    private Integer version;
+    private String html;
     private Date date;
     private String author;
     private String comment;
@@ -51,37 +48,18 @@ public class TemplateAttribute {
         this.template = template;
     }
 
-    @Override
-    public String toString() {
-        return "a: " + attribute + " v: " + value;
+    /**
+     * @return the html
+     */
+    public String getHtml() {
+        return html;
     }
 
     /**
-     * @return the value
+     * @param html the html to set
      */
-    public String getValue() {
-        return value;
-    }
-
-    /**
-     * @param value the value to set
-     */
-    public void setValue(String value) {
-        this.value = value;
-    }
-
-    /**
-     * @return the version
-     */
-    public Integer getVersion() {
-        return version;
-    }
-
-    /**
-     * @param version the version to set
-     */
-    public void setVersion(Integer version) {
-        this.version = version;
+    public void setHtml(String html) {
+        this.html = html;
     }
 
     /**
@@ -124,19 +102,5 @@ public class TemplateAttribute {
      */
     public void setComment(String comment) {
         this.comment = comment;
-    }
-
-    /**
-     * @return the attribute
-     */
-    public String getAttribute() {
-        return attribute;
-    }
-
-    /**
-     * @param attribute the attribute to set
-     */
-    public void setAttribute(String attribute) {
-        this.attribute = attribute;
     }
 }

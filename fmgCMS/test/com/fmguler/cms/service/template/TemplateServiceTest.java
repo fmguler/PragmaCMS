@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.service.template;
@@ -18,7 +18,7 @@ public class TemplateServiceTest {
     private TemplateService templateService;
 
     //test merge
-    public void testMerge() {
+    public void testMerge() throws TemplateException {
         Map model = new HashMap();
         model.put("attr1", "value");
         System.out.println(templateService.merge("template1.html", model));
@@ -33,7 +33,7 @@ public class TemplateServiceTest {
     }
 
     //test operations
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, TemplateException {
         TemplateServiceTest test = new TemplateServiceTest();
         test.templateService = buildTemplateService();
 

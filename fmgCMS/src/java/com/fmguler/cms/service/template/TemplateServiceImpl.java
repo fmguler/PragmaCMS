@@ -9,14 +9,8 @@ package com.fmguler.cms.service.template;
 import freemarker.template.Configuration;
 import freemarker.template.DefaultObjectWrapper;
 import freemarker.template.Template;
-import freemarker.template.TemplateException;
-import java.io.File;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.io.*;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 
 /**
@@ -42,44 +36,57 @@ public class TemplateServiceImpl implements TemplateService {
     }
 
     @Override
-    public String merge(String templatePath, Map model) {
+    public String merge(String templatePath, Map model) throws TemplateException {
         try {
             StringWriter sw = new StringWriter();
             Template template = configuration.getTemplate(templatePath, "UTF-8");
             template.process(model, sw);
             return sw.toString();
-        } catch (TemplateException ex) {
-            Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot merge template", ex);
+        } catch (freemarker.template.TemplateException ex) {
+            throw new TemplateException(TemplateException.ERROR_MERGE_FAILED, ex);
         } catch (IOException ex) {
-            Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot find template file", ex);
+            throw new TemplateException(TemplateException.ERROR_MERGE_FAILED, ex);
         }
-        return "";
     }
 
     @Override
-    public String mergeFromSource(String templatePath, String templateSource, Map model) {
+    public String mergeFromSource(String templatePath, String templateSource, Map model) throws TemplateException {
         try {
             StringWriter sw = new StringWriter();
             Template template = new Template(templatePath, new StringReader(templateSource), new Configuration());
             template.process(model, sw);
             return sw.toString();
-        } catch (TemplateException ex) {
-            Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot merge template from source", ex);
+        } catch (freemarker.template.TemplateException ex) {
+            throw new TemplateException(TemplateException.ERROR_MERGE_SOURCE_FAILED, ex);
         } catch (IOException ex) {
-            Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot merge template from source", ex);
+            throw new TemplateException(TemplateException.ERROR_MERGE_SOURCE_FAILED, ex);
         }
-        return "";
     }
 
     @Override
-    public String getSource(String templatePath) {
+    public String getSource(String templatePath) throws TemplateException {
         try {
             File templateFile = new File(templateFolder, templatePath);
             return FileUtils.readFileToString(templateFile, "UTF-8");
         } catch (IOException ex) {
-            Logger.getLogger(TemplateServiceImpl.class.getName()).log(Level.SEVERE, "Cannot read template file", ex);
+            throw new TemplateException(TemplateException.ERROR_READ_SOURCE_FAILED, ex);
         }
-        return "";
+    }
+
+    @Override
+    public OutputStream getSourceOutputStream(String templatePath) throws TemplateException {
+        try {
+            File templateFile = new File(templateFolder, templatePath);
+            return new FileOutputStream(templateFile);
+        } catch (IOException ex) {
+            throw new com.fmguler.cms.service.template.TemplateException(TemplateException.ERROR_WRITE_SOURCE_FAILED, ex);
+        }
+    }
+
+    @Override
+    public void removeSource(String templatePath){
+            File templateFile = new File(templateFolder, templatePath);
+            FileUtils.deleteQuietly(templateFile);
     }
 
     //--------------------------------------------------------------------------

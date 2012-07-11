@@ -154,7 +154,7 @@ function editPageReady(pageId, pagePath){
     //attribute history (modal)
     $("#attributeHistoryDialog").dialog({
         height: 500,
-        width: 700,
+        width: 750,
         autoOpen: false,
         modal: true,
         buttons: [{
@@ -328,7 +328,7 @@ function templatesReady(){
 }
 
 //on edit template ready
-function editTemplateReady(templatePath){
+function editTemplateReady(templateId, templatePath){
     //rename template (modal)
     $("#renameTemplateDialog").dialog({
         //height: 'auto',
@@ -356,24 +356,24 @@ function editTemplateReady(templatePath){
         modal: true,
         buttons: [{
             'class': 'btn btn-success',
-            text: messages["button_make_attribute"][locale],
-            click: function() {
-                $(this).dialog("close");
-                makeAttributeDialog();
-            }
-        },{
-            'class': 'btn btn-inverse',
             text: messages["button_edit_html"][locale],
             click: function() {
                 $(this).dialog("close");
                 editTemplateHtmlDialog();
             }
         },{
-            'class': 'btn btn-primary',
+            'class': 'btn btn-inverse',
             text: messages["button_edit_inline"][locale],
             click: function() {
-                $(this).dialog("close");
+                //$(this).dialog("close");
                 editTemplateInlineDialog();
+            }
+        },{
+            'class': 'btn btn-primary',
+            text: messages["button_make_attribute"][locale],
+            click: function() {
+                $(this).dialog("close");
+                makeAttributeDialog();
             }
         },{
             'class': 'btn',
@@ -451,6 +451,68 @@ function editTemplateReady(templatePath){
                 $(this).dialog("close");
             }
         }]
+    });
+
+    //template history (modal)
+    $("#templateHistoryDialog").dialog({
+        height: 500,
+        width: 750,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["button_view_changes"][locale],
+            click: templateHistoryDialogViewChanges
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //view changes (modal)
+    $("#viewChangesDialog").dialog({
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
+
+    //get the template as json
+    $.ajax({
+        url: 'getTemplate',
+        data: 'templateId='+templateId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                template = response.object;
+            }
+        }
+    });
+
+    //get the original template html as json
+    $.ajax({
+        url: 'getTemplateHtml',
+        data: 'original=true&templateId='+templateId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                templateHtml = response.object;
+            }
+        }
     });
 
     //load the page preview iframe
@@ -631,6 +693,27 @@ function removePageAttachment(attachmentId, elemIndex){
     });
 }
 
+//revert template to selected history version
+function removePageAttributeHistory(attributeHistoryId){
+    if(!confirm(messages["confirm_remove_page_attribute_history"][locale])) return;
+
+    $.ajax({
+        url: 'removePageAttributeHistory',
+        data: 'attributeHistoryId='+attributeHistoryId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                $("#history-"+attributeHistoryId).css({
+                    "background-color" : "#fbcdcd"
+                }, 'fast').fadeOut("fast");
+            }
+        }
+    });
+}
+
 //------------------------------------------------------------------------------
 //EDIT PAGE DIALOGS
 //------------------------------------------------------------------------------
@@ -789,7 +872,7 @@ function attributeHistoryDialogPopulate(attribute){
                 $('#previousVersions > tbody').empty();
                 for (var i = 0; i < selectedAttributeHistory.length; i++) {
                     var current = (selectedAttributeHistory[i].id==attribute.version);
-                    var attributeHistoryRow = current?"<tr style='background-color:#00ff00'>":"<tr>";
+                    var attributeHistoryRow = current?"<tr id='history-"+selectedAttributeHistory[i].id+"' style='background-color:#00ff00'>":"<tr id='history-"+selectedAttributeHistory[i].id+"'>";
                     attributeHistoryRow += "<td><input type='radio' name='attribute1' value='"+i+"' "+(current?"checked":"")+" /></td>";
                     attributeHistoryRow += "<td><input type='radio' name='attribute2' value='"+i+"' "+(i==0?"checked":"")+" /></td>";
                     attributeHistoryRow += "<td>"+selectedAttributeHistory[i].author + "</td>";
@@ -797,6 +880,7 @@ function attributeHistoryDialogPopulate(attribute){
                     attributeHistoryRow += "<td>"+selectedAttributeHistory[i].date + "</td>";
                     attributeHistoryRow += "<td><a class='btn' href='javascript:attributeHistoryDialogRevert("+i+")'>Revert</a></td>";
                     attributeHistoryRow += "<td><a class='btn' href='javascript:revertPageAttribute("+attribute.id+","+selectedAttributeHistory[i].id+")'>Publish</a></td>";
+                    attributeHistoryRow += current?"<td></td>":"<td><a class='btn' href='javascript:removePageAttributeHistory("+selectedAttributeHistory[i].id+")'>Remove</a></td>";
                     attributeHistoryRow += "</tr>";
                     $('#previousVersions > tbody').append(attributeHistoryRow);
                 }
@@ -958,15 +1042,19 @@ function onIFrameLoad(url, path){
         var iframeWidth = $("#pagePreview").contents().find("body")[0].scrollWidth;
         var iframeHeight = $("#pagePreview").contents().find("body")[0].scrollHeight;
 
-        //adjust page elems width
-        $(".content").width(iframeWidth);
-        $(".container").width(iframeWidth);
-        $(".page-header").width(iframeWidth);
-        $("#page-header-placeholder").height($(".page-header").outerHeight());
+        //adjust page elems width when the document is ready
+        $(document).ready(function() {
+            if (iframeWidth>940){
+                $(".content").width(iframeWidth);
+                $(".container").width(iframeWidth);
+                $(".page-header").width(iframeWidth);
+            }
+            $("#page-header-placeholder").height($(".page-header").outerHeight());
 
-        //resize iframe to actual content
-        $("#pagePreview").width(iframeWidth);
-        $("#pagePreview").height(iframeHeight+100);
+            //resize iframe to actual content
+            $("#pagePreview").width(iframeWidth);
+            $("#pagePreview").height(iframeHeight+100);
+        });
 
         return true;
     }
@@ -1182,7 +1270,7 @@ function inspectElement(){
 //make attribute
 function makeAttribute(){
     var attribute = $("#makeAttributeDialogAttribute").val();
-    if(!/^[\w\-]{3,100}$/.test(attribute)){
+    if(!/^[\w]{3,100}$/.test(attribute)){
         showErrorDialog("Attribute should not contain spaces or special characters");
         return;
     }
@@ -1196,7 +1284,7 @@ function makeAttribute(){
     /*
     $.ajax({
         url: 'getTemplateElementHtml',
-        data: 'templateId='+templateId+'&elemId='+elemId,
+        data: 'templateId='+template.id+'&elemId='+elemId,
         dataType: 'json',
         type: 'POST',
         success: function(response) {
@@ -1210,11 +1298,11 @@ function makeAttribute(){
             }
         }
     });
-    */
+     */
 
     //update the html in server
     var data = new Object();
-    data.templateId = templateId;
+    data.templateId = template.id;
     data.elemId = elemId;
     data.html = ("${"+attribute+"}");
 
@@ -1241,14 +1329,9 @@ function makeAttribute(){
 //save template
 function saveTemplate(publish){
     var templateForm = new Object();
-    templateForm.templateId = templateId;
+    templateForm.templateId = template.id;
     templateForm.comment = $("#saveTemplateDialogComment").val();
     templateForm.publish = publish;
-
-    if (!publish){
-        alert("This feature is not implemented yet, sorry...");
-        return;
-    }
 
     //save with ajax
     $.ajax({
@@ -1265,6 +1348,10 @@ function saveTemplate(publish){
                 //get result
                 var result = response.object;
                 var addedAttrs = result.addedAttributes;
+                if (publish){
+                    templateHtml = result.templateHtml;
+                    template = result.template;
+                }
 
                 //add added attributes to message
                 var message = response.message+"<br/>";
@@ -1276,6 +1363,67 @@ function saveTemplate(publish){
 
                 //show message with saved attrs
                 showStatusDialog(message);
+            }
+        }
+    });
+}
+
+//revert template to selected history version
+function revertTemplate(templateId, templateHistoryId, publish, silent){
+    if(!silent && publish && !confirm(messages["confirm_revert_template"][locale])) return;
+    if(!silent && !publish && !confirm(messages["confirm_revert_preview_template"][locale])) return;
+
+    $.ajax({
+        url: 'revertTemplate',
+        data: 'templateId='+templateId+'&templateHistoryId='+templateHistoryId+"&publish="+publish,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                //show the status
+                $('#templateHistoryDialog').dialog('close');
+                showStatusDialog(response.message);
+
+                //get result
+                var result = response.object;
+                if (publish){
+                    templateHtml = result.templateHtml;
+                    template = result.template;
+                }
+
+                //re-load the page preview iframe
+                $("#templatePreview").remove();
+                var templatePreviewSrc = contextPath+template.path+"?time="+(new Date()).getTime()+"&static&edit";
+                $("#page-header-placeholder").after('<iframe id="templatePreview" src="'+templatePreviewSrc+'" width="100%" height="480" onLoad="onTemplateIFrameLoad(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>');
+            }
+        }
+    });
+}
+
+//revert current changes
+function revertTemplateChanges(){
+    if(!confirm(messages["confirm_revert_changes_template"][locale])) return;
+    revertTemplate(template.id, template.version, false, true);
+}
+
+//revert template to selected history version
+function removeTemplateHistory(templateHistoryId){
+    if(!confirm(messages["confirm_remove_template_history"][locale])) return;
+
+    $.ajax({
+        url: 'removeTemplateHistory',
+        data: 'templateHistoryId='+templateHistoryId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                $("#history-"+templateHistoryId).css({
+                    "background-color" : "#fbcdcd"
+                }, 'fast').fadeOut("fast");
             }
         }
     });
@@ -1308,7 +1456,7 @@ function editTemplateHtmlDialog(){
 function editTemplateHtmlDialogPopulate(elemId){
     $.ajax({
         url: 'getTemplateElementHtml',
-        data: 'templateId='+templateId+'&elemId='+elemId,
+        data: 'templateId='+template.id+'&elemId='+elemId,
         dataType: 'json',
         type: 'POST',
         success: function(response) {
@@ -1330,7 +1478,7 @@ function editTemplateHtmlDialogUpdate(){
 
     //update the html in server and regenerate children
     var data = new Object();
-    data.templateId = templateId;
+    data.templateId = template.id;
     data.elemId = elemId;
     data.html = $("#editTemplateHtmlDialogTextarea").val();
 
@@ -1380,12 +1528,100 @@ function saveTemplateDialog(){
 
 //review template changes, diff to published version
 function reviewTemplateChangesDialog(){
-    alert("This feature is not implemented yet, sorry...");
+    $.ajax({
+        url: 'getTemplateHtml',
+        data: 'original=false&templateId='+template.id,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                var currentTemplateHtml = response.object;
+                if (templateHtml == currentTemplateHtml){
+                    showStatusDialog("Nothing is changed!");
+                    return;
+                }
+
+                //diff
+                var api = new Object();
+                api.source = templateHtml;
+                api.diff = currentTemplateHtml;
+                api.mode = "diff";
+                api.diffview = "inline";
+                api.sourcelabel = "Original"
+                api.difflabel = "Changed"
+                var result = prettydiff(api);
+
+                //open view changes dialog
+                viewChangesDialog(result[0]);
+            }
+        }
+    });
 }
 
 //template history, list previous versions, view changes
 function templateHistoryDialog(){
-    alert("This feature is not implemented yet, sorry...");
+    //populate the dialog with history records of the template
+    $.ajax({
+        url: 'getTemplateHistories',
+        data: 'templateId='+template.id,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                templateHistory = response.object;
+                $('#previousVersions > tbody').empty();
+                for (var i = 0; i < templateHistory.length; i++) {
+                    var current = (templateHistory[i].id==template.version);
+                    var templateHistoryRow = current?"<tr id='history-"+templateHistory[i].id+"' style='background-color:#00ff00'>":"<tr id='history-"+templateHistory[i].id+"'>";
+                    templateHistoryRow += "<td><input type='radio' name='attribute1' value='"+i+"' "+(current?"checked":"")+" /></td>";
+                    templateHistoryRow += "<td><input type='radio' name='attribute2' value='"+i+"' "+(i==0?"checked":"")+" /></td>";
+                    templateHistoryRow += "<td>"+templateHistory[i].author + "</td>";
+                    templateHistoryRow += "<td>"+templateHistory[i].comment + "</td>";
+                    templateHistoryRow += "<td>"+templateHistory[i].date + "</td>";
+                    templateHistoryRow += "<td><a class='btn' href='javascript:revertTemplate("+template.id+","+templateHistory[i].id+",false)'>Revert</a></td>";
+                    templateHistoryRow += "<td><a class='btn' href='javascript:revertTemplate("+template.id+","+templateHistory[i].id+",true)'>Publish</a></td>";
+                    templateHistoryRow += current?"<td></td>":"<td><a class='btn' href='javascript:removeTemplateHistory("+templateHistory[i].id+")'>Remove</a></td>";
+                    templateHistoryRow += "</tr>";
+                    $('#previousVersions > tbody').append(templateHistoryRow);
+                }
+            }
+        }
+    });
+
+    //open the dialog
+    $('#templateHistoryDialog').dialog('open');
+}
+
+//view changes between template histories
+function templateHistoryDialogViewChanges(){
+    var attr1 = $("#templateHistoryDialog").find('input:radio[name=attribute1]:checked').val();
+    var attr2 = $("#templateHistoryDialog").find('input:radio[name=attribute2]:checked').val();
+
+    if (!attr1 || !attr2){
+        alert("Please choose both templates to be compared.");
+        return;
+    }
+    if (attr1 == attr2){
+        alert("You are trying to compare the template with itself. Please select two different templates to compare.");
+        return;
+    }
+
+    //diff
+    var api = new Object();
+    api.source = templateHistory[attr1].html;
+    api.diff = templateHistory[attr2].html;
+    api.mode = "diff";
+    api.diffview = "inline";
+    api.sourcelabel = templateHistory[attr1].date;
+    api.difflabel = templateHistory[attr2].date;
+    var result = prettydiff(api);
+
+    //open view changes dialog
+    viewChangesDialog(result[0]);
 }
 
 //------------------------------------------------------------------------------
@@ -1425,15 +1661,19 @@ function onTemplateIFrameLoad(url, path){
         var iframeWidth = $("#templatePreview").contents().find("body")[0].scrollWidth;
         var iframeHeight = $("#templatePreview").contents().find("body")[0].scrollHeight;
 
-        //adjust page elems width
-        $(".content").width(iframeWidth);
-        $(".container").width(iframeWidth);
-        $(".page-header").width(iframeWidth);
-        $("#page-header-placeholder").height($(".page-header").outerHeight());
+        //adjust page elems width when the document is ready
+        $(document).ready(function() {
+            if (iframeWidth>940){
+                $(".content").width(iframeWidth);
+                $(".container").width(iframeWidth);
+                $(".page-header").width(iframeWidth);
+            }
+            $("#page-header-placeholder").height($(".page-header").outerHeight());
 
-        //resize iframe to actual content
-        $("#templatePreview").width(iframeWidth);
-        $("#templatePreview").height(iframeHeight+100);
+            //resize iframe to actual content
+            $("#templatePreview").width(iframeWidth);
+            $("#templatePreview").height(iframeHeight+100);
+        });
 
         return true;
     }
@@ -1642,6 +1882,10 @@ var messages = {
         en: "This attribute will be reverted to selected version, and this version will be published. Are you sure?",
         tr: "Bu öğe seçili versiyona geri döndürülecek ve bu versiyon yayınlanacak. Emin misiniz?"
     },
+    "confirm_remove_page_attribute_history": {
+        en: "This attribute history record will be removed from the system. This action is permanent. Are you sure?",
+        tr: "Bu öğe geçmişi kaydı sistemden kaldırılacak. Bu işlem geri alınamaz. Emin misiniz?"
+    },
     "confirm_remove_resource": {
         en: "This resource will be completely removed from the system. This action is permanent. Are you sure?",
         tr: "Bu kaynak sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
@@ -1653,5 +1897,21 @@ var messages = {
     "confirm_remove_template": {
         en: "Warning! This template will be completely removed from the system with all the pages using it. This action is permanent. Are you sure?",
         tr: "Uyarı! Bu şablon tüm sayfalarıyla birlikte sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
+    },
+    "confirm_remove_template_history": {
+        en: "This template history record will be removed from the system. This action is permanent. Are you sure?",
+        tr: "Bu şablon geçmişi kaydı sistemden kaldırılacak. Bu işlem geri alınamaz. Emin misiniz?"
+    },
+    "confirm_revert_template": {
+        en: "This template will be reverted to selected version, and this version will be published. Are you sure?",
+        tr: "Bu şablon seçili versiyona geri döndürülecek ve bu versiyon yayınlanacak. Emin misiniz?"
+    },
+    "confirm_revert_preview_template": {
+        en: "This template will be reverted to selected version, but this version will not be published (preview). Your current changes will be lost. Are you sure?",
+        tr: "Bu şablon seçili versiyona geri döndürülecek ama bu versiyon yayınlanmayacak (önizleme). Mevcut değişiklikleriniz kaybolacak. Emin misiniz?"
+    },
+    "confirm_revert_changes_template": {
+        en: "This template will be reverted to last published version. Your current changes will be lost. Are you sure?",
+        tr: "Bu şablon son yayınlanmış versiyona geri döndürülecek. Mevcut değişiklikleriniz kaybolacak. Emin misiniz?"
     }
 };

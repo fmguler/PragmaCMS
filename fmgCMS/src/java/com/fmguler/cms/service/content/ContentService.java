@@ -50,11 +50,6 @@ public interface ContentService {
     void savePageAttribute(PageAttribute pageAttribute);
 
     /**
-     * Save the template attribute
-     */
-    void saveTemplateAttribute(TemplateAttribute templateAttribute);
-
-    /**
      * Save the page
      */
     void savePage(Page page);
@@ -99,4 +94,16 @@ public interface ContentService {
     void saveTemplate(Template template);
 
     void removeTemplate(int id);
+
+    List getTemplateHistories(Integer templateId);
+
+    TemplateHistory getTemplateHistory(int id);
+
+    void saveTemplateHistory(TemplateHistory templateHistory);
+
+    Template getTemplate(String path);
+
+    void removePageAttributeHistory(int id);
+
+    void removeTemplateHistory(int id);
 }

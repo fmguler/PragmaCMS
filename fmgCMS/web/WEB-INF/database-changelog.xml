@@ -325,4 +325,38 @@
         <rollback/>
     </changeSet>
     <!-- <<MILESTONE 0.3 AUTHOR/ETC -->
+
+    <!-- MILESTONE 0.31 EDITTEMPLATEFIX >> -->
+    <!-- remove template attr tables -->
+    <changeSet author="fmguler" id="38">
+        <dropTable tableName="template_attribute_history" schemaName="public"/>
+        <dropTable tableName="template_attribute" schemaName="public"/>
+    </changeSet>
+    <!-- add template history table -->
+    <changeSet author="fmguler" id="39">
+        <createTable schemaName="public" tableName="template_history">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="template_history_pkey"/>
+            </column>
+            <column name="template_id" type="int"/>
+            <column name="html" type="TEXT"/>
+            <column name="author" type="VARCHAR(1000)"/>
+            <column name="comment" type="VARCHAR(1000)"/>
+            <column name="date" type="TIMESTAMP WITHOUT TIME ZONE"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="40">
+        <addForeignKeyConstraint
+            constraintName="template_history_template_id_fkey"
+            baseTableSchemaName="public" baseTableName="template_history" baseColumnNames="template_id"
+            referencedTableSchemaName="public" referencedTableName="template" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <!-- add version to template table -->
+    <changeSet author="fmguler" id="41">
+        <addColumn tableName="template" schemaName="public">
+            <column name="version" type="int"/>
+        </addColumn>
+    </changeSet>
+    <!-- <<MILESTONE 0.31 EDITTEMPLATEFIX -->
 </databaseChangeLog>

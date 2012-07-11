@@ -28,7 +28,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public Page getPage(String path) {
         Set joins = new HashSet();
-        joins.add("Page.template.templateAttributes");
+        joins.add("Page.template");
         joins.add("Page.pageAttributes");
         Criteria criteria = new Criteria();
         criteria.eq("Page.path", path);
@@ -43,7 +43,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public Page getPage(int id) {
         Set joins = new HashSet();
-        joins.add("Page.template.templateAttributes");
+        joins.add("Page.template");
         joins.add("Page.pageAttributes");
         Criteria criteria = new Criteria();
         criteria.eq("Page.id", id);
@@ -91,8 +91,20 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public Template getTemplate(int id) {
         Set joins = new HashSet();
-        joins.add("Template.templateAttributes");
         return (Template)ven.get(id, Template.class, joins);
+    }
+
+    @Override
+    public Template getTemplate(String path) {
+        Set joins = new HashSet();
+        Criteria criteria = new Criteria();
+        criteria.eq("Template.path", path);
+
+        //get the list
+        List list = ven.list(Template.class, joins, criteria);
+
+        if (list.isEmpty()) return null;
+        return (Template)list.get(0);
     }
 
     @Override
@@ -105,13 +117,39 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    public TemplateHistory getTemplateHistory(int id) {
+        Set joins = new HashSet();
+        return (TemplateHistory)ven.get(id, TemplateHistory.class, joins);
+    }
+
+    @Override
+    public List getTemplateHistories(Integer templateId) {
+        Set joins = new HashSet();
+        joins.add("TemplateHistory.template");
+        Criteria criteria = new Criteria();
+        criteria.eq("TemplateHistory.template.id", templateId);
+        criteria.orderDesc("TemplateHistory.date");
+        return ven.list(TemplateHistory.class, joins, criteria);
+    }
+
+    @Override
     public void saveTemplate(Template template) {
         ven.save(template);
     }
 
     @Override
+    public void saveTemplateHistory(TemplateHistory templateHistory) {
+        ven.save(templateHistory);
+    }
+
+    @Override
     public void removeTemplate(int id) {
         ven.delete(id, Template.class);
+    }
+
+    @Override
+    public void removeTemplateHistory(int id) {
+        ven.delete(id, TemplateHistory.class);
     }
 
     //--------------------------------------------------------------------------
@@ -152,13 +190,13 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
-    public void saveTemplateAttribute(TemplateAttribute templateAttribute) {
-        ven.save(templateAttribute);
+    public void removePageAttribute(int id) {
+        ven.delete(id, PageAttribute.class);
     }
 
     @Override
-    public void removePageAttribute(int id) {
-        ven.delete(id, PageAttribute.class);
+    public void removePageAttributeHistory(int id) {
+        ven.delete(id, PageAttributeHistory.class);
     }
 
     //--------------------------------------------------------------------------

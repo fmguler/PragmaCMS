@@ -36,8 +36,8 @@ Aloha.ready(function() {
 });
 
 //when the user tries to scroll by mouse wheel (since the iframe is auto sized it won't work)
-$(function(){
-    $('body').bind('mousewheel', function(event) {
+Aloha.jQuery(function(){
+    Aloha.jQuery('body').bind('mousewheel', function(event) {
         window.parent.onIFrameScroll(event);
         return false;
     });

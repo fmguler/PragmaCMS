@@ -106,4 +106,6 @@ public interface ContentService {
     void removePageAttributeHistory(int id);
 
     void removeTemplateHistory(int id);
+
+    List getPages(int templateId);
 }

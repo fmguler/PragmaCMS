@@ -117,7 +117,7 @@ public class ContentController implements ServletContextAware {
         if (request.getParameter("edit") != null && request.getSession().getAttribute("user") != null) {
             //inject editor code if this is an edit
             String templateSource = templateService.getSource(templatePath);
-            templateSource = AdminController.injectEditor(templateSource, true, request.getContextPath());
+            templateSource = AdminController.injectEditor(templateSource, request.getContextPath());
             pageHtml = templateService.mergeFromSource(templatePath, templateSource, model);
         } else if ((cachedResDate != -1) && (cachedResDate < (System.currentTimeMillis() / 1000L * 1000L)) && (cachedResDate >= (page.getLastModified().getTime() / 1000L * 1000L))) {
             //not modified (browser cache)

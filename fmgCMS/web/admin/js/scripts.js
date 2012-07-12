@@ -821,8 +821,8 @@ function reviewChangesDialog(){
 function reviewChangesDialogViewChanges(elemIndex){
     //diff
     var api = new Object();
-    api.source = pageCopy.pageAttributes[elemIndex].value;
-    api.diff = page.pageAttributes[elemIndex].value;
+    api.source = pageCopy.pageAttributes[elemIndex].value == "" ? "[Empty]" : pageCopy.pageAttributes[elemIndex].value;
+    api.diff = page.pageAttributes[elemIndex].value == "[Empty]" ? "" : page.pageAttributes[elemIndex].value;
     api.mode = "diff";
     api.diffview = "inline";
     api.sourcelabel = "Original"
@@ -905,8 +905,8 @@ function attributeHistoryDialogViewChanges(){
 
     //diff
     var api = new Object();
-    api.source = selectedAttributeHistory[attr1].value;
-    api.diff = selectedAttributeHistory[attr2].value;
+    api.source = selectedAttributeHistory[attr1].value == "" ? "[Empty]" : selectedAttributeHistory[attr1].value;
+    api.diff = selectedAttributeHistory[attr2].value == "" ? "[Empty]" : selectedAttributeHistory[attr2].value;
     api.mode = "diff";
     api.diffview = "inline";
     api.sourcelabel = selectedAttributeHistory[attr1].date;
@@ -1279,9 +1279,7 @@ function makeAttribute(){
     var elemId = getSelectedElementId();
     if (!elemId) return;
 
-    //save the new attribute html
-    //NOTE: not yet used, can be used to update existing pages' default values
-    /*
+    //set the default value of the html
     $.ajax({
         url: 'getTemplateElementHtml',
         data: 'templateId='+template.id+'&elemId='+elemId,
@@ -1291,14 +1289,10 @@ function makeAttribute(){
             if (response.status != "0") {
                 //fail silently
             } else {
-                var newAttribute = new Object();
-                newAttribute.attribute = attribute;
-                newAttribute.html = response.object;
-                newAttributes.push(newAttribute);
+                newAttributes[attribute] = response.object;
             }
         }
     });
-     */
 
     //update the html in server
     var data = new Object();
@@ -1332,6 +1326,7 @@ function saveTemplate(publish){
     templateForm.templateId = template.id;
     templateForm.comment = $("#saveTemplateDialogComment").val();
     templateForm.publish = publish;
+    templateForm.newAttributes = newAttributes;
 
     //save with ajax
     $.ajax({

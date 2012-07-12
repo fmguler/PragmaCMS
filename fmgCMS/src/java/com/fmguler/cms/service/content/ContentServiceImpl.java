@@ -76,6 +76,17 @@ public class ContentServiceImpl implements ContentService {
     }
 
     @Override
+    public List getPages(int templateId) {
+        Set joins = new HashSet();
+        joins.add("Page.template");
+        Criteria criteria = new Criteria();
+        criteria.eq("Page.template.id", templateId);
+        criteria.orderAsc("Page.path");
+        List list = ven.list(Page.class, joins, criteria);
+        return list;
+    }
+
+    @Override
     public void savePage(Page page) {
         ven.save(page);
     }

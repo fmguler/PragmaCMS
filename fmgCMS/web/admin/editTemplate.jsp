@@ -22,7 +22,7 @@
             var template = null;
             var templateHtml = null;
             var templateHistory = null;
-            var newAttributes = new Array();
+            var newAttributes = new Object();
             var selectedElement = null;
             $(function(){editTemplateReady(${template.id}, '${template.path}')});
         </script>

@@ -131,6 +131,12 @@ public class AdminController {
         page.setLastModified(new Date());
         contentService.savePage(page);
 
+        //to get page attributes and template
+        page = contentService.getPage(page.getId());
+
+        //scan and auto add attributes
+        scanAttributes(page);
+
         //return success
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", page);
     }
@@ -181,9 +187,6 @@ public class AdminController {
         if (page.getNewPath() != null) {
             return "redirect:/admin/editPage?path=" + page.getNewPath();
         }
-
-        //scan and auto add attributes
-        scanPageAttributes(page);
 
         model.addAttribute("page", page);
         return "admin/editPage";
@@ -766,7 +769,7 @@ public class AdminController {
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", template);
     }
 
-    //ajax - get template html original or current
+    //ajax - get template html original or current (for review changes)
     @RequestMapping()
     @ResponseBody
     public String getTemplateHtml(@RequestParam Integer templateId, @RequestParam Boolean original, HttpServletRequest request) {
@@ -883,8 +886,6 @@ public class AdminController {
         docCopy.head().getElementById("fmgcms-injected-script").remove();
         String templateHtml = docCopy.html();
 
-        //TODO: scan attr
-
         //add history record
         TemplateHistory templateHistory = new TemplateHistory();
         templateHistory.setTemplate(template);
@@ -899,6 +900,9 @@ public class AdminController {
 
         //update template html and version if this is not a draft
         if (publish) {
+            //scan new attributes and add them to existing pages
+            scanAttributes(template, templateHtml, request.getParameterMap());
+
             //save new template html to resource
             Resource resource = resourceService.getResource(template.getPath());
             if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource corresponding to this template is not found", null);
@@ -1087,7 +1091,7 @@ public class AdminController {
      * @param pageHtml the page html
      * @return injected page html
      */
-    public static String injectEditor(String pageHtml, boolean editPage, String contextPath) {
+    public static String injectEditor(String pageHtml, String contextPath) {
         String editorScript = ""
                 + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/jquery-ui-1.8.20.custom.min.js\"></script>\n"
                 + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
@@ -1121,8 +1125,7 @@ public class AdminController {
         while (matcher.find()) {
             String attribute = matcher.group(1);
             if (attribute.startsWith("i_")) continue; //do not edit invisible attributes
-            if (editPage && attribute.startsWith("t_")) continue; //do not edit template attributes in edit page mode
-            if (editPage || attribute.startsWith("t_")) matcher.appendReplacement(sb, "<div id=\"attribute-editable-$1\" onclick=\"window.parent.onAlohaClick('$1')\" class=\"editable\">\\${$1}</div>"); //do not edit page attributes in edit template mode
+            matcher.appendReplacement(sb, "<div id=\"attribute-editable-$1\" onclick=\"window.parent.onAlohaClick('$1')\" class=\"editable\" style=\"display:inline-block\">\\${$1}</div>");
         }
         matcher.appendTail(sb);
 
@@ -1132,38 +1135,48 @@ public class AdminController {
     //PRIVATE
     //--------------------------------------------------------------------------
     //scan page attributes
-    private void scanPageAttributes(Page page) {
-        //scan the page for ${} placeholders
-        //detect the missing page attributes, and add them to the page
-        //detect unused attributes and mark them
+    private void scanAttributes(Page page) {
+        //scan the page template for ${} placeholders
+        //detect the new page attributes, and add them to the page
 
         //new page, template not selected yet (this shouldn't happen anymore, but be safe)
         if (page.getTemplate() == null) return;
 
-        String templateSource;
+        //get the page's template html
+        String templateHtml;
+        InputStream inputStream = null;
         try {
-            templateSource = templateService.getSource(page.getTemplate().getId() + ".ftl");
-        } catch (TemplateException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Cannot get template source at scanPageAttributes", ex);
+            String resourcePath  = page.getTemplate().getPath();
+            if (resourcePath.equals("/")) resourcePath = "/index.html";
+            Resource resource = resourceService.getResource(resourcePath);
+            inputStream = resourceService.getInputStream(resource);
+            templateHtml = IOUtils.toString(inputStream, "UTF-8");
+        } catch (ResourceException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for templateHtml", ex);
             return;
+        } catch (IOException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error reading template resource for templateHtml", ex);
+            return;
+        } finally {
+            IOUtils.closeQuietly(inputStream);
         }
 
-        //scan template source for attributes
+        //scan template html for attributes
         Set<String> pageAttributes = new HashSet();
         Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
-        Matcher matcher = pattern.matcher(templateSource);
+        Matcher matcher = pattern.matcher(templateHtml);
         while (matcher.find()) {
             String attribute = matcher.group(1);
             pageAttributes.add(attribute);
         }
 
-        //detect missing attributes
+        //detect new attributes
         List<PageAttribute> existingPageAttributes = page.getPageAttributes();
-        for (PageAttribute attr : existingPageAttributes) {
-            if (pageAttributes.contains(attr.getAttribute())) pageAttributes.remove(attr.getAttribute());
+        for (PageAttribute existingAttr : existingPageAttributes) {
+            if (pageAttributes.contains(existingAttr.getAttribute())) pageAttributes.remove(existingAttr.getAttribute());
         }
 
-        //add missing attributes to page
+        //add new attributes to the page
         for (String attribute : pageAttributes) {
             PageAttribute pageAttribute = new PageAttribute();
             pageAttribute.setAttribute(attribute);
@@ -1171,18 +1184,95 @@ public class AdminController {
             pageAttribute.setComment("attribute is scanned");
             pageAttribute.setDate(new Date());
             pageAttribute.setPage(page);
-            pageAttribute.setValue("");
+            pageAttribute.setValue("[Add Content]");
             pageAttribute.setVersion(0);
             contentService.savePageAttribute(pageAttribute);
-            page.getPageAttributes().add(pageAttribute);
+
+            //add history record
+            PageAttributeHistory attributeHistory = new PageAttributeHistory();
+            attributeHistory.setPage(page);
+            attributeHistory.setAttribute(pageAttribute.getAttribute());
+            attributeHistory.setValue(pageAttribute.getValue());
+            attributeHistory.setAuthor(pageAttribute.getAuthor());
+            attributeHistory.setDate(pageAttribute.getDate());
+            attributeHistory.setComment(pageAttribute.getComment());
+            contentService.savePageAttributeHistory(attributeHistory);
         }
     }
 
-    //scan template attributes
-    private void scanTemplateAttributes(Template template) {
-        //scan the template for ${} placeholders, use some convention for template and global attrs
-        //detect the missing template attributes, and add them to the template
-        //detect unused attributes and mark them
+    //scan template attributes and add to all pages
+    private void scanAttributes(Template template, String templateHtml, Map attributeValues) {
+        //scan the template for ${} placeholders
+        //detect the new page attributes, and add them to the pages of the template
+
+        //get the page's template html
+        String originalTemplateHtml;
+        InputStream inputStream = null;
+        try {
+            Resource resource = resourceService.getResource(template.getPath());
+            inputStream = resourceService.getInputStream(resource);
+            originalTemplateHtml = IOUtils.toString(inputStream, "UTF-8");
+        } catch (ResourceException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for originalTemplateHtml", ex);
+            return;
+        } catch (IOException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error reading template resource for originalTemplateHtml", ex);
+            return;
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
+
+
+        //scan template html for attributes
+        Set<String> pageAttributes = new HashSet();
+        Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
+        Matcher matcher = pattern.matcher(templateHtml);
+        while (matcher.find()) {
+            String attribute = matcher.group(1);
+            pageAttributes.add(attribute);
+        }
+
+        //scan original template html for attributes
+        Set<String> existingPageAttributes = new HashSet();
+        matcher = pattern.matcher(originalTemplateHtml);
+        while (matcher.find()) {
+            String attr = matcher.group(1);
+            existingPageAttributes.add(attr);
+        }
+
+        //detect new attributes
+        for (String existingAttr : existingPageAttributes) {
+            if (pageAttributes.contains(existingAttr)) pageAttributes.remove(existingAttr);
+        }
+
+        //the pages of this template
+        List<Page> pages = contentService.getPages(template.getId());
+
+        //add new attributes to all pages of this template
+        for (Page page : pages) {
+            for (String attribute : pageAttributes) {
+                PageAttribute pageAttribute = new PageAttribute();
+                pageAttribute.setAttribute(attribute);
+                pageAttribute.setAuthor("admin");
+                pageAttribute.setComment("attribute is added to template");
+                pageAttribute.setDate(new Date());
+                pageAttribute.setPage(page);
+                String[] defaultValue = (String[])attributeValues.get("newAttributes[" + attribute + "]");
+                pageAttribute.setValue(defaultValue == null ? "[Add Content]" : defaultValue[0]);
+                pageAttribute.setVersion(0);
+                contentService.savePageAttribute(pageAttribute);
+
+                //add history record
+                PageAttributeHistory attributeHistory = new PageAttributeHistory();
+                attributeHistory.setPage(page);
+                attributeHistory.setAttribute(pageAttribute.getAttribute());
+                attributeHistory.setValue(pageAttribute.getValue());
+                attributeHistory.setAuthor(pageAttribute.getAuthor());
+                attributeHistory.setDate(pageAttribute.getDate());
+                attributeHistory.setComment(pageAttribute.getComment());
+                contentService.savePageAttributeHistory(attributeHistory);
+            }
+        }
     }
 
     //process template - make links absolute

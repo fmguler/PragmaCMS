@@ -17,6 +17,8 @@
         <script type="text/javascript" src="js/jquery.iframe-post-form.js"></script>
         <script type="text/javascript" src="js/bootstrap/js/bootstrap.js"></script>
         <script type="text/javascript" src="js/prettydiff/prettydiff-min.js"></script>
+        <script type="text/javascript" src="js/ace/ace.js" charset="utf-8"></script>
+        <script type="text/javascript" src="js/ace/mode-html.js" charset="utf-8"></script>
         <script type="text/javascript" src="js/scripts.js"></script>
         <script type="text/javascript">
             var locale = 'en';
@@ -26,6 +28,7 @@
             var selectedAttributeId = null;
             var selectedAttributeHistory = null;
             var pageAttachments = null;
+            var editor = null;
             $(function(){editPageReady(${page.id}, '${page.path}')});
         </script>
     </head>
@@ -146,9 +149,7 @@
 
         <!-- Edit Html Dialog -->
         <div id="editHtmlDialog" title="Edit Attribute HTML">
-            <div>
-                <textarea class="span7" rows="20" id="editHtmlDialogTextarea" onchange="onEditHtmlDialogTextareaChange()">[No Attribute Selected]</textarea>
-            </div>
+            <div id="editor" style="position: relative; width: 730px; height: 500px;"></div>
         </div>
 
         <!-- Save Dialog -->

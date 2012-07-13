@@ -15,6 +15,8 @@
         <script type="text/javascript" src="js/jquery-ui-1.8.20.custom.min.js"></script>
         <script type="text/javascript" src="js/bootstrap/js/bootstrap.js"></script>
         <script type="text/javascript" src="js/prettydiff/prettydiff-min.js"></script>
+        <script type="text/javascript" src="js/ace/ace.js" charset="utf-8"></script>
+        <script type="text/javascript" src="js/ace/mode-html.js" charset="utf-8"></script>
         <script type="text/javascript" src="js/scripts.js"></script>
         <script type="text/javascript">
             var locale = 'en';
@@ -24,6 +26,7 @@
             var templateHistory = null;
             var newAttributes = new Object();
             var selectedElement = null;
+            var editor = null;
             $(function(){editTemplateReady(${template.id}, '${template.path}')});
         </script>
     </head>
@@ -107,9 +110,7 @@
 
         <!-- Edit Template Html Dialog -->
         <div id="editTemplateHtmlDialog" title="Edit Template HTML">
-            <div>
-                <textarea class="span7" rows="20" id="editTemplateHtmlDialogTextarea">[No Attribute Selected]</textarea>
-            </div>
+            <div id="editor" style="position: relative; width: 730px; height: 500px;"></div>
         </div>
 
         <!-- Save Template Dialog -->

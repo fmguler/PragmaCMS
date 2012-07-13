@@ -901,7 +901,7 @@ public class AdminController {
         //update template html and version if this is not a draft
         if (publish) {
             //scan new attributes and add them to existing pages
-            scanAttributes(template, templateHtml, request.getParameterMap());
+            Set addedAttributes = scanAttributes(template, templateHtml, request.getParameterMap());
 
             //save new template html to resource
             Resource resource = resourceService.getResource(template.getPath());
@@ -943,10 +943,10 @@ public class AdminController {
             //return updated objects if published (state change)
             result.put("template", template);
             result.put("templateHtml", templateHtml);
+            result.put("addedAttributes", addedAttributes);
         }
 
         //return success
-        result.put("addedAttributes", new LinkedList());
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template is saved successfully. Following attributes are added;", result);
     }
 
@@ -1201,7 +1201,7 @@ public class AdminController {
     }
 
     //scan template attributes and add to all pages
-    private void scanAttributes(Template template, String templateHtml, Map attributeValues) {
+    private Set<String> scanAttributes(Template template, String templateHtml, Map attributeValues) {
         //scan the template for ${} placeholders
         //detect the new page attributes, and add them to the pages of the template
 
@@ -1214,10 +1214,10 @@ public class AdminController {
             originalTemplateHtml = IOUtils.toString(inputStream, "UTF-8");
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for originalTemplateHtml", ex);
-            return;
+            return new HashSet();
         } catch (IOException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error reading template resource for originalTemplateHtml", ex);
-            return;
+            return new HashSet();
         } finally {
             IOUtils.closeQuietly(inputStream);
         }
@@ -1273,6 +1273,8 @@ public class AdminController {
                 contentService.savePageAttributeHistory(attributeHistory);
             }
         }
+
+        return pageAttributes;
     }
 
     //process template - make links absolute

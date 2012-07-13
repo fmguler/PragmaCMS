@@ -104,14 +104,10 @@ function editPageReady(pageId, pagePath){
     //edit html (modal)
     $("#editHtmlDialog").dialog({
         //height: 'auto',
-        width: 570,
+        width: 750,
         autoOpen: false,
         modal: true,
         buttons: [{
-            'class': 'btn',
-            text: messages["apply"][locale],
-            click: function() {}
-        },{
             'class': 'btn btn-primary',
             text: messages["ok"][locale],
             click: function() {
@@ -231,6 +227,13 @@ function editPageReady(pageId, pagePath){
     //load the page preview iframe
     var pagePreviewSrc = contextPath+pagePath+"?time="+(new Date()).getTime()+"&edit";
     $("#pagePreview").attr("src", pagePreviewSrc);
+
+    //configure the ACE code editor
+    editor = ace.edit("editor");
+    var HtmlMode = require("ace/mode/html").Mode;
+    editor.getSession().setMode(new HtmlMode());
+    editor.getSession().setUseWrapMode(true);
+    editor.getSession().on('change', onEditHtmlDialogUpdate);
 }
 
 //on resources ready
@@ -387,7 +390,7 @@ function editTemplateReady(templateId, templatePath){
     //edit template html (modal)
     $("#editTemplateHtmlDialog").dialog({
         //height: 'auto',
-        width: 570,
+        width: 750,
         autoOpen: false,
         modal: true,
         buttons: [{
@@ -518,6 +521,12 @@ function editTemplateReady(templateId, templatePath){
     //load the page preview iframe
     var templatePreviewSrc = contextPath+templatePath+"?time="+(new Date()).getTime()+"&static&edit";
     $("#page-header-placeholder").after('<iframe id="templatePreview" src="'+templatePreviewSrc+'" width="100%" height="480" onLoad="onTemplateIFrameLoad(this.contentWindow.location.href, this.contentWindow.location.pathname)"></iframe>');
+
+    //configure the ACE code editor
+    editor = ace.edit("editor");
+    var HtmlMode = require("ace/mode/html").Mode;
+    editor.getSession().setMode(new HtmlMode());
+    editor.getSession().setUseWrapMode(true);
 }
 
 //------------------------------------------------------------------------------
@@ -824,7 +833,7 @@ function reviewChangesDialogViewChanges(elemIndex){
     api.source = pageCopy.pageAttributes[elemIndex].value == "" ? "[Empty]" : pageCopy.pageAttributes[elemIndex].value;
     api.diff = page.pageAttributes[elemIndex].value == "[Empty]" ? "" : page.pageAttributes[elemIndex].value;
     api.mode = "diff";
-    api.diffview = "inline";
+    api.diffview = "sidebyside";
     api.sourcelabel = "Original"
     api.difflabel = "Changed"
     var result = prettydiff(api);
@@ -908,7 +917,7 @@ function attributeHistoryDialogViewChanges(){
     api.source = selectedAttributeHistory[attr1].value == "" ? "[Empty]" : selectedAttributeHistory[attr1].value;
     api.diff = selectedAttributeHistory[attr2].value == "" ? "[Empty]" : selectedAttributeHistory[attr2].value;
     api.mode = "diff";
-    api.diffview = "inline";
+    api.diffview = "sidebyside";
     api.sourcelabel = selectedAttributeHistory[attr1].date;
     api.difflabel = selectedAttributeHistory[attr2].date;
     var result = prettydiff(api);
@@ -936,12 +945,12 @@ function viewChangesDialog(changesTable){
 
     //show the dialog
     $('#viewChangesDialog').dialog('option', "height", 600);
-    $('#viewChangesDialog').dialog('option', "width", 800);
+    $('#viewChangesDialog').dialog('option', "width", 900);
     $('#viewChangesDialog').dialog('open');
 
 
     //adjust width the table is smaller
-    if($("#viewChangesDialog").find("table").width() < 750){
+    if($("#viewChangesDialog").find("table").width() < 850){
         $('#viewChangesDialog').dialog('option', "width", $("#viewChangesDialog").find("table").width()+50);
     }
 
@@ -965,7 +974,8 @@ function editHtmlDialog(){
     $("#pagePreview")[0].contentWindow.forceAlohaChange();
 
     //update the textarea
-    $("#editHtmlDialogTextarea").val(attributeById(selectedAttributeId).value);
+    editor.setValue(attributeById(selectedAttributeId).value);
+    editor.gotoLine(0);
 
     //show the dialog
     $('#editHtmlDialog').dialog('open');
@@ -991,18 +1001,17 @@ function onSelectedAttributeChange(){
     editable.focus();
 }
 
-//on attribute textarea value change, update preview
-function onEditHtmlDialogTextareaChange(){
+//edit page attribute html update button
+function onEditHtmlDialogUpdate(){
     if (!selectedAttributeId) return;
 
     //update the attribute value
     var attribute = attributeById(selectedAttributeId);
-    attribute.value = $("#editHtmlDialogTextarea").val();
+    attribute.value = editor.getValue();
 
     //update editable html
     var editable = $("#pagePreview").contents().find("#attribute-editable-"+attribute.attribute);
     editable.html(attribute.value);
-    editable.focus();
 }
 
 //aloha edited content is changed, update texts
@@ -1043,7 +1052,7 @@ function onIFrameLoad(url, path){
         var iframeHeight = $("#pagePreview").contents().find("body")[0].scrollHeight;
 
         //adjust page elems width when the document is ready
-        $(document).ready(function() {
+        setTimeout(function() {
             if (iframeWidth>940){
                 $(".content").width(iframeWidth);
                 $(".container").width(iframeWidth);
@@ -1054,7 +1063,7 @@ function onIFrameLoad(url, path){
             //resize iframe to actual content
             $("#pagePreview").width(iframeWidth);
             $("#pagePreview").height(iframeHeight+100);
-        });
+        }, 100);
 
         return true;
     }
@@ -1440,7 +1449,7 @@ function editTemplateHtmlDialog(){
     if (!elemId) return;
 
     //show the dialog
-    $("#editTemplateHtmlDialogTextarea").val("Please wait...");
+    editor.setValue("Please wait...");
     $('#editTemplateHtmlDialog').dialog('open');
 
     //populate the textarea with the actual html of the selected element
@@ -1459,13 +1468,14 @@ function editTemplateHtmlDialogPopulate(elemId){
                 $('#editTemplateHtmlDialog').dialog('close');
                 showErrorDialog(response.message);
             } else {
-                $("#editTemplateHtmlDialogTextarea").val(response.object);
+                editor.setValue(response.object);
+                editor.gotoLine(0);
             }
         }
     });
 }
 
-//on element textarea value change
+//edit template html update button
 function editTemplateHtmlDialogUpdate(){
     //get the element id
     var elemId = getSelectedElementId();
@@ -1475,7 +1485,7 @@ function editTemplateHtmlDialogUpdate(){
     var data = new Object();
     data.templateId = template.id;
     data.elemId = elemId;
-    data.html = $("#editTemplateHtmlDialogTextarea").val();
+    data.html = editor.getValue();
 
     $.ajax({
         url: 'updateTemplateElementHtml',
@@ -1543,7 +1553,7 @@ function reviewTemplateChangesDialog(){
                 api.source = templateHtml;
                 api.diff = currentTemplateHtml;
                 api.mode = "diff";
-                api.diffview = "inline";
+                api.diffview = "sidebyside";
                 api.sourcelabel = "Original"
                 api.difflabel = "Changed"
                 var result = prettydiff(api);
@@ -1610,7 +1620,7 @@ function templateHistoryDialogViewChanges(){
     api.source = templateHistory[attr1].html;
     api.diff = templateHistory[attr2].html;
     api.mode = "diff";
-    api.diffview = "inline";
+    api.diffview = "sidebyside";
     api.sourcelabel = templateHistory[attr1].date;
     api.difflabel = templateHistory[attr2].date;
     var result = prettydiff(api);
@@ -1657,7 +1667,7 @@ function onTemplateIFrameLoad(url, path){
         var iframeHeight = $("#templatePreview").contents().find("body")[0].scrollHeight;
 
         //adjust page elems width when the document is ready
-        $(document).ready(function() {
+        setTimeout(function() {
             if (iframeWidth>940){
                 $(".content").width(iframeWidth);
                 $(".container").width(iframeWidth);
@@ -1668,7 +1678,7 @@ function onTemplateIFrameLoad(url, path){
             //resize iframe to actual content
             $("#templatePreview").width(iframeWidth);
             $("#templatePreview").height(iframeHeight+100);
-        });
+        }, 100);
 
         return true;
     }

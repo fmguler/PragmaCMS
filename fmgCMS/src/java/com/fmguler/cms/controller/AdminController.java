@@ -124,7 +124,7 @@ public class AdminController {
     public String addPage(Page page) {
         if (page.getId() != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This page already exists", null);
         if (!page.getPath().startsWith("/")) page.setPath("/" + page.getPath());
-        if (!page.getPath().substring(1).matches("[A-Za-z0-9\\-]{0,255}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<br/><li>Dash (-)", null);
+        if (!page.getPath().substring(1).matches("[A-Za-z0-9\\-./]{0,255}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<li>Dash (-)<li>Dot (.)", null);
         if (contentService.getPage(page.getPath()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A page with this path already exists", null);
 
         //save the page
@@ -212,7 +212,7 @@ public class AdminController {
 
         //path validity checks (same as addPage)
         if (!newPath.startsWith("/")) newPath = "/" + newPath;
-        if (!newPath.substring(1).matches("[A-Za-z0-9\\-]{0,255}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<br/><li>Dash (-)", null);
+        if (!newPath.substring(1).matches("[A-Za-z0-9\\-./]{0,255}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<br/><li>Dash (-)<li>Dot (.)", null);
 
         //add a redirect page with old path pointing to renamed page
         if (redirect != null) {
@@ -658,7 +658,7 @@ public class AdminController {
 
             //save processed form as template file
             os = templateService.getSourceOutputStream(template.getId() + ".ftl");
-            os.write(processTemplate(templateDocument).getBytes("UTF-8"));
+            os.write(processTemplate(templateDocument, resource, true).getBytes("UTF-8"));
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at addTemplate cannot read resource", ex);
             return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
@@ -717,6 +717,7 @@ public class AdminController {
         String templateHtml = null;
         try {
             Resource resource = resourceService.getResource(template.getPath());
+            //TODO: check resource null, the resource this template points to may have been renamed
             inputStream = resourceService.getInputStream(resource);
             templateHtml = IOUtils.toString(inputStream, "UTF-8");
         } catch (ResourceException ex) {
@@ -924,7 +925,7 @@ public class AdminController {
             //process the new template html and save it as template file
             try {
                 os = templateService.getSourceOutputStream(template.getId() + ".ftl");
-                os.write(processTemplate(docCopy).getBytes("UTF-8"));
+                os.write(processTemplate(docCopy, resource, false).getBytes("UTF-8"));
                 os.close();
             } catch (TemplateException ex) {
                 Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at saveTemplate write to template source os", ex);
@@ -1022,7 +1023,7 @@ public class AdminController {
             //process the new template html and save it as template file
             try {
                 os = templateService.getSourceOutputStream(template.getId() + ".ftl");
-                os.write(processTemplate(docCopy).getBytes("UTF-8"));
+                os.write(processTemplate(docCopy, resource, false).getBytes("UTF-8"));
                 os.close();
             } catch (TemplateException ex) {
                 Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at saveTemplate write to template source os", ex);
@@ -1146,7 +1147,7 @@ public class AdminController {
         String templateHtml;
         InputStream inputStream = null;
         try {
-            String resourcePath  = page.getTemplate().getPath();
+            String resourcePath = page.getTemplate().getPath();
             if (resourcePath.equals("/")) resourcePath = "/index.html";
             Resource resource = resourceService.getResource(resourcePath);
             inputStream = resourceService.getInputStream(resource);
@@ -1278,9 +1279,88 @@ public class AdminController {
     }
 
     //process template - make links absolute
-    private String processTemplate(Document templateDocument) {
-        //TODO: make paths absolute
+    private String processTemplate(Document templateDocument, Resource templateResource, boolean initial) {
+        String contextPath = "/fmgCMS";
+
+        //process all links, media, imports
+        //convert links to absolute path like /a/b/c
+        Elements links = templateDocument.select("a[href]");
+        Elements media = templateDocument.select("[src]");
+        Elements imports = templateDocument.select("link[href]");
+        Elements styles = templateDocument.select("style");
+
+        //make media src absolute
+        for (Element src : media) {
+            src.attr("src", contextPath + templateResource.getFolder() + src.attr("src"));
+        }
+
+        //make css href absolute
+        for (Element link : imports) {
+            if (initial) processCss(contextPath, templateResource, resourceService.getResource(templateResource.getFolder() + link.attr("href"))); //if initial also update css contents
+            link.attr("href", contextPath + templateResource.getFolder() + link.attr("href"));
+        }
+
+        //make link href absolute
+        for (Element link : links) {
+            if (!link.absUrl("href").equals("")) continue; //skip absolute links
+            link.attr("href", contextPath + templateResource.getFolder() + link.attr("href"));
+        }
+
+        //also replace inline styles
+        for (Element style : styles) {
+            String cssContents = style.html();
+
+            //process css contents (copied from processCss)
+            Pattern pattern = Pattern.compile("url\\(\\s*(['\\\"]?+)(.*?)\\1\\s*\\)");
+            Matcher matcher = pattern.matcher(cssContents);
+            StringBuffer sb = new StringBuffer();
+            while (matcher.find()) {
+                matcher.appendReplacement(sb, "url('" + contextPath + templateResource.getFolder() + "$2')");
+            }
+            matcher.appendTail(sb);
+
+            //replace inline style
+            style.html(sb.toString());
+        }
+
         return templateDocument.html();
+    }
+
+    //process css - make links absolute
+    private void processCss(String contextPath, Resource templateResource, Resource cssResource) {
+        //no such css
+        if (cssResource == null) return;
+
+        //copy the resource html as template file
+        InputStream is = null;
+        OutputStream os = null;
+        String cssContents;
+        try {
+            is = resourceService.getInputStream(cssResource);
+            cssContents = IOUtils.toString(is, "UTF-8");
+
+            //process css contents
+            Pattern pattern = Pattern.compile("url\\(\\s*(['\\\"]?+)(.*?)\\1\\s*\\)");
+            Matcher matcher = pattern.matcher(cssContents);
+            StringBuffer sb = new StringBuffer();
+            while (matcher.find()) {
+                String cssUrl = matcher.group(2);
+                if (cssUrl.startsWith("/") || cssUrl.startsWith("http")) continue; //skip absoulte urls
+                matcher.appendReplacement(sb, "url('" + contextPath + cssResource.getFolder() + "$2')");
+            }
+            matcher.appendTail(sb);
+
+            //write to the resource
+            os = resourceService.getOutputStream(cssResource);
+            os.write(sb.toString().getBytes("UTF-8"));
+        } catch (ResourceException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Resource exception while processing css contents", ex);
+        } catch (IOException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException while processing css contents", ex);
+        } finally {
+            IOUtils.closeQuietly(is);
+            IOUtils.closeQuietly(os);
+        }
     }
 
     //SETTERS

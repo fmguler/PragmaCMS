@@ -24344,6 +24344,9 @@ Firebug.HTML = extend(Firebug.Module,
                     var name = attr.nodeName.toLowerCase();
                     var value = name == "style" ? formatStyles(node.style.cssText) : attr.nodeValue;
 
+                    //fmg:
+                    if (name == 'fmgcms-id') continue;
+
                     html.push('&nbsp;<span class="nodeName">', name,
                         '</span>=&quot;<span class="nodeValue">', escapeHTML(value),
                         '</span>&quot;');

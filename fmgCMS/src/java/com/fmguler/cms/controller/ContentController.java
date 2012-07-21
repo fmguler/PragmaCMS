@@ -88,6 +88,11 @@ public class ContentController implements ServletContextAware {
 
         //return 404
         if (page == null) {
+            //if the page extension is html, try static resource
+            if (path.endsWith(".html") || path.endsWith(".htm")) {
+                handleStaticResource(path, request, response);
+                return null;
+            }
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return null;
         }

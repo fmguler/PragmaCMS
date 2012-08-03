@@ -22,6 +22,9 @@
                 </bean>
             </array>
         </property>
+        <property name="customArgumentResolver">
+            <bean class="com.fmguler.cms.controller.CustomWebArgumentResolver" />
+        </property>
     </bean>
 
     <!-- Map static content according to this mapping -->

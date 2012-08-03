@@ -23,6 +23,7 @@ public class Author {
     private String firstName;
     private String lastName;
     private String email;
+    private Site site;
 
     /**
      * @return the id
@@ -106,6 +107,20 @@ public class Author {
      */
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    /**
+     * @return the site
+     */
+    public Site getSite() {
+        return site;
+    }
+
+    /**
+     * @param site the site to set
+     */
+    public void setSite(Site site) {
+        this.site = site;
     }
 
     /*

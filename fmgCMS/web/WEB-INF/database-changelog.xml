@@ -359,4 +359,80 @@
         </addColumn>
     </changeSet>
     <!-- <<MILESTONE 0.31 EDITTEMPLATEFIX -->
+
+    <!-- MILESTONE 0.32 MULTISITE >> -->
+    <!-- add site table -->
+    <changeSet author="fmguler" id="42">
+        <createTable schemaName="public" tableName="site">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="site_pkey"/>
+            </column>
+            <column name="domains" type="VARCHAR(1000)"/>
+            <column name="company" type="VARCHAR(1000)"/>
+            <column name="address" type="VARCHAR(1000)"/>
+            <column name="city" type="VARCHAR(1000)"/>
+            <column name="state" type="VARCHAR(1000)"/>
+            <column name="country" type="VARCHAR(1000)"/>
+            <column name="phone" type="VARCHAR(1000)"/>
+            <column name="primary_contact_id" type="int"/>
+        </createTable>
+    </changeSet>
+    <!-- add site references to objects -->
+    <changeSet author="fmguler" id="43">
+        <addColumn tableName="author" schemaName="public">
+            <column name="site_id" type="int"/>
+        </addColumn>
+        <addColumn tableName="page" schemaName="public">
+            <column name="site_id" type="int"/>
+        </addColumn>
+        <addColumn tableName="template" schemaName="public">
+            <column name="site_id" type="int"/>
+        </addColumn>
+    </changeSet>
+    <!-- constraints for site references -->
+    <changeSet author="fmguler" id="44">
+        <addForeignKeyConstraint
+            constraintName="author_site_id_fkey"
+            baseTableSchemaName="public" baseTableName="author" baseColumnNames="site_id"
+            referencedTableSchemaName="public" referencedTableName="site" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+        <addForeignKeyConstraint
+            constraintName="page_site_id_fkey"
+            baseTableSchemaName="public" baseTableName="page" baseColumnNames="site_id"
+            referencedTableSchemaName="public" referencedTableName="site" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+        <addForeignKeyConstraint
+            constraintName="site_primary_contact_id_fkey"
+            baseTableSchemaName="public" baseTableName="site" baseColumnNames="primary_contact_id"
+            referencedTableSchemaName="public" referencedTableName="author" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="CASCADE" />
+        <addForeignKeyConstraint
+            constraintName="template_site_id_fkey"
+            baseTableSchemaName="public" baseTableName="template" baseColumnNames="site_id"
+            referencedTableSchemaName="public" referencedTableName="site" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <!-- add default site record and point existing records to this -->
+    <changeSet author="fmguler" id="45">
+        <insert schemaName="public" tableName="site">
+            <column name="domains" value="*"/>
+            <column name="company" value="Default Web Site"/>
+            <column name="address" value=""/>
+            <column name="city" value=""/>
+            <column name="state" value=""/>
+            <column name="country" value=""/>
+            <column name="phone" value=""/>
+            <column name="primary_contact_id" valueNumeric="1"/>
+        </insert>
+        <rollback/>
+    </changeSet>
+    <changeSet author="fmguler" id="46">
+        <sql>
+            update author set site_id = 1;
+            update page set site_id = 1;
+            update template set site_id = 1;
+        </sql>
+        <rollback/>
+    </changeSet>
+    <!-- <<MILESTONE 0.32 MULTISITE -->
 </databaseChangeLog>

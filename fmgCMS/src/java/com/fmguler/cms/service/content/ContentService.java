@@ -16,16 +16,16 @@ import java.util.List;
  */
 public interface ContentService {
     /**
-     * Return the page with the specified path
+     * Return the page with the specified path for the site
      * @param path the path of the page
      * @return page object with attributes
      */
-    public Page getPage(String path);
+    public Page getPage(String path, int siteId);
 
     /**
-     * @return all pages in the system
+     * @return all pages in the system for the site
      */
-    public List getPages();
+    public List getPages(int siteId);
 
     /**
      * @param id template id
@@ -34,9 +34,9 @@ public interface ContentService {
     Template getTemplate(int id);
 
     /**
-     * @return all templates in the system
+     * @return all templates in the system for the site
      */
-    public List getTemplates();
+    public List getTemplates(int siteId);
 
     /**
      * @param id the id of the page attribute
@@ -67,13 +67,13 @@ public interface ContentService {
 
     Page getPage(int id);
 
-    void updatePageRedirects(String oldRedirect, String newRedirect);
+    void updatePageRedirects(String oldRedirect, String newRedirect, int siteId);
 
     /**
-     * Get the author by username
+     * Get the author by username for the site
      * @return Author in the system
      */
-    Author getAuthor(String username);
+    Author getAuthor(String username, int siteId);
 
     void removePage(int id);
 
@@ -85,7 +85,7 @@ public interface ContentService {
      * @param attribute the attribute name
      * @return all versions of the attribute including current
      */
-    List getPageAttributeHistories(Integer pageId, String attribute);
+    List getPageAttributeHistories(Integer pageId, String attribute, int siteId);
 
     PageAttributeHistory getPageAttributeHistory(int id);
 
@@ -95,17 +95,28 @@ public interface ContentService {
 
     void removeTemplate(int id);
 
-    List getTemplateHistories(Integer templateId);
+    List getTemplateHistories(Integer templateId, int siteId);
 
     TemplateHistory getTemplateHistory(int id);
 
     void saveTemplateHistory(TemplateHistory templateHistory);
 
-    Template getTemplate(String path);
+    Template getTemplate(String path, int siteId);
 
     void removePageAttributeHistory(int id);
 
     void removeTemplateHistory(int id);
 
-    List getPages(int templateId);
+    List getPages(int templateId, int siteId);
+
+    List getSites();
+
+    /**
+     * Resolve the site id of the request by host header
+     * @param domainName the host header - requested domain
+     * @return the site id of this domain or null
+     */
+    Integer resolveSiteId(String domainName);
+
+    Site getSite(int id);
 }

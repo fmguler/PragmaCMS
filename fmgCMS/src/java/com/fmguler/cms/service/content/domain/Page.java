@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.service.content.domain;
@@ -21,6 +21,7 @@ public class Page {
     private Date lastModified;
     private String newPath;
     private List pageAttributes = new VenList(PageAttribute.class, "page");
+    private Site site;
 
     /**
      * @return the id
@@ -109,5 +110,27 @@ public class Page {
      */
     public void setNewPath(String newPath) {
         this.newPath = newPath;
+    }
+
+    /**
+     * @return the site
+     */
+    public Site getSite() {
+        return site;
+    }
+
+    /**
+     * @param site the site to set
+     */
+    public void setSite(Site site) {
+        this.site = site;
+    }
+
+    /**
+     * Check if this page belongs to this site
+     */
+    public boolean checkSite(Site siteToCheck) {
+        if (siteToCheck == null || siteToCheck.getId() == null || site == null || site.getId() == null) return false;
+        return site.getId().equals(siteToCheck.getId());
     }
 }

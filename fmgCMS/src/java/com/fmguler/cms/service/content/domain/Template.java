@@ -16,6 +16,7 @@ public class Template {
     private String name;
     private String path;
     private Integer version;
+    private Site site;
 
     /**
      * @return the id
@@ -76,5 +77,27 @@ public class Template {
      */
     public void setVersion(Integer version) {
         this.version = version;
+    }
+
+    /**
+     * @return the site
+     */
+    public Site getSite() {
+        return site;
+    }
+
+    /**
+     * @param site the site to set
+     */
+    public void setSite(Site site) {
+        this.site = site;
+    }
+
+    /**
+     * Check if this template belongs to this site
+     */
+    public boolean checkSite(Site siteToCheck) {
+        if (siteToCheck == null || siteToCheck.getId() == null || site == null || site.getId() == null) return false;
+        return site.getId().equals(siteToCheck.getId());
     }
 }

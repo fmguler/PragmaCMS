@@ -57,7 +57,7 @@ public class AdminController {
 
     //login the user
     @RequestMapping
-    public String login(Model model, HttpServletRequest request) {
+    public String login(Model model, HttpServletRequest request, HttpServletResponse response, Site site) {
         Author user = (Author)request.getSession().getAttribute("user");
         if (user != null) return "redirect:home.htm";
 
@@ -67,16 +67,19 @@ public class AdminController {
             String password = ServletRequestUtils.getStringParameter(request, "password", "");
 
             //check user existence & authentication
-            user = contentService.getAuthor(username);
+            user = contentService.getAuthor(username, site.getId());
             if (user == null || !user.checkPassword(password)) {
                 //return error message
                 String errrorMessage = "Username/password incorrect!";
                 model.addAttribute("errorMessage", errrorMessage);
-                return null;
+                return "admin/login";
             }
 
             //attach user to session
             request.getSession().setAttribute("user", user);
+
+            //log as info
+            Logger.getLogger(AdminController.class.getName()).log(Level.INFO, "Site: {0} ({1}) User logged in: {2}", new Object[]{request.getServerName(), site.getId(), user.getUsername()});
 
             //return back to the desired url
             String returnUrl = (String)request.getSession().getAttribute("returnUrl");
@@ -84,7 +87,7 @@ public class AdminController {
             return "redirect:" + returnUrl;
         }
 
-        return null;
+        return "admin/login";
     }
 
     @RequestMapping
@@ -111,9 +114,9 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //list pages
     @RequestMapping()
-    public String pages(Model model) {
-        List pages = contentService.getPages();
-        List templates = contentService.getTemplates();
+    public String pages(Model model, Site site) {
+        List pages = contentService.getPages(site.getId());
+        List templates = contentService.getTemplates(site.getId());
         model.addAttribute("pages", pages);
         model.addAttribute("templates", templates);
         return "admin/pages";
@@ -121,21 +124,22 @@ public class AdminController {
 
     @RequestMapping
     @ResponseBody
-    public String addPage(Page page) {
+    public String addPage(Page page, Site site) {
         if (page.getId() != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This page already exists", null);
         if (!page.getPath().startsWith("/")) page.setPath("/" + page.getPath());
         if (!page.getPath().substring(1).matches("[A-Za-z0-9\\-./]{0,255}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<li>Dash (-)<li>Dot (.)", null);
-        if (contentService.getPage(page.getPath()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A page with this path already exists", null);
+        if (contentService.getPage(page.getPath(), site.getId()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A page with this path already exists", null);
 
         //save the page
         page.setLastModified(new Date());
+        page.setSite(site);
         contentService.savePage(page);
 
         //to get page attributes and template
         page = contentService.getPage(page.getId());
 
         //scan and auto add attributes
-        scanAttributes(page);
+        scanAttributes(page, site);
 
         //return success
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", page);
@@ -144,8 +148,11 @@ public class AdminController {
     //remove page
     @RequestMapping
     @ResponseBody
-    public String removePage(@RequestParam int pageId, Model model) {
+    public String removePage(@RequestParam int pageId, Model model, Site site) {
         try {
+            Page page = contentService.getPage(pageId);
+            if (page == null || !page.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null);
+
             contentService.removePage(pageId);
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
         } catch (Exception ex) { //TODO: service exception
@@ -172,8 +179,8 @@ public class AdminController {
 
     //edit a page
     @RequestMapping()
-    public String editPage(@RequestParam String path, Model model) {
-        Page page = contentService.getPage(path);
+    public String editPage(@RequestParam String path, Model model, Site site) {
+        Page page = contentService.getPage(path, site.getId());
 
         //creating a new page
         if (page == null) {
@@ -188,6 +195,9 @@ public class AdminController {
             return "redirect:/admin/editPage?path=" + page.getNewPath();
         }
 
+        //log as info
+        Logger.getLogger(AdminController.class.getName()).log(Level.INFO, "Site: {0} Editing Page: {1}", new Object[]{site.getId(), path});
+
         model.addAttribute("page", page);
         return "admin/editPage";
     }
@@ -195,19 +205,19 @@ public class AdminController {
     //ajax - get page
     @RequestMapping()
     @ResponseBody
-    public String getPage(@RequestParam Integer pageId) {
+    public String getPage(@RequestParam Integer pageId, Site site) {
         Page page = contentService.getPage(pageId);
-        if (page == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null);
+        if (page == null || !page.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null);
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", page);
     }
 
     //ajax - rename page
     @RequestMapping
     @ResponseBody
-    public String renamePage(@RequestParam Integer pageId, @RequestParam String newPath, @RequestParam(required = false) String redirect) {
+    public String renamePage(@RequestParam Integer pageId, @RequestParam String newPath, @RequestParam(required = false) String redirect, Site site) {
         Page originalPage = contentService.getPage(pageId);
-        if (originalPage == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null); //error - cannot redirect a new page
-        if (contentService.getPage(newPath) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A page with this address already exists!", null);
+        if (originalPage == null || !originalPage.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null); //error - cannot redirect a new page
+        if (contentService.getPage(newPath, site.getId()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A page with this address already exists!", null);
         if (originalPage.getPath().equals(newPath)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "You did not change the address...", null); //also this could cause redirect loop
 
         //path validity checks (same as addPage)
@@ -222,11 +232,12 @@ public class AdminController {
             redirectPage.setPath(originalPage.getPath()); //old path
             redirectPage.setNewPath(newPath); //new path
             redirectPage.setTemplate(originalPage.getTemplate());
+            redirectPage.setSite(site);
             contentService.savePage(redirectPage);
         }
 
         //also update redirects pointing to the old path to the new path (it would still work but we reduce it to single redirect)
-        contentService.updatePageRedirects(originalPage.getPath(), newPath);
+        contentService.updatePageRedirects(originalPage.getPath(), newPath, site.getId());
 
         //save the page with new path
         originalPage.setLastModified(new Date());
@@ -240,10 +251,10 @@ public class AdminController {
     //ajax - save all page attributes
     @RequestMapping()
     @ResponseBody
-    public String savePageAttributes(@RequestParam Integer pageId, @RequestParam String comment, @RequestParam Boolean publish, HttpServletRequest request) {
+    public String savePageAttributes(@RequestParam Integer pageId, @RequestParam String comment, @RequestParam Boolean publish, HttpServletRequest request, Site site) {
         Author user = (Author)request.getSession().getAttribute("user");
         Page page = contentService.getPage(pageId);
-        if (page == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null);
+        if (page == null || !page.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null);
 
         //save updated page attributes
         List savedAttributes = new LinkedList();
@@ -302,17 +313,17 @@ public class AdminController {
     //ajax - page attribute histories
     @RequestMapping()
     @ResponseBody
-    public String getPageAttributeHistories(@RequestParam Integer pageId, @RequestParam String attribute) {
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", contentService.getPageAttributeHistories(pageId, attribute));
+    public String getPageAttributeHistories(@RequestParam Integer pageId, @RequestParam String attribute, Site site) {
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", contentService.getPageAttributeHistories(pageId, attribute, site.getId()));
     }
 
     //ajax - revert page attribute to history version
     @RequestMapping()
     @ResponseBody
-    public String revertPageAttribute(@RequestParam Integer attributeId, @RequestParam Integer attributeHistoryId) {
+    public String revertPageAttribute(@RequestParam Integer attributeId, @RequestParam Integer attributeHistoryId, Site site) {
         PageAttribute attribute = contentService.getPageAttribute(attributeId);
         PageAttributeHistory attributeHistory = contentService.getPageAttributeHistory(attributeHistoryId);
-        if (attribute == null || attributeHistory == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Attribute not found", null);
+        if (attribute == null || attributeHistory == null || !attribute.getPage().checkSite(site) || !attributeHistory.getPage().checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Attribute not found", null);
 
         //revert to this history version
         attribute.setValue(attributeHistory.getValue());
@@ -334,9 +345,9 @@ public class AdminController {
     //ajax - remove page attribute history
     @RequestMapping()
     @ResponseBody
-    public String removePageAttributeHistory(@RequestParam Integer attributeHistoryId) {
+    public String removePageAttributeHistory(@RequestParam Integer attributeHistoryId, Site site) {
         PageAttributeHistory attributeHistory = contentService.getPageAttributeHistory(attributeHistoryId);
-        if (attributeHistory == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Attribute History not found", null);
+        if (attributeHistory == null || !attributeHistory.getPage().checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Attribute History not found", null);
         contentService.removePageAttributeHistory(attributeHistoryId);
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Attribute History is removed successfully", null);
     }
@@ -344,20 +355,23 @@ public class AdminController {
     //ajax - get page attachments
     @RequestMapping()
     @ResponseBody
-    public String getPageAttachments(@RequestParam Integer pageId) {
+    public String getPageAttachments(@RequestParam Integer pageId, Site site) {
+        Page page = contentService.getPage(pageId);
+        if (page == null || !page.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null);
+
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", contentService.getPageAttachments(pageId));
     }
 
     //ajax - uploads page attachment
     @RequestMapping()
     @ResponseBody
-    public String uploadPageAttachment(@RequestParam Integer pageId, HttpServletRequest request) {
+    public String uploadPageAttachment(@RequestParam Integer pageId, HttpServletRequest request, Site site) {
         if (request instanceof MultipartHttpServletRequest) {
             MultipartHttpServletRequest multipartReq = (MultipartHttpServletRequest)request;
 
             //which page this attachment belongs to
-            Page page = new Page();
-            page.setId(pageId);
+            Page page = contentService.getPage(pageId);
+            if (page == null || !page.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page not found", null);
 
             Iterator it = multipartReq.getFileNames();
             while (it.hasNext()) {
@@ -408,8 +422,10 @@ public class AdminController {
     //remove page attachment
     @RequestMapping
     @ResponseBody
-    public String removePageAttachment(@RequestParam int attachmentId) {
+    public String removePageAttachment(@RequestParam int attachmentId, Site site) {
         try {
+            PageAttachment pageAttachment = contentService.getPageAttachment(attachmentId);
+            if (pageAttachment == null || !pageAttachment.getPage().checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page attachment not found", null);
             contentService.removePageAttachment(attachmentId);
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
         } catch (Exception ex) { //TODO: service exception
@@ -422,7 +438,7 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //list resources
     @RequestMapping()
-    public String resources(Model model, @RequestParam(required = false) String resourceFolder, @RequestParam(required = false) String addFolder) {
+    public String resources(Model model, @RequestParam(required = false) String resourceFolder, @RequestParam(required = false) String addFolder, Site site) {
         try {
             //partition the add folder /a/b/c to /a/b and c
             if (addFolder != null && addFolder.contains("/")) {
@@ -430,8 +446,11 @@ public class AdminController {
                 addFolder = addFolder.substring(addFolder.lastIndexOf("/") + 1);
             }
 
+            //check null
+            if (resourceFolder == null) resourceFolder = "";
+
             //check not exists
-            Resource folder = resourceService.getResource(resourceFolder);
+            Resource folder = resourceService.getResource(toRootFolder(site), resourceFolder);
             if (folder == null || !folder.getDirectory()) {
                 model.addAttribute("errorMessage", "This folder does not exist. Do you want to create this folder?");
                 model.addAttribute("errorAction", "Create Folder");
@@ -440,7 +459,7 @@ public class AdminController {
             }
 
             //get the resources in this folder, files and folders
-            List resources = resourceService.getResources(folder);
+            List resources = resourceService.getResources(toRootFolder(site), folder);
             model.addAttribute("resources", resources);
             model.addAttribute("resourceFolder", folder.toResourcePath());
             model.addAttribute("resourceFolderArray", folder.toResourcePath().split("/"));
@@ -456,11 +475,11 @@ public class AdminController {
 
     //download resource
     @RequestMapping()
-    public void downloadResource(@RequestParam String resourcePath, HttpServletRequest request, HttpServletResponse response) {
+    public void downloadResource(@RequestParam String resourcePath, HttpServletRequest request, HttpServletResponse response, Site site) {
         InputStream inputStream = null;
         OutputStream outputStream = null;
         try {
-            Resource resource = resourceService.getResource(resourcePath);
+            Resource resource = resourceService.getResource(toRootFolder(site), resourcePath);
 
             //check not exists
             if (resource == null || resource.getDirectory()) {
@@ -472,7 +491,7 @@ public class AdminController {
             response.setStatus(HttpServletResponse.SC_OK);
             response.setHeader("Content-Disposition", "attachment; filename=" + resource.getName());
             response.setContentLength(resource.getContentLength());
-            inputStream = resourceService.getInputStream(resource);
+            inputStream = resourceService.getInputStream(toRootFolder(site), resource);
             outputStream = response.getOutputStream();
             IOUtils.copyLarge(inputStream, outputStream);
         } catch (ResourceException ex) {
@@ -487,12 +506,12 @@ public class AdminController {
 
     //upload resource
     @RequestMapping()
-    public String uploadResource(@RequestParam String resourceFolder, HttpServletRequest request, Model model) {
+    public String uploadResource(@RequestParam String resourceFolder, HttpServletRequest request, Model model, Site site) {
         if (request instanceof MultipartHttpServletRequest) {
             MultipartHttpServletRequest multipartReq = (MultipartHttpServletRequest)request;
 
             //get the folder
-            Resource folder = resourceService.getResource(resourceFolder);
+            Resource folder = resourceService.getResource(toRootFolder(site), resourceFolder);
 
             //check folder
             if (folder == null || !folder.getDirectory()) {
@@ -519,7 +538,7 @@ public class AdminController {
                 InputStream is = null;
                 OutputStream os = null;
                 try {
-                    os = resourceService.getOutputStream(uploadedResource);
+                    os = resourceService.getOutputStream(toRootFolder(site), uploadedResource);
                     is = multipartFile.getInputStream();
                     IOUtils.copyLarge(is, os);
                     IOUtils.closeQuietly(is);
@@ -527,7 +546,7 @@ public class AdminController {
 
                     //if this is a zip file, extract it
                     if (originalName.endsWith(".zip")) {
-                        resourceService.extractZip(uploadedResource, false, true);
+                        resourceService.extractZip(toRootFolder(site), uploadedResource, false, true);
                     }
                 } catch (ResourceException ex) {
                     Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Resource service error at uploadResource", ex);
@@ -558,16 +577,16 @@ public class AdminController {
     //ajax - add folder
     @RequestMapping
     @ResponseBody
-    public String addFolder(@RequestParam String baseFolder, @RequestParam String name) {
+    public String addFolder(@RequestParam String baseFolder, @RequestParam String name, Site site) {
         try {
-            Resource folder = resourceService.getResource(baseFolder);
+            Resource folder = resourceService.getResource(toRootFolder(site), baseFolder);
             if (folder == null || !folder.getDirectory()) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Base folder does not exist", null);
 
             //check name for special chars
             if (!name.matches("[\\w\\- ]{0,100}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Folder name contains invalid characters", null);
 
             //add the folder
-            resourceService.addFolder(folder, name);
+            resourceService.addFolder(toRootFolder(site), folder, name);
 
             //return success
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
@@ -580,13 +599,13 @@ public class AdminController {
     //ajax - remove resouce
     @RequestMapping
     @ResponseBody
-    public String removeResource(@RequestParam String resourcePath) {
+    public String removeResource(@RequestParam String resourcePath, Site site) {
         try {
-            Resource resource = resourceService.getResource(resourcePath);
+            Resource resource = resourceService.getResource(toRootFolder(site), resourcePath);
             if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource does not exist", null);
 
             //remove the resource (also removes folders)
-            resourceService.removeResource(resource);
+            resourceService.removeResource(toRootFolder(site), resource);
 
             //return success
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
@@ -598,13 +617,13 @@ public class AdminController {
     //ajax - crawl web page
     @RequestMapping
     @ResponseBody
-    public String crawlWebPage(@RequestParam String baseFolder, @RequestParam String pageUrl, @RequestParam(required = false) String followLinks) {
+    public String crawlWebPage(@RequestParam String baseFolder, @RequestParam String pageUrl, @RequestParam(required = false) String followLinks, Site site) {
         try {
-            Resource folder = resourceService.getResource(baseFolder);
+            Resource folder = resourceService.getResource(toRootFolder(site), baseFolder);
             if (folder == null || !folder.getDirectory()) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Base folder does not exist", null);
 
             //crawl web page, asynchronously
-            resourceService.crawlWebPage(folder, pageUrl, followLinks != null);
+            resourceService.crawlWebPage(toRootFolder(site), folder, pageUrl, followLinks != null);
 
             //return success
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Started crawling web page. Reload page to see crawled resources.", null);
@@ -618,23 +637,24 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //list templates
     @RequestMapping()
-    public String templates(Model model) {
-        List templates = contentService.getTemplates();
+    public String templates(Model model, Site site) {
+        List templates = contentService.getTemplates(site.getId());
         model.addAttribute("templates", templates);
         return "admin/templates";
     }
 
     @RequestMapping
     @ResponseBody
-    public String addTemplate(@RequestParam String name, @RequestParam String path) {
-        Resource resource = resourceService.getResource(path);
+    public String addTemplate(@RequestParam String name, @RequestParam String path, Site site) {
+        Resource resource = resourceService.getResource(toRootFolder(site), path);
         if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No HTML resource exists for given path.", null);
-        if (contentService.getTemplate(path) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Another template with this resource path already exists. If you want to use the same resource you can duplicate it in the resources menu.", null);
+        if (contentService.getTemplate(path, site.getId()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Another template with this resource path already exists. If you want to use the same resource you can duplicate it in the resources menu.", null);
 
         //save the template
         Template template = new Template();
         template.setName(name);
         template.setPath(resource.toResourcePath());
+        template.setSite(site);
         contentService.saveTemplate(template);
 
         //copy the resource html as template file
@@ -642,7 +662,7 @@ public class AdminController {
         OutputStream os = null;
         String templateHtml;
         try {
-            is = resourceService.getInputStream(resource);
+            is = resourceService.getInputStream(toRootFolder(site), resource);
             templateHtml = IOUtils.toString(is, "UTF-8");
             Document templateDocument = Jsoup.parse(templateHtml);
             templateDocument.outputSettings().prettyPrint(false);
@@ -658,7 +678,7 @@ public class AdminController {
 
             //save processed form as template file
             os = templateService.getSourceOutputStream(template.getId() + ".ftl");
-            os.write(processTemplate(templateDocument, resource, true).getBytes("UTF-8"));
+            os.write(processTemplate(templateDocument, resource, true, site).getBytes("UTF-8"));
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at addTemplate cannot read resource", ex);
             return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
@@ -680,8 +700,10 @@ public class AdminController {
     //remove template
     @RequestMapping
     @ResponseBody
-    public String removeTemplate(@RequestParam int templateId, Model model) {
+    public String removeTemplate(@RequestParam int templateId, Model model, Site site) {
         try {
+            Template template = contentService.getTemplate(templateId);
+            if (template == null || !template.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
             contentService.removeTemplate(templateId);
             templateService.removeSource(templateId + ".ftl");
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
@@ -695,17 +717,17 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //edit a template
     @RequestMapping()
-    public String editTemplate(@RequestParam int id, @RequestParam(required = false) String ofPage, Model model, HttpServletRequest request) {
+    public String editTemplate(@RequestParam int id, @RequestParam(required = false) String ofPage, Model model, HttpServletRequest request, Site site) {
         Template template;
 
         //if ofPage parameter is set, edit the template of this page
         if (ofPage != null) {
-            Page page = contentService.getPage(ofPage);
+            Page page = contentService.getPage(ofPage, site.getId());
             template = page == null ? null : page.getTemplate();
         } else template = contentService.getTemplate(id);
 
         //no such template
-        if (template == null) {
+        if (template == null || !template.checkSite(site)) {
             model.addAttribute("errorMessage", "This template does not exist. You should add the template first.");
             model.addAttribute("errorAction", "Add Template");
             model.addAttribute("errorActionUrl", "templates");
@@ -716,9 +738,9 @@ public class AdminController {
         InputStream inputStream = null;
         String templateHtml = null;
         try {
-            Resource resource = resourceService.getResource(template.getPath());
+            Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
             //TODO: check resource null, the resource this template points to may have been renamed
-            inputStream = resourceService.getInputStream(resource);
+            inputStream = resourceService.getInputStream(toRootFolder(site), resource);
             templateHtml = IOUtils.toString(inputStream, "UTF-8");
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for templateHtml", ex);
@@ -756,6 +778,9 @@ public class AdminController {
         request.getSession().setAttribute("templateDocument:" + template.getId(), templateDocument);
         request.getSession().setAttribute("templateElemCounter:" + template.getId(), templateElemCounter);
 
+        //log as info
+        Logger.getLogger(AdminController.class.getName()).log(Level.INFO, "Site: {0} Editing Template: {1}", new Object[]{site.getId(), template.getPath()});
+
         //return regular template obj
         model.addAttribute("template", template);
         return "admin/editTemplate";
@@ -764,18 +789,18 @@ public class AdminController {
     //ajax - get template
     @RequestMapping()
     @ResponseBody
-    public String getTemplate(@RequestParam Integer templateId) {
+    public String getTemplate(@RequestParam Integer templateId, Site site) {
         Template template = contentService.getTemplate(templateId);
-        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+        if (template == null || !template.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", template);
     }
 
     //ajax - get template html original or current (for review changes)
     @RequestMapping()
     @ResponseBody
-    public String getTemplateHtml(@RequestParam Integer templateId, @RequestParam Boolean original, HttpServletRequest request) {
+    public String getTemplateHtml(@RequestParam Integer templateId, @RequestParam Boolean original, HttpServletRequest request, Site site) {
         Template template = contentService.getTemplate(templateId);
-        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+        if (template == null || !template.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
 
         //resulting template html
         String templateHtml = null;
@@ -784,8 +809,8 @@ public class AdminController {
             //get the original unmodified html
             InputStream inputStream = null;
             try {
-                Resource resource = resourceService.getResource(template.getPath());
-                inputStream = resourceService.getInputStream(resource);
+                Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
+                inputStream = resourceService.getInputStream(toRootFolder(site), resource);
                 templateHtml = IOUtils.toString(inputStream, "UTF-8");
             } catch (ResourceException ex) {
                 Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for templateHtml", ex);
@@ -815,9 +840,9 @@ public class AdminController {
     //ajax - rename template
     @RequestMapping
     @ResponseBody
-    public String renameTemplate(@RequestParam Integer templateId, @RequestParam String name) {
+    public String renameTemplate(@RequestParam Integer templateId, @RequestParam String name, Site site) {
         Template template = contentService.getTemplate(templateId);
-        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+        if (template == null || !template.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
         if (template.getName().equals(name)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "You did not change the name...", null);
 
         //change the name and save
@@ -874,10 +899,10 @@ public class AdminController {
     //ajax - make attribute
     @RequestMapping
     @ResponseBody
-    public String saveTemplate(@RequestParam Integer templateId, @RequestParam String comment, @RequestParam Boolean publish, HttpServletRequest request) {
+    public String saveTemplate(@RequestParam Integer templateId, @RequestParam String comment, @RequestParam Boolean publish, HttpServletRequest request, Site site) {
         Author user = (Author)request.getSession().getAttribute("user");
         Template template = contentService.getTemplate(templateId);
-        if (template == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+        if (template == null || !template.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
         Document templateDocument = (Document)request.getSession().getAttribute("templateDocument:" + templateId);
         if (templateDocument == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template document in session, please report this error to us", null);
 
@@ -902,14 +927,14 @@ public class AdminController {
         //update template html and version if this is not a draft
         if (publish) {
             //scan new attributes and add them to existing pages
-            Set addedAttributes = scanAttributes(template, templateHtml, request.getParameterMap());
+            Set addedAttributes = scanAttributes(template, templateHtml, request.getParameterMap(), site);
 
             //save new template html to resource
-            Resource resource = resourceService.getResource(template.getPath());
+            Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
             if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource corresponding to this template is not found", null);
             OutputStream os = null;
             try {
-                os = resourceService.getOutputStream(resource);
+                os = resourceService.getOutputStream(toRootFolder(site), resource);
                 os.write(templateHtml.getBytes("UTF-8"));
                 os.close();
             } catch (ResourceException ex) {
@@ -925,7 +950,7 @@ public class AdminController {
             //process the new template html and save it as template file
             try {
                 os = templateService.getSourceOutputStream(template.getId() + ".ftl");
-                os.write(processTemplate(docCopy, resource, false).getBytes("UTF-8"));
+                os.write(processTemplate(docCopy, resource, false, site).getBytes("UTF-8"));
                 os.close();
             } catch (TemplateException ex) {
                 Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at saveTemplate write to template source os", ex);
@@ -954,17 +979,17 @@ public class AdminController {
     //ajax - template histories
     @RequestMapping()
     @ResponseBody
-    public String getTemplateHistories(@RequestParam Integer templateId) {
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", contentService.getTemplateHistories(templateId));
+    public String getTemplateHistories(@RequestParam Integer templateId, Site site) {
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", contentService.getTemplateHistories(templateId, site.getId()));
     }
 
     //ajax - revert template to history version
     @RequestMapping()
     @ResponseBody
-    public String revertTemplate(@RequestParam Integer templateId, @RequestParam Integer templateHistoryId, @RequestParam Boolean publish, HttpServletRequest request) {
+    public String revertTemplate(@RequestParam Integer templateId, @RequestParam Integer templateHistoryId, @RequestParam Boolean publish, HttpServletRequest request, Site site) {
         Template template = contentService.getTemplate(templateId);
         TemplateHistory templateHistory = contentService.getTemplateHistory(templateHistoryId);
-        if (template == null || templateHistory == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
+        if (template == null || templateHistory == null || !template.checkSite(site) || !templateHistory.getTemplate().checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
 
         //the html to revert to
         String templateHtml = templateHistory.getHtml();
@@ -998,11 +1023,11 @@ public class AdminController {
         Map result = new HashMap();
         if (publish) {
             //save new template html to resource
-            Resource resource = resourceService.getResource(template.getPath());
+            Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
             if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource corresponding to this template is not found", null);
             OutputStream os = null;
             try {
-                os = resourceService.getOutputStream(resource);
+                os = resourceService.getOutputStream(toRootFolder(site), resource);
                 os.write(templateHtml.getBytes("UTF-8"));
                 os.close();
             } catch (ResourceException ex) {
@@ -1023,7 +1048,7 @@ public class AdminController {
             //process the new template html and save it as template file
             try {
                 os = templateService.getSourceOutputStream(template.getId() + ".ftl");
-                os.write(processTemplate(docCopy, resource, false).getBytes("UTF-8"));
+                os.write(processTemplate(docCopy, resource, false, site).getBytes("UTF-8"));
                 os.close();
             } catch (TemplateException ex) {
                 Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at saveTemplate write to template source os", ex);
@@ -1051,9 +1076,9 @@ public class AdminController {
     //ajax - remove template history
     @RequestMapping()
     @ResponseBody
-    public String removeTemplateHistory(@RequestParam Integer templateHistoryId) {
+    public String removeTemplateHistory(@RequestParam Integer templateHistoryId, Site site) {
         TemplateHistory templateHistory = contentService.getTemplateHistory(templateHistoryId);
-        if (templateHistory == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template History not found", null);
+        if (templateHistory == null || !templateHistory.getTemplate().checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template History not found", null);
         contentService.removeTemplateHistory(templateHistoryId);
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template History is removed successfully", null);
     }
@@ -1064,7 +1089,7 @@ public class AdminController {
     //generate sitemap xml
     @RequestMapping()
     @ResponseBody()
-    public String generateSitemap(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public String generateSitemap(HttpServletRequest request, HttpServletResponse response, Site site) throws IOException {
         //get the http://something part
         String urlPrefix = request.getRequestURL().substring(0, request.getRequestURL().length() - request.getRequestURI().length());
         response.setContentType("text/xml");
@@ -1073,7 +1098,7 @@ public class AdminController {
         sitemapBuffer.append("<?xml version=\"1.0\" encoding=\"utf-8\"?><urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
 
         //add all pages with last modified date
-        List<Page> pages = contentService.getPages();
+        List<Page> pages = contentService.getPages(site.getId());
         for (Page page : pages) {
             sitemapBuffer.append("<url>");
             sitemapBuffer.append("<loc>").append(urlPrefix).append(page.getPath()).append("</loc>");
@@ -1136,7 +1161,7 @@ public class AdminController {
     //PRIVATE
     //--------------------------------------------------------------------------
     //scan page attributes
-    private void scanAttributes(Page page) {
+    private void scanAttributes(Page page, Site site) {
         //scan the page template for ${} placeholders
         //detect the new page attributes, and add them to the page
 
@@ -1149,8 +1174,8 @@ public class AdminController {
         try {
             String resourcePath = page.getTemplate().getPath();
             if (resourcePath.equals("/")) resourcePath = "/index.html";
-            Resource resource = resourceService.getResource(resourcePath);
-            inputStream = resourceService.getInputStream(resource);
+            Resource resource = resourceService.getResource(toRootFolder(site), resourcePath);
+            inputStream = resourceService.getInputStream(toRootFolder(site), resource);
             templateHtml = IOUtils.toString(inputStream, "UTF-8");
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for templateHtml", ex);
@@ -1202,7 +1227,7 @@ public class AdminController {
     }
 
     //scan template attributes and add to all pages
-    private Set<String> scanAttributes(Template template, String templateHtml, Map attributeValues) {
+    private Set<String> scanAttributes(Template template, String templateHtml, Map attributeValues, Site site) {
         //scan the template for ${} placeholders
         //detect the new page attributes, and add them to the pages of the template
 
@@ -1210,8 +1235,8 @@ public class AdminController {
         String originalTemplateHtml;
         InputStream inputStream = null;
         try {
-            Resource resource = resourceService.getResource(template.getPath());
-            inputStream = resourceService.getInputStream(resource);
+            Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
+            inputStream = resourceService.getInputStream(toRootFolder(site), resource);
             originalTemplateHtml = IOUtils.toString(inputStream, "UTF-8");
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for originalTemplateHtml", ex);
@@ -1279,8 +1304,8 @@ public class AdminController {
     }
 
     //process template - make links absolute
-    private String processTemplate(Document templateDocument, Resource templateResource, boolean initial) {
-        String contextPath = "/fmgCMS";
+    private String processTemplate(Document templateDocument, Resource templateResource, boolean initial, Site site) {
+        String contextPath = ""; //TODO & NOTE & IMPORTANT: We assume that the app does not have a contextPath, this won't work otherwise
 
         //process all links, media, imports
         //convert links to absolute path like /a/b/c
@@ -1296,7 +1321,7 @@ public class AdminController {
 
         //make css href absolute
         for (Element link : imports) {
-            if (initial) processCss(contextPath, templateResource, resourceService.getResource(templateResource.getFolder() + link.attr("href"))); //if initial also update css contents
+            if (initial) processCss(contextPath, templateResource, resourceService.getResource(toRootFolder(site), templateResource.getFolder() + link.attr("href")), site); //if initial also update css contents
             link.attr("href", contextPath + templateResource.getFolder() + link.attr("href"));
         }
 
@@ -1327,7 +1352,7 @@ public class AdminController {
     }
 
     //process css - make links absolute
-    private void processCss(String contextPath, Resource templateResource, Resource cssResource) {
+    private void processCss(String contextPath, Resource templateResource, Resource cssResource, Site site) {
         //no such css
         if (cssResource == null) return;
 
@@ -1336,7 +1361,7 @@ public class AdminController {
         OutputStream os = null;
         String cssContents;
         try {
-            is = resourceService.getInputStream(cssResource);
+            is = resourceService.getInputStream(toRootFolder(site), cssResource);
             cssContents = IOUtils.toString(is, "UTF-8");
 
             //process css contents
@@ -1351,7 +1376,7 @@ public class AdminController {
             matcher.appendTail(sb);
 
             //write to the resource
-            os = resourceService.getOutputStream(cssResource);
+            os = resourceService.getOutputStream(toRootFolder(site), cssResource);
             os.write(sb.toString().getBytes("UTF-8"));
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Resource exception while processing css contents", ex);
@@ -1361,6 +1386,11 @@ public class AdminController {
             IOUtils.closeQuietly(is);
             IOUtils.closeQuietly(os);
         }
+    }
+
+    //convert user site to root folder (for resources)
+    private String toRootFolder(Site site) {
+        return "/" + site.getId();
     }
 
     //SETTERS

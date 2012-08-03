@@ -27,7 +27,7 @@
     <!-- APPLICATION SERVICES /////////////////////////////////////////////// -->
 
     <!-- Inventory service, manages inventories-->
-    <bean id="contentService" class="com.fmguler.cms.service.content.ContentServiceImpl">
+    <bean id="contentService" class="com.fmguler.cms.service.content.ContentServiceImpl" init-method="init">
         <property name="dataSource" ref="dataSource" />
     </bean>
 

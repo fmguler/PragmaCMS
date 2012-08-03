@@ -6,9 +6,14 @@
  */
 package com.fmguler.cms.controller;
 
+import com.fmguler.cms.service.content.ContentService;
 import com.fmguler.cms.service.content.domain.Author;
+import com.fmguler.cms.service.content.domain.Site;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 import org.springframework.web.servlet.support.RequestContextUtils;
 
@@ -17,10 +22,25 @@ import org.springframework.web.servlet.support.RequestContextUtils;
  * @author Fatih Mehmet Güler
  */
 public class AAInterceptor extends HandlerInterceptorAdapter {
+    private ContentService contentService;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         //set the locale (too lazy to create separate interceptor just for this)
         request.setAttribute("locale", RequestContextUtils.getLocale(request));
+
+        //resolve the site id
+        Integer siteId = contentService.resolveSiteId(request.getServerName());
+
+        //this domain does not belong to any of the registered sites and there is no default web site (with domain '*')
+        if (siteId == null) {
+            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "This domain name does not match any site record, returning 404: {0}", request.getServerName());
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return false;
+        }
+
+        //set the site as request attribute so that all controllers know which site is this current request belong to
+        request.setAttribute("site", new Site(siteId));
 
         //login pages
         String path = extractPath(request);
@@ -39,6 +59,14 @@ public class AAInterceptor extends HandlerInterceptorAdapter {
             return false;
         }
 
+        //security check for the logged in user.
+        //NOTE: this does not happen since session cookie is domain based but, just in case...
+        if (!user.getSite().getId().equals(siteId)) {
+            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "The logged in user is not the author of this domain: {0} userId: {1}", new Object[]{request.getServerName(), user.getId()});
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return false;
+        }
+
         return true;
     }
 
@@ -50,5 +78,12 @@ public class AAInterceptor extends HandlerInterceptorAdapter {
         if (requestUri.startsWith(contextPath)) path = requestUri.substring(contextPath.length());
         else path = requestUri;
         return path;
+    }
+
+    //SETTERS
+    //--------------------------------------------------------------------------
+    @Autowired
+    public void setContentService(ContentService contentService) {
+        this.contentService = contentService;
     }
 }

@@ -31,6 +31,8 @@ import org.jsoup.select.Elements;
  */
 public class SimpleWebCrawler {
     private Set downloadedUrls = new HashSet();
+    private int downloadedPageCount = 0;
+    private static int PAGE_LIMIT = 20;
 
     /**
      * Crawl a web page and save it to the folder
@@ -40,6 +42,12 @@ public class SimpleWebCrawler {
      */
     public void crawl(File folder, String pageUrl, boolean followLinks) {
         try {
+            //check downloaded page count
+            if (++downloadedPageCount > PAGE_LIMIT) {
+                System.out.println("Won't crawl url, page count limit is reached: " + pageUrl);
+                return;
+            }
+
             System.out.println("Crawling Page: " + pageUrl);
 
             //save the page
@@ -70,13 +78,15 @@ public class SimpleWebCrawler {
                 }
             }
 
-            //all links, not saving right now, but may be needed for full crawling
+            //all links, crawl them if followLinks is set and not already crawled and in the same domain
             for (Element link : links) {
                 String urlStr = link.attr("abs:href");
                 URL url = new URL(urlStr);
                 if (url.getRef() != null) continue; //I hate anchors
                 if (url.getQuery() != null) continue; //query strings are also evil
                 if (followLinks && !downloadedUrls.contains(url) && sameDomain(parentUrl, url)) crawl(folder, urlStr, followLinks);
+                //TODO: refactor this crawler to be breadth first not depth first (download limit can prevent higher up pages from being crawled)
+                if (downloadedPageCount > PAGE_LIMIT) break;
             }
         } catch (IOException ex) {
             Logger.getLogger(SimpleWebCrawler.class.getName()).log(Level.WARNING, "SKIPPING - Crawling page failed for url: {0} error: {1}", new Object[]{pageUrl, ex.getMessage()});

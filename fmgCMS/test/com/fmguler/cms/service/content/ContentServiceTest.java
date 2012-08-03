@@ -1,7 +1,7 @@
 /*
  *  fmgCMS
  *  Copyright 2011 PragmaCraft LLC.
- * 
+ *
  *  All rights reserved.
  */
 package com.fmguler.cms.service.content;
@@ -18,7 +18,7 @@ public class ContentServiceTest {
 
     //test get page
     public void testGetPage() {
-        Page page = contentService.getPage("/index.html");
+        Page page = contentService.getPage("/index.html", 1);
         System.out.println(page);
     }
 

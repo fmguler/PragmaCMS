@@ -10,6 +10,7 @@ import com.fmguler.cms.service.content.ContentService;
 import com.fmguler.cms.service.content.domain.Page;
 import com.fmguler.cms.service.content.domain.PageAttachment;
 import com.fmguler.cms.service.content.domain.PageAttribute;
+import com.fmguler.cms.service.content.domain.Site;
 import com.fmguler.cms.service.resource.ResourceException;
 import com.fmguler.cms.service.resource.ResourceService;
 import com.fmguler.cms.service.resource.domain.Resource;
@@ -51,7 +52,8 @@ public class ContentController implements ServletContextAware {
     private ServletContext servletContext;
 
     @RequestMapping
-    protected ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    protected ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response, Site site) throws Exception {
+        //Based on the host header decide which site does this request belongs to
         //Based on the requested url, decide which page to be served
         //if the requested content is static, pipe it from template resources
 
@@ -70,7 +72,7 @@ public class ContentController implements ServletContextAware {
         //if the requested resource is page attachment (binary user uploaded content), download it from storage service
         Integer attachmentId;
         if ((attachmentId = checkPageAttachment(path)) != null) {
-            handlePageAttachment(attachmentId, request, response);
+            handlePageAttachment(site, attachmentId, request, response);
             return null;
         }
 
@@ -79,18 +81,18 @@ public class ContentController implements ServletContextAware {
         //since htm or html extension can be given to generated pages, they cannot be accessed directly
         //they can be retrieved as static file by appending ?static (or any static file not having extension specified in isStaticResource)
         if (isStaticResource(path) || request.getParameter("static") != null) {
-            handleStaticResource(path, request, response);
+            handleStaticResource(site, path, request, response);
             return null;
         }
 
         //get the page with attributes
-        Page page = contentService.getPage(path);
+        Page page = contentService.getPage(path, site.getId());
 
         //return 404
         if (page == null) {
             //if the page extension is html, try static resource
             if (path.endsWith(".html") || path.endsWith(".htm")) {
-                handleStaticResource(path, request, response);
+                handleStaticResource(site, path, request, response);
                 return null;
             }
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -110,9 +112,6 @@ public class ContentController implements ServletContextAware {
         //get request last modified header to check not modified
         long cachedResDate = request.getDateHeader("If-Modified-Since");
 
-        //TODO: if the assigned path to the page and it's template path are in different folders like /some-page and /template/page.html
-        //it's resources will use /template as relative path, and return not found. We should implement pages like /some-page/ and look for resources starting with /some-page in /template
-
         //find the template, fill with attributes
         String templatePath = page.getTemplate().getId() + ".ftl";
         Map model = getPageAttributesMap(page);
@@ -129,10 +128,12 @@ public class ContentController implements ServletContextAware {
             response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
             response.setContentLength(0);
             response.flushBuffer();
+            Logger.getLogger(ContentController.class.getName()).log(Level.INFO, "Site: {0} ({1}) Viewing Page: {2} (Not Modified)", new Object[]{request.getServerName(), site.getId(), path});
             return null;
         } else {
             //regular merge
             pageHtml = templateService.merge(templatePath, model);
+            Logger.getLogger(ContentController.class.getName()).log(Level.INFO, "Site: {0} ({1}) Viewing Page: {2}", new Object[]{request.getServerName(), site.getId(), path});
         }
 
         //write the page to the response
@@ -170,12 +171,12 @@ public class ContentController implements ServletContextAware {
     }
 
     //handle static resource, pipe from template resources, handle caching
-    private void handleStaticResource(String resourcePath, HttpServletRequest request, HttpServletResponse response) {
+    private void handleStaticResource(Site site, String resourcePath, HttpServletRequest request, HttpServletResponse response) {
         //NOTE: some of the following code block is taken from winstone code (StaticResourceServlet.java)
         InputStream inputStream = null;
         OutputStream outputStream = null;
         try {
-            Resource resource = resourceService.getResource(resourcePath);
+            Resource resource = resourceService.getResource(toRootFolder(site), resourcePath);
             long cachedResDate = request.getDateHeader("If-Modified-Since");
 
             //check not exists
@@ -209,7 +210,7 @@ public class ContentController implements ServletContextAware {
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.setContentLength(resource.getContentLength());
                 response.addDateHeader("Last-Modified", resource.getLastModified().getTime());
-                inputStream = resourceService.getInputStream(resource);
+                inputStream = resourceService.getInputStream(toRootFolder(site), resource);
                 outputStream = response.getOutputStream();
                 IOUtils.copyLarge(inputStream, outputStream);
             }
@@ -231,7 +232,7 @@ public class ContentController implements ServletContextAware {
     }
 
     //handle static resource, pipe from template resources, handle caching
-    private void handlePageAttachment(Integer attachmentId, HttpServletRequest request, HttpServletResponse response) {
+    private void handlePageAttachment(Site site, Integer attachmentId, HttpServletRequest request, HttpServletResponse response) {
         //TODO: catch template service exception and return 404 if requested resource does not exist.
         //NOTE: some of the following code block is taken from winstone code (StaticResourceServlet.java)
         InputStream inputStream = null;
@@ -240,7 +241,7 @@ public class ContentController implements ServletContextAware {
             PageAttachment pageAttachment = contentService.getPageAttachment(attachmentId);
             long cachedResDate = request.getDateHeader("If-Modified-Since");
 
-            if (pageAttachment == null) {
+            if (pageAttachment == null || !pageAttachment.getPage().checkSite(site)) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
@@ -283,6 +284,11 @@ public class ContentController implements ServletContextAware {
         }
 
         return result;
+    }
+
+    //convert user site to root folder (for resources)
+    private String toRootFolder(Site site) {
+        return "/" + site.getId();
     }
 
     //SETTERS

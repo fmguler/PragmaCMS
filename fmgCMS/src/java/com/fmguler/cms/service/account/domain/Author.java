@@ -4,7 +4,7 @@
  *
  *  All rights reserved.
  */
-package com.fmguler.cms.service.content.domain;
+package com.fmguler.cms.service.account.domain;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -23,7 +23,7 @@ public class Author {
     private String firstName;
     private String lastName;
     private String email;
-    private Site site;
+    private Account account;
 
     /**
      * @return the id
@@ -110,17 +110,17 @@ public class Author {
     }
 
     /**
-     * @return the site
+     * @return the account
      */
-    public Site getSite() {
-        return site;
+    public Account getAccount() {
+        return account;
     }
 
     /**
-     * @param site the site to set
+     * @param account the account to set
      */
-    public void setSite(Site site) {
-        this.site = site;
+    public void setAccount(Account account) {
+        this.account = account;
     }
 
     /*

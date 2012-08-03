@@ -5,7 +5,7 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>fmgCMS - Error</title>
+        <title>Pragma CMS - Error</title>
         <link rel="shortcut icon" href="js/favicon.ico">
         <link href="js/bootstrap/css/bootstrap.css" rel="stylesheet">
         <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>

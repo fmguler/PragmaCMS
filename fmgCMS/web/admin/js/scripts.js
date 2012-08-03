@@ -529,6 +529,16 @@ function editTemplateReady(templateId, templatePath){
     editor.getSession().setUseWrapMode(true);
 }
 
+//on account ready
+function accountReady(){
+
+}
+
+//on profile ready
+function profileReady(){
+
+}
+
 //------------------------------------------------------------------------------
 //PAGES ACTIONS
 //------------------------------------------------------------------------------
@@ -1296,7 +1306,7 @@ function makeAttribute(){
         type: 'POST',
         success: function(response) {
             if (response.status != "0") {
-                //fail silently
+            //fail silently
             } else {
                 newAttributes[attribute] = response.object;
             }
@@ -1717,6 +1727,44 @@ function getSelectedElementId(){
     if (elemChanged) $("#templatePreview")[0].contentWindow.Firebug.HTML.select(selectedElement)
 
     return elemId;
+}
+
+//------------------------------------------------------------------------------
+//ACCOUNT AJAX ACTIONS
+//------------------------------------------------------------------------------
+
+//remove the site
+function removeSite(){
+    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
+}
+
+//remove the author
+function removeAuthor(){
+    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
+}
+
+//------------------------------------------------------------------------------
+//ACCOUNT DIALOGS
+//------------------------------------------------------------------------------
+
+//edit author dialog
+function editAccountDialog(){
+    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
+}
+
+//edit site dialog
+function editSiteDialog(){
+    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
+}
+
+//edit author dialog
+function editAuthorDialog(){
+    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
+}
+
+//edit profile dialog
+function editProfileDialog(){
+    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
 }
 
 //------------------------------------------------------------------------------

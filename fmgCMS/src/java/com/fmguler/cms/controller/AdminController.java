@@ -7,6 +7,9 @@
 package com.fmguler.cms.controller;
 
 import com.fmguler.cms.helper.CommonController;
+import com.fmguler.cms.service.account.AccountService;
+import com.fmguler.cms.service.account.domain.Account;
+import com.fmguler.cms.service.account.domain.Author;
 import com.fmguler.cms.service.content.ContentService;
 import com.fmguler.cms.service.content.domain.*;
 import com.fmguler.cms.service.resource.ResourceException;
@@ -53,6 +56,7 @@ public class AdminController {
     private ContentService contentService;
     private TemplateService templateService;
     private ResourceService resourceService;
+    private AccountService accountService;
     private StorageService storageService;
 
     //login the user
@@ -67,11 +71,23 @@ public class AdminController {
             String password = ServletRequestUtils.getStringParameter(request, "password", "");
 
             //check user existence & authentication
-            user = contentService.getAuthor(username, site.getId());
+            user = accountService.getAuthor(username);
             if (user == null || !user.checkPassword(password)) {
                 //return error message
                 String errrorMessage = "Username/password incorrect!";
                 model.addAttribute("errorMessage", errrorMessage);
+                return "admin/login";
+            }
+
+            //check if correct site
+            if (!user.getAccount().checkSite(site.getId())) {
+                //return error message
+                String errorMessage = "This web site does not belong to your account, you can login to one of these domains; ";
+                for (Object o : user.getAccount().getSites()) {
+                    Site s = (Site)o;
+                    errorMessage += s.getDomains() + " ";
+                }
+                model.addAttribute("errorMessage", errorMessage);
                 return "admin/login";
             }
 
@@ -1112,6 +1128,25 @@ public class AdminController {
         return sitemapBuffer.toString();
     }
 
+    //--------------------------------------------------------------------------
+    //ACCOUNT
+    //--------------------------------------------------------------------------
+    //manage account, sites & authors
+    @RequestMapping()
+    public String account(Model model, HttpServletRequest request, Site site) {
+        Author user = (Author)request.getSession().getAttribute("user");
+        Account account = accountService.getAccount(user.getAccount().getId()); //get the latest data, session might be old
+        model.addAttribute("account", account);
+        return "admin/account";
+    }
+
+    //view/edit profile
+    @RequestMapping()
+    public String profile(Model model, HttpServletRequest request, Site site) {
+        model.addAttribute("author", request.getSession().getAttribute("user"));
+        return "admin/profile";
+    }
+
     /**
      * Inject editor code to page html
      * @param pageHtml the page html
@@ -1272,7 +1307,7 @@ public class AdminController {
         }
 
         //the pages of this template
-        List<Page> pages = contentService.getPages(template.getId());
+        List<Page> pages = contentService.getPages(template.getId(), site.getId());
 
         //add new attributes to all pages of this template
         for (Page page : pages) {
@@ -1408,6 +1443,11 @@ public class AdminController {
     @Autowired
     public void setResourceService(ResourceService resourceService) {
         this.resourceService = resourceService;
+    }
+
+    @Autowired
+    public void setAccountService(AccountService accountService) {
+        this.accountService = accountService;
     }
 
     @Autowired

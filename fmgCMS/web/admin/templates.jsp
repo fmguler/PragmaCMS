@@ -6,7 +6,7 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-        <title>fmgCMS - Templates</title>
+        <title>Pragma CMS - Templates</title>
         <link rel="shortcut icon" href="js/favicon.ico">
         <link rel="stylesheet" href="js/bootstrap/css/bootstrap.css">
         <link rel="stylesheet" href="js/jquery-ui-base/jquery-ui-1.8.20.custom.css">

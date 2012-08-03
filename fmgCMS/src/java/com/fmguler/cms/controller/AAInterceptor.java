@@ -6,8 +6,8 @@
  */
 package com.fmguler.cms.controller;
 
+import com.fmguler.cms.service.account.domain.Author;
 import com.fmguler.cms.service.content.ContentService;
-import com.fmguler.cms.service.content.domain.Author;
 import com.fmguler.cms.service.content.domain.Site;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -61,8 +61,8 @@ public class AAInterceptor extends HandlerInterceptorAdapter {
 
         //security check for the logged in user.
         //NOTE: this does not happen since session cookie is domain based but, just in case...
-        if (!user.getSite().getId().equals(siteId)) {
-            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "The logged in user is not the author of this domain: {0} userId: {1}", new Object[]{request.getServerName(), user.getId()});
+        if (!user.getAccount().checkSite(siteId)) {
+            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "The domain {0} does not belong to the account of this user userId: {1}", new Object[]{request.getServerName(), user.getId()});
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return false;
         }

@@ -69,12 +69,6 @@ public interface ContentService {
 
     void updatePageRedirects(String oldRedirect, String newRedirect, int siteId);
 
-    /**
-     * Get the author by username for the site
-     * @return Author in the system
-     */
-    Author getAuthor(String username, int siteId);
-
     void removePage(int id);
 
     void savePageAttributeHistory(PageAttributeHistory pageAttributeHistory);

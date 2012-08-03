@@ -434,5 +434,81 @@
         </sql>
         <rollback/>
     </changeSet>
+
+    <!-- add account table -->
+    <changeSet author="fmguler" id="47">
+        <createTable schemaName="public" tableName="account">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="account_pkey"/>
+            </column>
+            <column name="company" type="VARCHAR(1000)"/>
+            <column name="address" type="VARCHAR(1000)"/>
+            <column name="city" type="VARCHAR(1000)"/>
+            <column name="state" type="VARCHAR(1000)"/>
+            <column name="country" type="VARCHAR(1000)"/>
+            <column name="phone" type="VARCHAR(1000)"/>
+            <column name="primary_contact_id" type="int"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="48">
+        <dropColumn tableName="site" columnName="company" schemaName="public"/>
+        <dropColumn tableName="site" columnName="address" schemaName="public"/>
+        <dropColumn tableName="site" columnName="city" schemaName="public"/>
+        <dropColumn tableName="site" columnName="state" schemaName="public"/>
+        <dropColumn tableName="site" columnName="country" schemaName="public"/>
+        <dropColumn tableName="site" columnName="phone" schemaName="public"/>
+        <dropColumn tableName="site" columnName="primary_contact_id" schemaName="public"/>
+    </changeSet>
+    <changeSet author="fmguler" id="49">
+        <dropColumn tableName="author" columnName="site_id" schemaName="public"/>
+        <addColumn tableName="author" schemaName="public">
+            <column name="account_id" type="int"/>
+        </addColumn>
+        <addColumn tableName="site" schemaName="public">
+            <column name="account_id" type="int"/>
+        </addColumn>
+    </changeSet>
+    <!-- constraints for account references -->
+    <changeSet author="fmguler" id="50">
+        <addForeignKeyConstraint
+            constraintName="account_primary_contact_id_fkey"
+            baseTableSchemaName="public" baseTableName="account" baseColumnNames="primary_contact_id"
+            referencedTableSchemaName="public" referencedTableName="author" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="CASCADE" />
+        <addForeignKeyConstraint
+            constraintName="author_account_id_fkey"
+            baseTableSchemaName="public" baseTableName="author" baseColumnNames="account_id"
+            referencedTableSchemaName="public" referencedTableName="account" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+        <addForeignKeyConstraint
+            constraintName="site_account_id_fkey"
+            baseTableSchemaName="public" baseTableName="site" baseColumnNames="account_id"
+            referencedTableSchemaName="public" referencedTableName="account" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <!-- add default account record and point existing records to this -->
+    <changeSet author="fmguler" id="51">
+        <insert schemaName="public" tableName="account">
+            <column name="company" value="Default Account"/>
+            <column name="address" value=""/>
+            <column name="city" value=""/>
+            <column name="state" value=""/>
+            <column name="country" value=""/>
+            <column name="phone" value=""/>
+            <column name="primary_contact_id" valueNumeric="1"/>
+        </insert>
+        <rollback/>
+    </changeSet>
+    <changeSet author="fmguler" id="52">
+        <sql>
+            update author set account_id = 1;
+            update site set account_id = 1;
+        </sql>
+        <rollback/>
+    </changeSet>
+    <!-- make username global unique -->
+    <changeSet author="fmguler" id="53">
+        <addUniqueConstraint schemaName="public" tableName="author" columnNames="username" constraintName="author_username_unique"/>
+    </changeSet>
     <!-- <<MILESTONE 0.32 MULTISITE -->
 </databaseChangeLog>

@@ -159,7 +159,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public TemplateHistory getTemplateHistory(int id) {
         Set joins = new HashSet();
-        joins.add("TemplateHistory.template");
+        joins.add("TemplateHistory.template.site");
         return (TemplateHistory)ven.get(id, TemplateHistory.class, joins);
     }
 
@@ -271,21 +271,6 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public void removePageAttachment(int id) {
         ven.delete(id, PageAttachment.class);
-    }
-
-    //--------------------------------------------------------------------------
-    //AUTHOR
-    //--------------------------------------------------------------------------
-    public Author getAuthor(String username, int siteId) {
-        Set joins = new HashSet();
-        joins.add("Author.site");
-        Criteria criteria = new Criteria();
-        criteria.eq("Author.username", username);
-        criteria.eq("Author.siteId", siteId);
-        criteria.and();
-        List<Author> list = ven.list(Author.class, joins, criteria);
-        if (list.isEmpty()) return null;
-        return list.get(0);
     }
 
     //--------------------------------------------------------------------------

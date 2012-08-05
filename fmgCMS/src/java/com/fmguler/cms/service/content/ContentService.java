@@ -113,4 +113,10 @@ public interface ContentService {
     Integer resolveSiteId(String domainName);
 
     Site getSite(int id);
+
+    void removeSite(int id);
+
+    void saveSite(Site site);
+
+    void removeDomainFromSite(int siteId, String domain);
 }

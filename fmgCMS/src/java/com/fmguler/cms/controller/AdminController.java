@@ -1131,13 +1131,239 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //ACCOUNT
     //--------------------------------------------------------------------------
+    //signup form
+    @RequestMapping()
+    public String signup(Model model, HttpServletRequest request) {
+        Author user = (Author)request.getSession().getAttribute("user");
+        if (user != null) return "admin/pages";
+        return "admin/signup";
+    }
+
+    //ajax - signup
+    @RequestMapping()
+    @ResponseBody
+    public String doSignup(HttpServletRequest request) {
+        Author user = (Author)request.getSession().getAttribute("user");
+        if (user != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "You are already logged in.", null);
+        if (!request.getMethod().equals("POST")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Are you crazy? Why are you even trying this?", null);
+
+        //get all the fields
+        String company = ServletRequestUtils.getStringParameter(request, "company", "");
+        String address = ServletRequestUtils.getStringParameter(request, "address", "");
+        String city = ServletRequestUtils.getStringParameter(request, "city", "");
+        String state = ServletRequestUtils.getStringParameter(request, "state", "");
+        String country = ServletRequestUtils.getStringParameter(request, "country", "");
+        String phone = ServletRequestUtils.getStringParameter(request, "phone", "");
+        String firstName = ServletRequestUtils.getStringParameter(request, "firstName", "");
+        String lastName = ServletRequestUtils.getStringParameter(request, "lastName", "");
+        String username = ServletRequestUtils.getStringParameter(request, "username", "");
+        String password = ServletRequestUtils.getStringParameter(request, "password", "");
+        String email = ServletRequestUtils.getStringParameter(request, "email", "");
+        String domains = ServletRequestUtils.getStringParameter(request, "domains", "");
+
+        //collect all the errors
+        String errorMessage = "";
+
+        //the most important checks first
+        if (!username.matches("[A-Za-z0-9-.]{3,100}")) errorMessage += "<li>Please enter a valid username, no special chars.</li>";
+        else if (accountService.getAuthor(username) != null) errorMessage += "<li>This username is taken, please choose another one.</li>";
+        if (password.trim().isEmpty()) errorMessage += "<li>Please enter a password.</li>";
+
+        //check if we already host any of the domains
+        String[] domainArray = domains.split("\\s+");
+        for (int i = 0; i < domainArray.length; i++) {
+            if (domainArray[i].trim().isEmpty()) continue;
+            if (!domainArray[i].matches("[A-Za-z0-9-.]{3,1000}")) errorMessage += "<li>" + domainArray[i] + " does not look like a domain name, domain names cannot include special chars.</li>";
+            Integer existingSiteId = contentService.resolveSiteId(domainArray[i]);
+            if (existingSiteId != null) errorMessage += "<li>The domain name(" + domainArray[i] + ") is already associated with another account. If you own this domain name, please contact us.</li>";
+        }
+
+        //check required fields
+        if (company.trim().isEmpty()) errorMessage += "<li>We'd be glad if you'd fill the company name. It's for information purposes only.</li>";
+
+        //return all of the error(s)
+        if (!errorMessage.equals("")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, errorMessage, null);
+
+        ////////////////////////////////////////////////////////////////////////
+        //LET'S DO IT!!!
+        ////////////////////////////////////////////////////////////////////////
+
+        //add account
+        Account account = new Account();
+        account.setCompany(company);
+        account.setAddress(address);
+        account.setCity(city);
+        account.setState(state);
+        account.setCountry(country);
+        account.setPhone(phone);
+        account.setPrimaryContact(new Author());
+        accountService.saveAccount(account);
+
+        //add author
+        Author author = new Author();
+        author.setUsername(username);
+        author.resetPassword(password);
+        author.setFirstName(firstName);
+        author.setLastName(lastName);
+        author.setEmail(email);
+        author.setAccount(account);
+        accountService.saveAuthor(author);
+
+        //we should save the account again unfortunately (aaargh!)
+        account.setPrimaryContact(author);
+        accountService.saveAccount(account);
+
+        //finally add site
+        Site site = new Site();
+        site.setAccount(account);
+        String specialDomain = username + ".pragmacms.com"; //create a unique domain for this site
+        site.setDomains(domains + " " + specialDomain);
+        contentService.saveSite(site);
+
+        //the root folder for the resources
+        try {
+            resourceService.addFolder("", resourceService.getResource("", "/"), site.getId() + "");
+        } catch (ResourceException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.SEVERE, "Error creating root folder of the new site. Site id: " + site.getId(), ex);
+        }
+
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", "http://" + specialDomain + "/admin/login");
+    }
+
     //manage account, sites & authors
     @RequestMapping()
-    public String account(Model model, HttpServletRequest request, Site site) {
+    public String account(Model model, HttpServletRequest request) {
         Author user = (Author)request.getSession().getAttribute("user");
-        Account account = accountService.getAccount(user.getAccount().getId()); //get the latest data, session might be old
+        Account account = accountService.getAccount(user.getAccount().getId()); //get the account with authors and primaryContact (session data does not have these)
         model.addAttribute("account", account);
         return "admin/account";
+    }
+
+    //ajax - get site
+    @RequestMapping()
+    @ResponseBody
+    public String getSite(@RequestParam Integer siteId, HttpServletRequest request) {
+        Author user = (Author)request.getSession().getAttribute("user");
+        if (siteId != null && !user.getAccount().checkSite(siteId)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Site not found", null); //some body else's site
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", contentService.getSite(siteId));
+    }
+
+    //ajax - save/add site
+    @RequestMapping
+    @ResponseBody
+    public String saveSite(@RequestParam Integer id, @RequestParam String domains, HttpServletRequest request) {
+        Author user = (Author)request.getSession().getAttribute("user");
+        if (id != null && !user.getAccount().checkSite(id)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Site not found", null); //some body else's site
+
+        //check each domain for validity and existence
+        String[] domainArray = domains.split("\\s+");
+        for (int i = 0; i < domainArray.length; i++) {
+            if (domainArray[i].trim().isEmpty()) continue;
+            if (!domainArray[i].matches("[A-Za-z0-9-.]{3,1000}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Does not look like a domain name, domain names cannot include special chars: " + domainArray[i], null);
+            Integer existingSiteId = contentService.resolveSiteId(domainArray[i]);
+            if (existingSiteId != null && !user.getAccount().checkSite(existingSiteId)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "The domain name(" + domainArray[i] + ") is already associated with another account. If you own this domain name, please contact us.", null); //some body else's domain
+            if (existingSiteId != null && !existingSiteId.equals(id)) contentService.removeDomainFromSite(existingSiteId, domainArray[i]); //NOTE: this is a move operation, this domain name will be hosted by the current site from now on
+        }
+
+        //save the site (also registers new domain names with the site)
+        Site site = new Site(id);
+        site.setDomains(domains);
+        site.setAccount(user.getAccount());
+        contentService.saveSite(site);
+
+        //if a new site is added update user session, create resource root folder
+        if (id == null) {
+            try {
+                resourceService.addFolder("", resourceService.getResource("", "/"), site.getId() + "");
+            } catch (ResourceException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.SEVERE, "Error creating root folder of the new site. Site id: " + site.getId(), ex);
+            }
+            request.getSession().setAttribute("user", accountService.getAuthor(user.getUsername()));
+        }
+
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", site);
+    }
+
+    //remove site
+    @RequestMapping
+    @ResponseBody
+    public String removeSite(@RequestParam Integer siteId, @RequestParam String confirmationCode, Model model, HttpServletRequest request) {
+        try {
+            Author user = (Author)request.getSession().getAttribute("user");
+            if (siteId != null && !user.getAccount().checkSite(siteId)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Site not found", null); //some body else's site
+            if (!confirmationCode.equals("nROqS9RUPH7Yh9WXdN8P")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Please do not play with this function, it's not a toy!", null);
+
+            //remove the site with all of its pages, templates and resources
+            contentService.removeSite(siteId);
+
+            //also remove the resource folder
+            try {
+                resourceService.removeResource("", resourceService.getResource("", siteId + ""));
+            } catch (ResourceException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.SEVERE, "Error removing root folder of the site to be deleted. Site id: " + siteId, ex);
+            }
+
+            //update the user session (TODO: actually we have to update all users logged in with this account, but for now, they'll have to log out and log in)
+            request.getSession().setAttribute("user", accountService.getAuthor(user.getUsername()));
+
+            //TODO: template files will not be removed, they have to be garbage collected somehow
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
+        } catch (Exception ex) { //TODO: service exception
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This site could not be removed. Error: " + ex.getMessage(), null);
+        }
+    }
+
+    //ajax - get author
+    @RequestMapping()
+    @ResponseBody
+    public String getAuthor(@RequestParam Integer authorId, HttpServletRequest request) {
+        Author user = (Author)request.getSession().getAttribute("user");
+        Author author = accountService.getAuthor(authorId);
+        if (author == null || !user.getAccount().getId().equals(author.getAccount().getId())) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Author not found", null);
+
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", author);
+    }
+
+    //ajax - save/add author
+    @RequestMapping
+    @ResponseBody
+    public String saveAuthor(Author authorForm, HttpServletRequest request) {
+        Author user = (Author)request.getSession().getAttribute("user");
+        Author author = authorForm.getId() == null ? new Author() : accountService.getAuthor(authorForm.getId());
+        if (authorForm.getId() != null && !user.getAccount().getId().equals(author.getAccount().getId())) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Author not found", null);
+        if (!authorForm.getUsername().equals(author.getUsername()) && accountService.getAuthor(authorForm.getUsername()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This username is taken, please choose another one", null);
+
+        //fields to be updated
+        author.setUsername(authorForm.getUsername());
+        author.setEmail(authorForm.getEmail());
+        author.setFirstName(authorForm.getFirstName());
+        author.setLastName(authorForm.getLastName());
+        author.setAccount(user.getAccount());
+        if (!authorForm.getPassword().trim().equals("")) author.resetPassword(authorForm.getPassword());
+        accountService.saveAuthor(author);
+
+        //return success
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", author);
+    }
+
+    //remove author
+    @RequestMapping
+    @ResponseBody
+    public String removeAuthor(@RequestParam Integer authorId, Model model, HttpServletRequest request) {
+        try {
+            Author user = (Author)request.getSession().getAttribute("user");
+            Author author = accountService.getAuthor(authorId);
+            if (author == null || !user.getAccount().getId().equals(author.getAccount().getId())) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Author not found", null);
+
+            //remove the author
+            accountService.removeAuthor(authorId);
+
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
+        } catch (Exception ex) { //TODO: service exception
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This author could not be removed. Error: " + ex.getMessage(), null);
+        }
     }
 
     //view/edit profile

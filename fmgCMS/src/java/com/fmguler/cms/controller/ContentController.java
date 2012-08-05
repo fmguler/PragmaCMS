@@ -128,7 +128,7 @@ public class ContentController implements ServletContextAware {
             response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
             response.setContentLength(0);
             response.flushBuffer();
-            Logger.getLogger(ContentController.class.getName()).log(Level.INFO, "Site: {0} ({1}) Viewing Page: {2} (Not Modified)", new Object[]{request.getServerName(), site.getId(), path});
+            Logger.getLogger(ContentController.class.getName()).log(Level.INFO, "Site: {0} ({1}) Viewing Page: {2} (Not Modified) IP: {3}", new Object[]{request.getServerName(), site.getId(), path, request.getRemoteAddr()});
             return null;
         } else {
             //regular merge

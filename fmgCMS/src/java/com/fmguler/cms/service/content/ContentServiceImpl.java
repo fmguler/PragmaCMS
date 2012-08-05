@@ -32,17 +32,32 @@ public class ContentServiceImpl implements ContentService {
 
         //populate the map
         for (Site site : sites) {
-            String[] domains = site.getDomains().split("\\s+"); //white space separated domain name regexes
-            for (int i = 0; i < domains.length; i++) {
-                Integer existingMapping = domainToSiteMap.get(domains[i]);
-                if (existingMapping != null && !existingMapping.equals(site.getId())) {
-                    Logger.getLogger(ContentServiceImpl.class.getName()).log(Level.SEVERE, "***WARNING*** same domain maps to different site: domain: {0} existing mapping: {1} illegal mapping: {2}", new Object[]{domains[i], existingMapping, site.getId()});
-                    continue;
-                }
-                if (existingMapping != null && existingMapping.equals(site.getId())) continue; //duplicate domain in the same site
-                //register the domain to site id
-                domainToSiteMap.put(domains[i], site.getId());
+            registerDomains(site);
+        }
+    }
+
+    //register domains of the site (add domain names to domainToSiteMap)
+    private void registerDomains(Site site) {
+        if (site == null) return;
+        String[] domainArray = site.toDomainArray();
+        for (int i = 0; i < domainArray.length; i++) {
+            if (domainArray[i].trim().isEmpty()) continue;
+            Integer existingMapping = domainToSiteMap.get(domainArray[i]);
+            if (existingMapping != null && !existingMapping.equals(site.getId())) {
+                Logger.getLogger(ContentServiceImpl.class.getName()).log(Level.SEVERE, "***WARNING*** same domain maps to different site, being overwritten: domain: {0} invalidated existing mapping: {1} new mapping: {2}", new Object[]{domainArray[i], existingMapping, site.getId()});
             }
+            if (existingMapping != null && existingMapping.equals(site.getId())) continue; //duplicate domain in the same site
+            //register the domain to site id
+            domainToSiteMap.put(domainArray[i], site.getId());
+        }
+    }
+
+    //unregister domains of the site (remove domain names from domainToSiteMap)
+    private void unregisterDomains(Site site) {
+        if (site == null) return;
+        String[] domainArray = site.toDomainArray();
+        for (int i = 0; i < domainArray.length; i++) {
+            domainToSiteMap.remove(domainArray[i]);
         }
     }
 
@@ -290,6 +305,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public Site getSite(int id) {
         Set joins = new HashSet();
+        joins.add("Site.account.sites");
         Criteria criteria = new Criteria();
         return (Site)ven.get(id, Site.class, joins, criteria);
     }
@@ -301,6 +317,40 @@ public class ContentServiceImpl implements ContentService {
         List list = ven.list(Site.class, joins, criteria);
         return list;
     }
+
+    @Override
+    public void saveSite(Site site) {
+        //unregister old domains
+        if (site.getId() != null) unregisterDomains((Site)ven.get(site.getId(), Site.class, new HashSet()));
+
+        //save the site
+        ven.save(site);
+
+        //register the new domains with the site
+        registerDomains(site);
+    }
+
+    //Remove a domain name from a site
+    @Override
+    public void removeDomainFromSite(int siteId, String domain) {
+        Set joins = new HashSet();
+        joins.add("Site.account");
+        Site site = (Site)ven.get(siteId, Site.class, joins);
+        if (site == null) return;
+        String[] domainArray = site.toDomainArray();
+        site.setDomains("");
+        for (int i = 0; i < domainArray.length; i++) {
+            if (domainArray[i].equals(domain)) continue;
+            site.setDomains(site.getDomains() + domainArray[i] + " ");
+        }
+        ven.save(site);
+    }
+
+    @Override
+    public void removeSite(int id) {
+        unregisterDomains((Site)ven.get(id, Site.class, new HashSet()));
+        ven.delete(id, Site.class);
+    }
     //--------------------------------------------------------------------------
     //SETTERS
     //--------------------------------------------------------------------------
@@ -310,6 +360,7 @@ public class ContentServiceImpl implements ContentService {
         ven = new Ven();
         ven.setDataSource(dataSource);
         ven.addDomainPackage("com.fmguler.cms.service.content.domain");
+        ven.addDomainPackage("com.fmguler.cms.service.account.domain");
         //ven.setDebug(true);
     }
 }

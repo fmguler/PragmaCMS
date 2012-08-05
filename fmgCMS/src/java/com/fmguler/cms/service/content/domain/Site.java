@@ -68,4 +68,12 @@ public class Site {
         this.account = account;
     }
 
+    /**
+     * @return the domain name array (parsed from domains)
+     */
+    public String[] toDomainArray(){
+        if (domains==null) return new String[0];
+        return domains.split("\\s+"); //white space separated domain name regexes
+    }
+
 }

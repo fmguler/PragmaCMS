@@ -11,7 +11,7 @@ import com.fmguler.cms.service.account.domain.Author;
 
 /**
  * Handles account operations
- * 
+ *
  * @author Fatih Mehmet Güler
  */
 public interface AccountService {
@@ -28,4 +28,12 @@ public interface AccountService {
      * @return
      */
     Account getAccount(int accountId);
+
+    Author getAuthor(int authorId);
+
+    void removeAuthor(int id);
+
+    void saveAuthor(Author author);
+
+    void saveAccount(Account account);
 }

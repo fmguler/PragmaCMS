@@ -531,7 +531,43 @@ function editTemplateReady(templateId, templatePath){
 
 //on account ready
 function accountReady(){
+    //edit site(modal)
+    $("#editSiteDialog").dialog({
+        //height: 'auto',
+        width: 470,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["save"][locale],
+            click: saveSite
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
 
+    //edit author(modal)
+    $("#editAuthorDialog").dialog({
+        //height: 'auto',
+        width: 470,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["save"][locale],
+            click: saveAuthor
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
 }
 
 //on profile ready
@@ -1733,14 +1769,81 @@ function getSelectedElementId(){
 //ACCOUNT AJAX ACTIONS
 //------------------------------------------------------------------------------
 
+//save the account
+function saveAccount(){
+
+}
+
+//save the site
+function saveSite(){
+    $.ajax({
+        url: 'saveSite',
+        data: $("#editSiteForm").serializeObject(),
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.href = 'account';
+            }
+        }
+    });
+}
+
 //remove the site
-function removeSite(){
-    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
+function removeSite(siteId){
+    if(!confirm(messages["confirm_remove_site"][locale])) return;
+
+    $.ajax({
+        url: 'removeSite',
+        data: 'confirmationCode=nROqS9RUPH7Yh9WXdN8P&siteId='+siteId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.href = 'account';
+            }
+        }
+    });
+}
+
+//save the author
+function saveAuthor(){
+    $.ajax({
+        url: 'saveAuthor',
+        data: $("#editAuthorForm").serializeObject(),
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.href = 'account';
+            }
+        }
+    });
 }
 
 //remove the author
-function removeAuthor(){
-    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
+function removeAuthor(authorId){
+    if(!confirm(messages["confirm_remove_author"][locale])) return;
+
+    $.ajax({
+        url: 'removeAuthor',
+        data: 'authorId='+authorId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.href = 'account';
+            }
+        }
+    });
 }
 
 //------------------------------------------------------------------------------
@@ -1753,13 +1856,75 @@ function editAccountDialog(){
 }
 
 //edit site dialog
-function editSiteDialog(){
-    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
+function editSiteDialog(siteId){
+    //clear the form first
+    $("#editSiteForm").find("input").val("");
+    $("#editSiteForm").find("textarea").val("");
+
+    //if editing fill existing data
+    if (siteId) editSiteDialogPopulate(siteId);
+
+    //show the dialog
+    $("#editSiteDialog").dialog('open');
+}
+
+//populate the edit site form
+function editSiteDialogPopulate(siteId){
+    $.ajax({
+        url: 'getSite.htm',
+        data: "siteId="+siteId,
+        dataType: 'json',
+        cache: false,
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+                $("#editSiteDialog").dialog('close');
+            } else {
+                var site = response.object;
+
+                //update form
+                $.each(site, function(key, value) {
+                    $("#editSiteForm").find("[name="+key+"]").val(value);
+                });
+            }
+        }
+    });
 }
 
 //edit author dialog
-function editAuthorDialog(){
-    showErrorDialog("This feature is not implemented yet, sorry.. Please contact us if you need this feature.");
+function editAuthorDialog(authorId){
+    //clear the form first
+    $("#editAuthorForm").find("input").val("");
+
+    //if editing fill existing data
+    if (authorId) editAuthorDialogPopulate(authorId);
+
+    //show the dialog
+    $("#editAuthorDialog").dialog('open');
+}
+
+//populate the edit author form
+function editAuthorDialogPopulate(authorId){
+    $.ajax({
+        url: 'getAuthor.htm',
+        data: "authorId="+authorId,
+        dataType: 'json',
+        cache: false,
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+                $("#editAuthorDialog").dialog('close');
+            } else {
+                var author = response.object;
+
+                //update form
+                $.each(author, function(key, value) {
+                    if (key=="password") return;
+                    $("#editAuthorForm").find("[name="+key+"]").val(value);
+                });
+            }
+        }
+    });
 }
 
 //edit profile dialog
@@ -1966,5 +2131,13 @@ var messages = {
     "confirm_revert_changes_template": {
         en: "This template will be reverted to last published version. Your current changes will be lost. Are you sure?",
         tr: "Bu şablon son yayınlanmış versiyona geri döndürülecek. Mevcut değişiklikleriniz kaybolacak. Emin misiniz?"
+    },
+    "confirm_remove_site": {
+        en: "WARNING!!! This site will be completely removed from the system with all of its pages, templates and resources. This action is permanent. Are you sure? Please think twice...",
+        tr: "UYARI!!! Bu site tüm sayfaları, şablonları ve kaynakları ile birlikte sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz? Lütfen tekrar düşünün..."
+    },
+    "confirm_remove_author": {
+        en: "This author will be completely removed from the account. This action is permanent. Are you sure?",
+        tr: "Bu yazar hesaptan silinecek. Bu işlem geri alınamaz. Emin misiniz?"
     }
 };

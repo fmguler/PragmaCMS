@@ -119,5 +119,48 @@
                 <p>&copy; PragmaCraft 2012</p>
             </footer>
         </div>
+
+        <!-- Edit Site Dialog -->
+        <div id="editSiteDialog" title="Edit Site">
+            <form id="editSiteForm">
+                <input type="hidden" name="id" />
+                <table class="style-full-width">
+                    <tr>
+                        <td><strong>Domains:</strong></td>
+                        <td><textarea name="domains"></textarea></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+
+        <!-- Edit Author Dialog -->
+        <div id="editAuthorDialog" title="Edit Author">
+            <form id="editAuthorForm">
+                <input type="hidden" name="id" />
+                <input type="hidden" name="account.id" />
+                <table class="style-full-width">
+                    <tr>
+                        <td><strong>Username:</strong></td>
+                        <td><input type="text" name="username" /></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Email:</strong></td>
+                        <td><input type="text" name="email" /></td>
+                    </tr>
+                    <tr>
+                        <td><strong>First Name:</strong></td>
+                        <td><input type="text" name="firstName" /></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Last Name:</strong></td>
+                        <td><input type="text" name="lastName" /></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Password (Enter to reset):</strong></td>
+                        <td><input type="password" name="password" /></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
     </body>
 </html>

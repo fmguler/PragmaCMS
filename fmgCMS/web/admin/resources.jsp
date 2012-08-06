@@ -35,9 +35,9 @@
                         <div class="page-header">
                             <h1 style="display: inline">List of Resources</h1>
                             <div style="float: right">
-                                <a href="javascript:$('#addFolderDialog').dialog('open')" class="btn btn-large">Add Folder</a>
-                                <a href="javascript:$('#crawlDialog').dialog('open')" class="btn btn-warning btn-large">Crawl Web Page</a>
-                                <a href="javascript:$('#uploadResourceDialog').dialog('open')" class="btn btn-primary btn-large">Upload Resource</a>
+                                <button onclick="$('#addFolderDialog').dialog('open')" class="btn btn-large">Add Folder</button>
+                                <button onclick="$('#crawlDialog').dialog('open')" class="btn btn-warning btn-large">Crawl Web Page</button>
+                                <button onclick="$('#uploadResourceDialog').dialog('open')" class="btn btn-primary btn-large">Upload Resource</button>
                             </div>
                         </div>
                         <h2>

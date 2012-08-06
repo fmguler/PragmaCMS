@@ -31,7 +31,7 @@
                         <div class="page-header">
                             <h1 style="display: inline">List of Templates</h1>
                             <div style="float: right">
-                                <a href="javascript:$('#addTemplateDialog').dialog('open')" class="btn btn-primary btn-large">Add Template</a>
+                                <button onclick="$('#addTemplateDialog').dialog('open')" class="btn btn-primary btn-large">Add Template</button>
                             </div>
                         </div>
                         <table class="table table-striped">

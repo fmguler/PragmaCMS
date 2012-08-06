@@ -1400,12 +1400,21 @@ public class AdminController {
 
         //inject editor code
         StringBuffer pageBuffer = new StringBuffer(pageHtml);
-        pageBuffer.insert(pageBuffer.indexOf("</head>"), editorScript);
+        int beforeHead = pageBuffer.indexOf("</head>");
+
+        //actually this will never happen because all templates are processed with jsoup which adds the missing tags, but be safe.
+        if (beforeHead == -1) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error injecting editor, pageHtml does not contain </head> tag");
+            pageBuffer.insert(0, "<!-- Error: page does not contain </head> tag, editor won't work -->");
+            return pageBuffer.toString();
+        } else {
+            pageBuffer.insert(beforeHead, editorScript);
+        }
 
         //replace placeholders with editable
         Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}"); //lazy match, to match multiple attrs in one line
         Matcher matcher = pattern.matcher(pageBuffer);
-        matcher.region(pageBuffer.indexOf("<body>"), pageBuffer.length()); //do not inject to invisible region (head)
+        matcher.region(beforeHead + editorScript.length(), pageBuffer.length()); //do not inject to invisible region (head)
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
             String attribute = matcher.group(1);

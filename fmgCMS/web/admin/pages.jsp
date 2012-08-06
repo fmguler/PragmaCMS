@@ -30,7 +30,7 @@
                         <div class="page-header">
                             <h1 style="display: inline">List of Pages</h1>
                             <div style="float: right">
-                                <a href="javascript:$('#addPageDialog').dialog('open')" class="btn btn-primary btn-large">Add Page</a>
+                                <button onclick="$('#addPageDialog').dialog('open')" class="btn btn-primary btn-large">Add Page</button>
                             </div>
                         </div>
                         <table class="table table-striped">

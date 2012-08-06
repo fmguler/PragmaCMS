@@ -184,7 +184,7 @@ public class ContentServiceImpl implements ContentService {
         joins.add("TemplateHistory.template");
         Criteria criteria = new Criteria();
         criteria.eq("TemplateHistory.template.id", templateId);
-        criteria.eq("TemplateHistory.template.siteId", siteId);
+        criteria.eq("TemplateHistory.template.siteId", siteId).and();
         criteria.orderDesc("TemplateHistory.date");
         return ven.list(TemplateHistory.class, joins, criteria);
     }

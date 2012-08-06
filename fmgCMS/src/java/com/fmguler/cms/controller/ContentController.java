@@ -128,12 +128,12 @@ public class ContentController implements ServletContextAware {
             response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
             response.setContentLength(0);
             response.flushBuffer();
-            Logger.getLogger(ContentController.class.getName()).log(Level.INFO, "Site: {0} ({1}) Viewing Page: {2} (Not Modified) IP: {3}", new Object[]{request.getServerName(), site.getId(), path, request.getRemoteAddr()});
+            Logger.getLogger(ContentController.class.getName()).log(Level.INFO, "Site: {0} ({1}) Viewing Page: {2} (Not Modified) IP: {3}", new Object[]{request.getServerName(), site.getId(), path, request.getHeader("X-Real-IP")});
             return null;
         } else {
             //regular merge
             pageHtml = templateService.merge(templatePath, model);
-            Logger.getLogger(ContentController.class.getName()).log(Level.INFO, "Site: {0} ({1}) Viewing Page: {2} IP: {3}", new Object[]{request.getServerName(), site.getId(), path, request.getRemoteAddr()});
+            Logger.getLogger(ContentController.class.getName()).log(Level.INFO, "Site: {0} ({1}) Viewing Page: {2} IP: {3}", new Object[]{request.getServerName(), site.getId(), path, request.getHeader("X-Real-IP")});
         }
 
         //write the page to the response

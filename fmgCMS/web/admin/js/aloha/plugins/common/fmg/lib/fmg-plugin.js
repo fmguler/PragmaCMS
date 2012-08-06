@@ -2,8 +2,10 @@ define([
     'aloha/jquery',
     'aloha/plugin',
     'aloha/floatingmenu',
+    'jquery-plugin!fmg/vendor/jquery-ui-1.8.20.custom.min',
     'css!fmg/css/image.css',
-    'css!link/css/link.css'
+    'css!link/css/link.css',
+    'css!fmg/vendor/jquery-ui-1.8.20.custom.css'
     ],
 
     function(aQuery, Plugin, FloatingMenu) {
@@ -17,7 +19,7 @@ define([
 
             init: function() {
                 // Executed on plugin initialization
-                var tabFmg = "Resim";
+                var tabFmg = "Image";
                 FloatingMenu.createScope(this.name, 'Aloha.continuoustext');
                 this.addUIInsertButton(tabFmg);
                 this.addUISrcButtons(tabFmg);
@@ -124,12 +126,12 @@ define([
 
                 //select buttom
                 this.selectImgButton = new Aloha.ui.Button({
-                    'label' : 'Seç',
+                    'label' : 'Select',
                     'size' : 'small',
                     'onclick' : function () {
                         that.selectFromPopup();
                     },
-                    'tooltip' : "Resim Seç",
+                    'tooltip' : "Select Image",
                     'toggle' : false
                 });
 
@@ -151,7 +153,7 @@ define([
                     GENTICS.Utils.Dom.insertIntoDOM(newImg, range, jQuery(Aloha.activeEditable.obj));
 
                 } else {
-                    alert('Lütfen resim eklemek için eklenecek yere tıklayın.');
+                    alert('Please click to the area where you want to insert image..');
                 }
             },
 
@@ -192,10 +194,10 @@ define([
 
             //fmg: select the image from popup, get the images from global
             selectFromPopup: function(){
-                this.selectDialog = $('<div></div>')
+                this.selectDialog = jQuery('<div></div>')
                 .dialog({
                     autoOpen: false,
-                    title: 'Resim Seç',
+                    title: 'Select Image',
                     modal: true
 
                 });
@@ -210,8 +212,8 @@ define([
 
                 this.selectDialog.html(dialogHtml);
                 this.selectDialog.dialog("option", "buttons", {
-                    "İptal": function() {
-                        $(this).dialog("close");
+                    "Cancel": function() {
+                        jQuery(this).dialog("close");
 
                     }
                 });

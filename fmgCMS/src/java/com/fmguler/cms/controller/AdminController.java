@@ -1380,7 +1380,6 @@ public class AdminController {
      */
     public static String injectEditor(String pageHtml, String contextPath) {
         String editorScript = ""
-                + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/jquery-ui-1.8.20.custom.min.js\"></script>\n"
                 + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/aloha/lib/aloha.js\" data-aloha-plugins=\"common/format,\n"
                 + "common/table,\n"
                 + "common/list,\n"
@@ -1397,7 +1396,6 @@ public class AdminController {
                 + "\">\n"
                 + "</script>\n"
                 + "<script type=\"text/javascript\" src=\"" + contextPath + "/admin/js/make-editable.js\"></script>\n"
-                + "<link href=\"" + contextPath + "/admin/js/jquery-ui-base/jquery-ui-1.8.20.custom.css\" type=\"text/css\" rel=\"stylesheet\" />\n"
                 + "<link href=\"" + contextPath + "/admin/js/aloha/css/aloha.css\" type=\"text/css\" rel=\"stylesheet\" />\n";
 
         //inject editor code

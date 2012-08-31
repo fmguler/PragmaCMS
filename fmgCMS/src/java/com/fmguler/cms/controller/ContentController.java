@@ -90,8 +90,8 @@ public class ContentController implements ServletContextAware {
 
         //return 404
         if (page == null) {
-            //if the page extension is html, try static resource
-            if (path.endsWith(".html") || path.endsWith(".htm")) {
+            //if the page extension is html/asp/php/jsf, try static resource after checking for dynamic page
+            if (isSecondaryStaticResource(path)) {
                 handleStaticResource(site, path, request, response);
                 return null;
             }
@@ -168,6 +168,11 @@ public class ContentController implements ServletContextAware {
     //check if the given path is a static resource, e.g. js, css, image
     private boolean isStaticResource(String path) {
         return path.matches(".+\\.(js|css|gif|png|jpeg|jpg|ico|swf|wmv|pdf|txt|xml)");
+    }
+
+    //check if the given path is a secondary static resource (first check as dynamic then treat as static), e.g. html, htm, asp
+    private boolean isSecondaryStaticResource(String path) {
+        return path.matches(".+\\.(html|htm|asp|php|jsf)");
     }
 
     //handle static resource, pipe from template resources, handle caching

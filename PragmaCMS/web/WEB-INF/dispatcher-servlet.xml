@@ -23,7 +23,7 @@
             </array>
         </property>
         <property name="customArgumentResolver">
-            <bean class="com.fmguler.cms.controller.CustomWebArgumentResolver" />
+            <bean class="com.pragmacraft.cms.controller.CustomWebArgumentResolver" />
         </property>
     </bean>
 
@@ -52,7 +52,7 @@
 
     <!-- Interceptors -->
     <mvc:interceptors>
-        <bean class="com.fmguler.cms.controller.AAInterceptor" />
+        <bean class="com.pragmacraft.cms.controller.AAInterceptor" />
     </mvc:interceptors>
 
     <!-- Contrary to general Spring usage we specify the jsp files directly (not under WEB-INF) in order to edit jsp files with Dreamweaver, etc.
@@ -69,6 +69,6 @@
     <!-- APPLICATION WEB INTERFACES /////////////////////////////////////////////// -->
 
     <!-- Auto scan controller package -->
-    <context:component-scan base-package="com.fmguler.cms.controller"/>
+    <context:component-scan base-package="com.pragmacraft.cms.controller"/>
 
 </beans>

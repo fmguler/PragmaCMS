@@ -6,7 +6,7 @@
     </context-param>
     <filter>
         <filter-name>PrivateJspFilter</filter-name>
-        <filter-class>com.fmguler.cms.helper.PrivateJspFilter</filter-class>
+        <filter-class>com.pragmacraft.cms.helper.PrivateJspFilter</filter-class>
         <init-param>
             <param-name>excludeRegex</param-name>
             <param-value>(.*)/redirect.jsp</param-value>

@@ -27,29 +27,29 @@
     <!-- APPLICATION SERVICES /////////////////////////////////////////////// -->
 
     <!-- Content service, all content operations; Site, Template, Page-->
-    <bean id="contentService" class="com.fmguler.cms.service.content.ContentServiceImpl" init-method="init">
+    <bean id="contentService" class="com.pragmacraft.cms.service.content.ContentServiceImpl" init-method="init">
         <property name="dataSource" ref="dataSource" />
     </bean>
 
     <!-- Template service, for templating-->
-    <bean id="templateService" class="com.fmguler.cms.service.template.TemplateServiceImpl" init-method="init">
+    <bean id="templateService" class="com.pragmacraft.cms.service.template.TemplateServiceImpl" init-method="init">
         <property name="templateFolder" value="${pragmacms.home}/data/template" />
     </bean>
 
     <!-- Resource service, for static resources -->
-    <bean id="resourceService" class="com.fmguler.cms.service.resource.ResourceServiceImpl">
+    <bean id="resourceService" class="com.pragmacraft.cms.service.resource.ResourceServiceImpl">
         <property name="rootFolder" value="${pragmacms.home}/data/www" />
     </bean>
 
     <!-- Account service, handles accounts and authors -->
-    <bean id="accountService" class="com.fmguler.cms.service.account.AccountServiceImpl">
+    <bean id="accountService" class="com.pragmacraft.cms.service.account.AccountServiceImpl">
         <property name="dataSource" ref="dataSource" />
     </bean>
 
     <!-- INFRASTRUCTURE SERVICES /////////////////////////////////////////////// -->
 
     <!-- Storage service -->
-    <bean id="storageService" class="com.fmguler.common.service.storage.StorageServiceImpl" init-method="init" destroy-method="destroy">
+    <bean id="storageService" class="com.pragmacraft.common.service.storage.StorageServiceImpl" init-method="init" destroy-method="destroy">
         <property  name="storageFolder" value="${pragmacms.home}/data/storage" />
         <property  name="storageDao" ref="storageDao" />
         <property  name="debugMode" value="true" />

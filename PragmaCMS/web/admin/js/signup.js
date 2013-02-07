@@ -1,5 +1,5 @@
 /*
- *  fmgCMS
+ *  PragmaCMS
  *  Copyright 2012 PragmaCraft LLC.
  *
  *  All rights reserved.

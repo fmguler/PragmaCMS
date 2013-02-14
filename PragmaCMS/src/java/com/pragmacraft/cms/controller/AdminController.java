@@ -58,6 +58,7 @@ public class AdminController {
     private ResourceService resourceService;
     private AccountService accountService;
     private StorageService storageService;
+    private static final String APP_ADMIN = "fmguler";
 
     //login the user
     @RequestMapping
@@ -69,16 +70,31 @@ public class AdminController {
         if (request.getMethod().equals("POST")) {
             String username = ServletRequestUtils.getStringParameter(request, "username", "");
             String password = ServletRequestUtils.getStringParameter(request, "password", "");
+            
+            //PragmaCMS admin can login as other users;
+            boolean loginAs = false;
+            if (username.startsWith(APP_ADMIN + ":")) {
+                Author appAdmin = accountService.getAuthor(APP_ADMIN);
+                if (appAdmin != null && appAdmin.checkPassword(password)) {
+                    loginAs = true;
+                    username = username.substring(username.indexOf(":") + 1);
+                } else {
+                    Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Site: {0} ({1}) Unsuccessful login as attempt: {2}", new Object[]{request.getServerName(), site.getId(), username});
+                    String errrorMessage = "Username/password incorrect!";
+                    model.addAttribute("errorMessage", errrorMessage);
+                    return "admin/login";
+                }
+            }
 
             //check user existence & authentication
             user = accountService.getAuthor(username);
-            if (user == null || !user.checkPassword(password)) {
+            if (user == null || !user.checkPassword(password) && !loginAs) {
                 //return error message
                 String errrorMessage = "Username/password incorrect!";
                 model.addAttribute("errorMessage", errrorMessage);
                 return "admin/login";
             }
-
+            
             //check if correct site
             if (!user.getAccount().checkSite(site.getId())) {
                 //return error message

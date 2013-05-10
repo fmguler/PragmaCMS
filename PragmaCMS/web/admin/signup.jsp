@@ -29,13 +29,13 @@
                             <tr>
                                 <td colspan="3">
                                     <h2>Account Info</h2>
-                                    <h6>The Account your sites and authors bound to.</h6>
+                                    <h6>Your account can have multiple sites and authors.</h6>
                                 </td>
                             </tr>
                             <tr>
                                 <td><strong>Company:</strong></td>
                                 <td><input type="text" name="company"/></td>
-                                <td><h6>For Information Purposes Only</h6></td>
+                                <td><h6>Used as the account name</h6></td>
                             </tr>
                             <tr>
                                 <td><strong>Address:</strong></td>
@@ -336,19 +336,8 @@
                             <tr>
                                 <td><strong>E-Mail:</strong></td>
                                 <td><input type="text" name="email"/></td>
-                                <td><h6>Not Required (Yet)</h6></td>
-                            </tr>
-                            <tr>
-                                <td colspan="3">
-                                    <h2>Site Info</h2>
-                                    <h6>The Primary Site. You can add other sites after signup.</h6>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Domain Names:</strong></td>
-                                <td><textarea name="domains">www.somedomain.com</textarea></td>
-                                <td><h6>Required. Enter your domain name. You don't have to own it yet. You can edit this after signup.</h6></td>
-                            </tr>
+                                <td><h6>Only required to reset password</h6></td>
+                            </tr>                            
                             <tr>
                                 <td></td>
                                 <td><a class="btn btn-large btn-primary" href="javascript:signup()">Let's Do It!</a></td>

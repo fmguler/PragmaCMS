@@ -36,4 +36,6 @@ public interface AccountService {
     void saveAuthor(Author author);
 
     void saveAccount(Account account);
+
+    void removeAccount(int id);
 }

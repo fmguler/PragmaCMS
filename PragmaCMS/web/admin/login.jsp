@@ -32,10 +32,16 @@
                             </tr>
                             <tr>
                                 <td></td>
-                                <td><input type="submit"  value=" Login " class="btn btn-large btn-primary"/></td>
-                            </tr>
-                        </table>
-                    </form>
+                                <td>
+                                    <input type="submit"  value=" Login " class="btn btn-large btn-primary"/>
+                                    <input type="button"  value=" Forgot Password " class="btn btn-large btn-group" onclick="alert('Not implemented yet, sorry. Send an email to cms@pragmacraft.com and we will reset your password')"/>
+                                </td>
+                            </tr>                            
+                        </table>                        
+                    </form>                    
+                </div>
+                <div class="span6 offset4 style-float-right">                    
+                    No account? <a href="signup">Signup here!</a>
                 </div>
             </div>
         </div>

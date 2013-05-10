@@ -71,9 +71,8 @@ public class Site {
     /**
      * @return the domain name array (parsed from domains)
      */
-    public String[] toDomainArray(){
-        if (domains==null) return new String[0];
+    public String[] toDomainArray() {
+        if (domains == null) return new String[]{""};
         return domains.split("\\s+"); //white space separated domain name regexes
     }
-
 }

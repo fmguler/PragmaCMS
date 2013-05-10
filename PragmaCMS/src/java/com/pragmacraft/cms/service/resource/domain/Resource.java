@@ -19,7 +19,7 @@ public class Resource {
     private String contentType;
     private Integer contentLength;
     private Date lastModified;
-    private Boolean directory;
+    private Boolean directory = false;
 
     /**
      * @return the name

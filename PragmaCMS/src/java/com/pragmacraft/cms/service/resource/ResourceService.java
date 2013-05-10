@@ -18,6 +18,11 @@ import java.util.List;
  */
 public interface ResourceService {
     /**
+     * Root folder, can be passed to all rootFolder params.
+     */
+    public static final String ROOT_FOLDER = "";
+
+    /**
      * @param rootFolder the root folder resourcePath is relative to (not
      * included in resulting resource folder)
      * @param resourcePath the path of the resource
@@ -36,20 +41,32 @@ public interface ResourceService {
 
     /**
      * Add folder with specified path
+     *
      * @param rootFolder the root folder resource is relative to
      * @param parentFolder parent folder
      * @param folderName the name of the folder
      * @throws ResourceException already exists or io error
      */
-    void addFolder(String rootFolder, Resource parentFolder, String folderName) throws ResourceException;
+    void addFolder(String rootFolder, String parentFolder, String folderName) throws ResourceException;
 
     /**
      * Remove a file or a folder
+     *
      * @param rootFolder the root folder resource is relative to
      * @param resource the resource to remove
      * @throws ResourceException file not exists or io error
      */
     void removeResource(String rootFolder, Resource resource) throws ResourceException;
+
+    /**
+     * Copy a file or folder to a destination file or folder
+     *
+     * @param rootFolder the root folder resource is relative to
+     * @param source the resource to copy
+     * @param destination the destination resource
+     * @throws ResourceException file not exists or io error
+     */
+    void copyResource(String rootFolder, Resource source, Resource destination) throws ResourceException;
 
     /**
      * @param rootFolder the root folder resource is relative to
@@ -69,6 +86,7 @@ public interface ResourceService {
 
     /**
      * Extract existing zip file
+     *
      * @param rootFolder the root folder zipResource is relative to
      * @param zipResource the zip file
      * @param createFolder extract to named folder

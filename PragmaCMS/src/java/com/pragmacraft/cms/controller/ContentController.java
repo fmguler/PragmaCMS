@@ -41,10 +41,12 @@ import org.springframework.web.servlet.ModelAndView;
 
 /**
  * Serves all content, dynamic and static.
+ *
  * @author Fatih Mehmet Güler
  */
 @Controller
 public class ContentController implements ServletContextAware {
+    public static final String ERROR_404_PAGE = "/404.html";
     private ContentService contentService;
     private TemplateService templateService;
     private ResourceService resourceService;
@@ -186,7 +188,7 @@ public class ContentController implements ServletContextAware {
 
             //check not exists
             if (resource == null || resource.getDirectory()) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                if (!resourcePath.toLowerCase().equals(ERROR_404_PAGE)) response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
 

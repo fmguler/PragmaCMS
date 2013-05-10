@@ -67,9 +67,9 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public void addFolder(String resourceRootFolder, Resource parentFolder, String folderName) throws ResourceException {
+    public void addFolder(String resourceRootFolder, String parentFolder, String folderName) throws ResourceException {
         try {
-            File folder = resourcePathToFile(resourceRootFolder, parentFolder.toResourcePath()); //always check path again
+            File folder = resourcePathToFile(resourceRootFolder, parentFolder); //always check path again
             File newFolder = new File(folder, folderName).getCanonicalFile();
             String rootCanonicalPath = new File(rootFolder + resourceRootFolder).getCanonicalPath();
             if (!newFolder.getCanonicalPath().startsWith(rootCanonicalPath)) throw new ResourceException(ResourceException.ERROR_UNKNOWN);
@@ -86,6 +86,24 @@ public class ResourceServiceImpl implements ResourceService {
             File file = resourcePathToFile(rootFolder, resource.toResourcePath()); //always check path again
             if (!file.exists()) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND);
             FileUtils.forceDelete(file);
+        } catch (IOException ex) {
+            throw new ResourceException(ResourceException.ERROR_UNKNOWN, ex);
+        }
+    }
+
+    @Override
+    public void copyResource(String rootFolder, Resource source, Resource destination) throws ResourceException {
+        try {            
+            File fileSrc = resourcePathToFile(rootFolder, source.toResourcePath()); //always check path again
+            File fileDest = resourcePathToFile(rootFolder, destination.toResourcePath()); //always check path again
+            
+            //do the copying. 
+            //NOTE: File.isFile won't work in this case since destination does not exist yet. We depend on the callers statement...
+            if (!source.getDirectory() && !destination.getDirectory()) FileUtils.copyFile(fileSrc, fileDest); //both files
+            else if (!source.getDirectory() && destination.getDirectory()) FileUtils.copyFileToDirectory(fileSrc, fileDest); //destination is directory
+            else if (source.getDirectory() && destination.getDirectory()) FileUtils.copyDirectory(fileSrc, fileDest); //both directory
+            
+            
         } catch (IOException ex) {
             throw new ResourceException(ResourceException.ERROR_UNKNOWN, ex);
         }

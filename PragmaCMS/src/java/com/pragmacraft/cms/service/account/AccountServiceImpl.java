@@ -75,6 +75,11 @@ public class AccountServiceImpl implements AccountService {
     public void saveAccount(Account account) {
         ven.save(account);
     }
+    
+    @Override
+    public void removeAccount(int id) {
+        ven.delete(id, Account.class);
+    }
 
     //--------------------------------------------------------------------------
     //SETTERS

@@ -1774,6 +1774,25 @@ function saveAccount(){
 
 }
 
+//remove the account
+function removeAccount(){
+    if(!confirm(messages["confirm_remove_account"][locale])) return;
+
+    $.ajax({
+        url: 'removeAccount',
+        data: 'confirmationCode=SWUvtwB7C2ApEr4EpD0d',
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.href = 'http://pragmacms.com/admin/signup';
+            }
+        }
+    });
+}
+
 //save the site
 function saveSite(){
     $.ajax({
@@ -1805,6 +1824,45 @@ function removeSite(siteId){
                 showErrorDialog(response.message);
             } else {
                 location.href = 'account';
+            }
+        }
+    });
+}
+
+//switch to the site, but before check if already logged in
+function switchSite(siteId, domains){
+    var primaryDomain = domains.split(/\s+/)[0];    
+    $.ajax({
+        url: 'http://'+primaryDomain+'/admin/checkLogin',
+        data: 'check',
+        dataType: 'jsonp',     
+        jsonpCallback: 'jsonCallback',
+        type: 'GET',
+        success: function(response) {                        
+            if (response.status != "0") {                                          
+                switchSiteFinal(siteId);
+            } else {
+                location.href = 'http://'+primaryDomain+'/admin/pages';
+            }
+        },
+        error: function(err){            
+            switchSiteFinal(siteId);
+        }
+    });    
+}
+
+//switch to the site
+function switchSiteFinal(siteId){    
+    $.ajax({
+        url: 'switchSite',
+        data: 'siteId='+siteId,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {
+                location.href = response.object;                
             }
         }
     });
@@ -2139,5 +2197,9 @@ var messages = {
     "confirm_remove_author": {
         en: "This author will be completely removed from the account. This action is permanent. Are you sure?",
         tr: "Bu yazar hesaptan silinecek. Bu işlem geri alınamaz. Emin misiniz?"
+    },
+    "confirm_remove_account": {
+        en: "WARNING!!! This account will be completely removed from the system with all of its its sites, authors, pages, templates and resources. This action is permanent. Are you sure? Instead you can remove individual sites. Please think twice...",
+        tr: "UYARI!!! Bu hesap tüm siteleri, yazarları, sayfaları, şablonları ve kaynakları ile birlikte sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz? Bunun yerine siteleri de silebilirsiniz. Lütfen tekrar düşünün..."
     }
 };

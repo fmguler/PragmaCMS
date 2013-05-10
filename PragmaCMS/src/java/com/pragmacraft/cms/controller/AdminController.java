@@ -49,16 +49,18 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 /**
  * Privileged operations for admins.
+ *
  * @author Fatih Mehmet Güler
  */
 @Controller
 public class AdminController {
+    private static final String APP_ADMIN = "fmguler";
+    private static List<AuthenticationToken> authenticationTokens = new LinkedList();
     private ContentService contentService;
     private TemplateService templateService;
     private ResourceService resourceService;
     private AccountService accountService;
     private StorageService storageService;
-    private static final String APP_ADMIN = "fmguler";
 
     //login the user
     @RequestMapping
@@ -70,7 +72,7 @@ public class AdminController {
         if (request.getMethod().equals("POST")) {
             String username = ServletRequestUtils.getStringParameter(request, "username", "");
             String password = ServletRequestUtils.getStringParameter(request, "password", "");
-            
+
             //PragmaCMS admin can login as other users;
             boolean loginAs = false;
             if (username.startsWith(APP_ADMIN + ":")) {
@@ -94,34 +96,62 @@ public class AdminController {
                 model.addAttribute("errorMessage", errrorMessage);
                 return "admin/login";
             }
-            
-            //check if correct site
-            if (!user.getAccount().checkSite(site.getId())) {
-                //return error message
-                String errorMessage = "This web site does not belong to your account, you can login to one of these domains; ";
-                for (Object o : user.getAccount().getSites()) {
-                    Site s = (Site)o;
-                    errorMessage += s.getDomains() + " ";
-                }
-                model.addAttribute("errorMessage", errorMessage);
-                return "admin/login";
-            }
 
-            //attach user to session
-            request.getSession().setAttribute("user", user);
+
+            //generate authentication token instead of putting to session
+            String authToken = generateAuthToken(user);
 
             //log as info
-            Logger.getLogger(AdminController.class.getName()).log(Level.INFO, "Site: {0} ({1}) User logged in: {2}", new Object[]{request.getServerName(), site.getId(), user.getUsername()});
+            Logger.getLogger(AdminController.class.getName()).log(Level.INFO, "Generated authentication token for user: {0}", new Object[]{user.getUsername()});
 
             //return back to the desired url
             String returnUrl = (String)request.getSession().getAttribute("returnUrl");
-            if (returnUrl == null) return "redirect:home.htm";
-            return "redirect:" + returnUrl;
+            if (returnUrl == null) returnUrl = "/admin/home?none";
+            request.getSession().removeAttribute("returnUrl");
+
+            //set the domain as default domain if user is not authorized to the current requested domain            
+            String primaryDomain = user.getAccount().getSites().isEmpty() ? user.getUsername() + ".pragmacms.com" : contentService.getSite(((Site)(user.getAccount().getSites().get(0))).getId()).toDomainArray()[0];
+            String domain = user.getAccount().checkSite(site.getId()) ? request.getServerName() : primaryDomain;
+            return "redirect:http://" + domain + returnUrl + "&authToken=" + authToken;
         }
 
         return "admin/login";
     }
 
+    //ajax - jsonp - check if logged in to this site
+    @RequestMapping
+    @ResponseBody
+    public String checkLogin(HttpServletRequest request, HttpServletResponse response) {
+        String result = request.getSession().getAttribute("user") == null ? CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Not logged in", null) : CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Logged in", null);
+        result = "jsonCallback(" + result + ")";
+        return result;
+    }
+
+    //ajax - switch to the site
+    @RequestMapping
+    @ResponseBody
+    public String switchSite(HttpServletRequest request, @RequestParam int siteId) {
+        Author user = (Author)request.getSession().getAttribute("user");
+
+        //update user sites in case it is changed
+        user = accountService.getAuthor(user.getUsername());
+
+        //check authorization
+        if (!user.getAccount().checkSite(siteId)) CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "You cannot switch to this site", null);
+
+        //generate authentication token instead of putting to session
+        String authToken = generateAuthToken(user);
+
+        //log as info
+        Logger.getLogger(AdminController.class.getName()).log(Level.INFO, "Generated authentication token for user: {0}", new Object[]{user.getUsername()});
+
+        //return the desired url
+        String domain = contentService.getSite(siteId).toDomainArray()[0];
+        String result = "http://" + domain + "/admin/pages?switch&authToken=" + authToken;
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", result);
+    }
+
+    //logout the user
     @RequestMapping
     public String logout(HttpServletRequest request) {
         request.getSession().invalidate();
@@ -618,7 +648,7 @@ public class AdminController {
             if (!name.matches("[\\w\\- ]{0,100}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Folder name contains invalid characters", null);
 
             //add the folder
-            resourceService.addFolder(toRootFolder(site), folder, name);
+            resourceService.addFolder(toRootFolder(site), folder.toResourcePath(), name);
 
             //return success
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
@@ -1159,8 +1189,7 @@ public class AdminController {
     @RequestMapping()
     @ResponseBody
     public String doSignup(HttpServletRequest request) {
-        Author user = (Author)request.getSession().getAttribute("user");
-        if (user != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "You are already logged in.", null);
+        if (request.getSession().getAttribute("user") != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "You are already logged in.", null);
         if (!request.getMethod().equals("POST")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Are you crazy? Why are you even trying this?", null);
 
         //get all the fields
@@ -1172,30 +1201,20 @@ public class AdminController {
         String phone = ServletRequestUtils.getStringParameter(request, "phone", "");
         String firstName = ServletRequestUtils.getStringParameter(request, "firstName", "");
         String lastName = ServletRequestUtils.getStringParameter(request, "lastName", "");
-        String username = ServletRequestUtils.getStringParameter(request, "username", "");
+        String username = ServletRequestUtils.getStringParameter(request, "username", "").toLowerCase(Locale.ENGLISH);
         String password = ServletRequestUtils.getStringParameter(request, "password", "");
         String email = ServletRequestUtils.getStringParameter(request, "email", "");
-        String domains = ServletRequestUtils.getStringParameter(request, "domains", "");
 
         //collect all the errors
         String errorMessage = "";
 
         //the most important checks first
         if (!username.matches("[A-Za-z0-9-.]{3,100}")) errorMessage += "<li>Please enter a valid username, no special chars.</li>";
-        else if (accountService.getAuthor(username) != null) errorMessage += "<li>This username is taken, please choose another one.</li>";
+        else if (accountService.getAuthor(username) != null) errorMessage += "<li>This username is taken, please choose another one. If this is you, <a href=\"login\"><u>login here</u></a></li>";
         if (password.trim().isEmpty()) errorMessage += "<li>Please enter a password.</li>";
 
-        //check if we already host any of the domains
-        String[] domainArray = domains.split("\\s+");
-        for (int i = 0; i < domainArray.length; i++) {
-            if (domainArray[i].trim().isEmpty()) continue;
-            if (!domainArray[i].matches("[A-Za-z0-9-.]{3,1000}")) errorMessage += "<li>" + domainArray[i] + " does not look like a domain name, domain names cannot include special chars.</li>";
-            Integer existingSiteId = contentService.resolveSiteId(domainArray[i]);
-            if (existingSiteId != null) errorMessage += "<li>The domain name(" + domainArray[i] + ") is already associated with another account. If you own this domain name, please contact us.</li>";
-        }
-
         //check required fields
-        if (company.trim().isEmpty()) errorMessage += "<li>We'd be glad if you'd fill the company name. It's for information purposes only.</li>";
+        if (company.trim().isEmpty()) errorMessage += "<li>Please fill company field. You can enter anything.</li>";
 
         //return all of the error(s)
         if (!errorMessage.equals("")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, errorMessage, null);
@@ -1233,18 +1252,23 @@ public class AdminController {
         Site site = new Site();
         site.setAccount(account);
         String specialDomain = username + ".pragmacms.com"; //create a unique domain for this site
-        site.setDomains(domains + " " + specialDomain);
+        site.setDomains(specialDomain);
         contentService.saveSite(site);
 
-        //the root folder for the resources
-        try {
-            resourceService.addFolder("", resourceService.getResource("", "/"), site.getId() + "");
-        } catch (ResourceException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.SEVERE, "Error creating root folder of the new site. Site id: " + site.getId(), ex);
-        }
+        //create new site resources (new folder and sample designs)
+        createSiteResources(site);
+
+        //update author so that it's account include site (yes, i could add site to account here, but i think it is not neat)
+        author = accountService.getAuthor(author.getUsername());
+
+        //generate authentication token so that user won't have to login        
+        String authToken = generateAuthToken(author);
+
+        //log as info
+        Logger.getLogger(AdminController.class.getName()).log(Level.INFO, "Generated authentication token for user: {0}", new Object[]{author.getUsername()});
 
         //return success
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", "http://" + specialDomain + "/admin/login");
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", "http://" + specialDomain + "/admin/resources" + "?none&authToken=" + authToken);
     }
 
     //manage account, sites & authors
@@ -1254,6 +1278,42 @@ public class AdminController {
         Account account = accountService.getAccount(user.getAccount().getId()); //get the account with authors and primaryContact (session data does not have these)
         model.addAttribute("account", account);
         return "admin/account";
+    }
+
+    //remove account
+    @RequestMapping
+    @ResponseBody
+    public String removeAccount(@RequestParam String confirmationCode, Model model, HttpServletRequest request) {
+        try {
+            Author user = (Author)request.getSession().getAttribute("user");
+            if (!confirmationCode.equals("SWUvtwB7C2ApEr4EpD0d")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Please do not play with this function, it's not a toy!", null);
+
+            //first, remove all sites
+            Account account = accountService.getAccount(user.getAccount().getId());
+            List<Site> sites = account.getSites();
+            for (Site site : sites) {
+                //remove the site with all of its pages, templates and resources
+                contentService.removeSite(site.getId());
+                //also remove the resource folder
+                try {
+                    resourceService.removeResource("", resourceService.getResource("", site.getId() + ""));
+                } catch (ResourceException ex) {
+                    Logger.getLogger(AdminController.class.getName()).log(Level.SEVERE, "Error removing root folder of the site to be deleted. Site id: " + site.getId(), ex);
+                }
+            }
+
+            //finally remove the account
+            accountService.removeAccount(account.getId());
+
+            //destroy session. 
+            request.getSession().invalidate();
+
+            //TODO: template files will not be removed, they have to be garbage collected somehow
+            //TODO: we should also destroy all of the account sessions; session of other users, and sessions of other sites
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
+        } catch (Exception ex) { //TODO: service exception
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This account could not be removed. Error: " + ex.getMessage(), null);
+        }
     }
 
     //ajax - get site
@@ -1290,11 +1350,7 @@ public class AdminController {
 
         //if a new site is added update user session, create resource root folder
         if (id == null) {
-            try {
-                resourceService.addFolder("", resourceService.getResource("", "/"), site.getId() + "");
-            } catch (ResourceException ex) {
-                Logger.getLogger(AdminController.class.getName()).log(Level.SEVERE, "Error creating root folder of the new site. Site id: " + site.getId(), ex);
-            }
+            createSiteResources(site);
             request.getSession().setAttribute("user", accountService.getAuthor(user.getUsername()));
         }
 
@@ -1391,6 +1447,7 @@ public class AdminController {
 
     /**
      * Inject editor code to page html
+     *
      * @param pageHtml the page html
      * @return injected page html
      */
@@ -1440,6 +1497,44 @@ public class AdminController {
         matcher.appendTail(sb);
 
         return sb.toString();
+    }
+
+    /**
+     * Generate authentication token for the user.
+     * This auth token can be used to get the user.
+     *
+     * @param user
+     * @return auth token
+     */
+    public static String generateAuthToken(Author user) {
+        AuthenticationToken token = new AuthenticationToken();
+        token.expirationTime = new Date(new Date().getTime() + 5 * 60 * 1000);
+        token.user = user;
+        token.token = UUID.randomUUID().toString();
+        authenticationTokens.add(token);
+        return token.token;
+    }
+
+    /**
+     * Return user by authentication token.
+     * The token is invalidated.
+     *
+     * @param authToken the token generated by generate token
+     * @return the user obj or null
+     */
+    public static Author getUserByAuthToken(String authToken) {
+        Date now = new Date();
+        Author result = null;
+        Iterator<AuthenticationToken> it = authenticationTokens.iterator();
+        while (it.hasNext()) {
+            AuthenticationToken token = it.next();
+            if (token.expirationTime.before(now)) it.remove();  //poor man's scheduler
+            if (authToken != null && token.token.equals(authToken)) {
+                result = token.user;
+                it.remove(); //this token is consumed
+            }
+        }
+        return result;
     }
 
     //PRIVATE
@@ -1672,9 +1767,34 @@ public class AdminController {
         }
     }
 
-    //convert user site to root folder (for resources)
+    //convert user site to site root folder (for resources)
     private String toRootFolder(Site site) {
-        return "/" + site.getId();
+        return "/" + site.getId() + "/";
+    }
+
+    //create new site folder and add sample design templates
+    private void createSiteResources(Site site) {
+        try {
+            //first, create the root folder for the resources
+            resourceService.addFolder(ResourceService.ROOT_FOLDER, ResourceService.ROOT_FOLDER, site.getId() + "");
+
+            //then copy some sample design templates
+            String[] samples = new String[]{"softwaretemplate.zip", "designstudio.zip", "businessworldtemplate.zip"};
+            for (int i = 0; i < samples.length; i++) {
+
+                //copy the sample zip
+                Resource sampleDesignSrc = resourceService.getResource(ResourceService.ROOT_FOLDER, "/sample/" + samples[i]);
+                Resource sampleDesignDst = new Resource();
+                sampleDesignDst.setFolder(toRootFolder(site));
+                sampleDesignDst.setName(samples[i]);
+                resourceService.copyResource(ResourceService.ROOT_FOLDER, sampleDesignSrc, sampleDesignDst);
+
+                //finally extract and delete the zip.
+                resourceService.extractZip(ResourceService.ROOT_FOLDER, sampleDesignDst, false, true);
+            }
+        } catch (ResourceException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.SEVERE, "Error creating root folder of the new site. Site id: " + site.getId(), ex);
+        }
     }
 
     //SETTERS
@@ -1703,4 +1823,11 @@ public class AdminController {
     public void setStorageService(StorageService storageService) {
         this.storageService = storageService;
     }
+}
+
+//simple auth token for cross domain sign on
+class AuthenticationToken {
+    public Author user;
+    public String token;
+    public Date expirationTime;
 }

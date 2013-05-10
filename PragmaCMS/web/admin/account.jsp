@@ -30,6 +30,7 @@
                         <div class="page-header">
                             <h1 style="display: inline">Account Info</h1>
                             <div style="float: right">
+                                <a href="javascript:removeAccount()" class="btn btn-danger btn-large">Remove Account</a>
                                 <a href="javascript:editSiteDialog()" class="btn btn-large">Add Site</a>
                                 <a href="javascript:editAuthorDialog()" class="btn btn-primary btn-large">Add Author</a>
                             </div>
@@ -69,6 +70,7 @@
                                 <th>Domains</th>
                                 <th width="150">Actions</th>
                             </tr>
+                            <c:set var="currentSiteId" value="${site.id}"/>
                             <c:forEach items="${account.sites}" var="site">
                                 <tr>
                                     <td>${site.id}</td>
@@ -78,7 +80,13 @@
                                             <a class="btn" href="javascript:editSiteDialog(${site.id})"><i class="icon-edit"></i> Edit Site</a>
                                             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                             <ul class="dropdown-menu">
-                                                <li><a href="javascript:removeSite(${site.id})"><i class="icon-trash"></i> Delete Site</a></li>
+                                                <c:if test="${currentSiteId!=site.id}">
+                                                    <li><a href="javascript:switchSite(${site.id}, '${site.domains}')"><i class="icon-resize-horizontal"></i> Switch Site</a></li>
+                                                    <li><a href="javascript:removeSite(${site.id})"><i class="icon-trash"></i> Delete Site</a></li>                                                
+                                                </c:if>
+                                                <c:if test="${currentSiteId==site.id}">
+                                                    <li><i>You are currently working on this site...</i></li>                                                    
+                                                </c:if>
                                             </ul>
                                         </div>
                                     </td>
@@ -105,7 +113,12 @@
                                             <a class="btn" href="javascript:editAuthorDialog(${author.id})"><i class="icon-edit"></i> Edit Author</a>
                                             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                             <ul class="dropdown-menu">
-                                                <li><a href="javascript:removeAuthor(${author.id})"><i class="icon-trash"></i> Delete Author</a></li>
+                                                <c:if test="${author.id!=sessionScope.user.id}">
+                                                    <li><a href="javascript:removeAuthor(${author.id})"><i class="icon-trash"></i> Delete Author</a></li>
+                                                </c:if>
+                                                <c:if test="${author.id==sessionScope.user.id}">
+                                                    <li><i>You are currently logged in as this author...</i></li>
+                                                </c:if>
                                             </ul>
                                         </div>
                                     </td>

@@ -326,6 +326,7 @@ function templatesReady(){
     //if this page is opened with addTemplate param, open add template dialog
     if(window.location.href.indexOf("addTemplate")>0){
         $("#addTemplateDialog").find("[name=path]").val(getParameterByName("addTemplate"));
+        $("#addTemplateDialog").find("[name=name]").val("template"+getParameterByName("addTemplate").replace("/", "-").replace(/(.html)|(.htm)/, "").toLowerCase());
         $('#addTemplateDialog').dialog('open');
     }
 }
@@ -581,9 +582,15 @@ function profileReady(){
 
 //add page
 function addPage(){
+    var addPageForm = $("#addPageForm").serializeObject();
+    if (addPageForm["template.id"] == null){
+        showErrorDialog(messages["error_template_not_selected"][locale]);
+        return;
+    }
+    
     $.ajax({
         url: 'addPage',
-        data: $("#addPageForm").serializeObject(),
+        data: addPageForm,
         dataType: 'json',
         type: 'POST',
         success: function(response) {
@@ -1248,9 +1255,15 @@ function crawlWebPage(){
 
 //add template
 function addTemplate(){
+    var addTemplateForm = $("#addTemplateForm").serializeObject();
+    if (addTemplateForm.name == ""){
+        showErrorDialog(messages["error_template_name_empty"][locale]);
+        return;
+    }
+    
     $.ajax({
         url: 'addTemplate',
-        data: $("#addTemplateForm").serializeObject(),
+        data: addTemplateForm,
         dataType: 'json',
         type: 'POST',
         success: function(response) {
@@ -2201,5 +2214,13 @@ var messages = {
     "confirm_remove_account": {
         en: "WARNING!!! This account will be completely removed from the system with all of its its sites, authors, pages, templates and resources. This action is permanent. Are you sure? Instead you can remove individual sites. Please think twice...",
         tr: "UYARI!!! Bu hesap tüm siteleri, yazarları, sayfaları, şablonları ve kaynakları ile birlikte sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz? Bunun yerine siteleri de silebilirsiniz. Lütfen tekrar düşünün..."
+    },
+    "error_template_not_selected": {
+        en: "Template is not selected. Please select a template.",
+        tr: "Şablon seçilmedi. Lütfen bir şablon seçin."
+    },
+    "error_template_name_empty": {
+        en: "Template name is empty. Please enter a template name.",
+        tr: "Şablon adı seçilmedi. Lütfen bir şablon adı girin."
     }
 };

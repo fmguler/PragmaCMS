@@ -70,7 +70,7 @@ public class AdminController {
 
         //on post
         if (request.getMethod().equals("POST")) {
-            String username = ServletRequestUtils.getStringParameter(request, "username", "");
+            String username = ServletRequestUtils.getStringParameter(request, "username", "").toLowerCase(Locale.ENGLISH);
             String password = ServletRequestUtils.getStringParameter(request, "password", "");
 
             //PragmaCMS admin can login as other users;
@@ -189,6 +189,7 @@ public class AdminController {
     public String addPage(Page page, Site site) {
         if (page.getId() != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This page already exists", null);
         if (!page.getPath().startsWith("/")) page.setPath("/" + page.getPath());
+        if (page.getPath().equals("/")) page.setPath("/index.html");
         if (!page.getPath().substring(1).matches("[A-Za-z0-9\\-./]{0,255}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Page path should not include any special character. Valid characters are; <br/><li>Letters (a-z/A-Z)<br/><li>Numbers (0-9)<li>Dash (-)<li>Dot (.)", null);
         if (contentService.getPage(page.getPath(), site.getId()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A page with this path already exists", null);
 
@@ -709,7 +710,7 @@ public class AdminController {
     @ResponseBody
     public String addTemplate(@RequestParam String name, @RequestParam String path, Site site) {
         Resource resource = resourceService.getResource(toRootFolder(site), path);
-        if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No HTML resource exists for given path.", null);
+        if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No HTML resource exists at this path. As an alternative, you can go to <a href=\"resources\"><u>resources</u></a> and click 'Make Template' button at an HTML resource", null);
         if (contentService.getTemplate(path, site.getId()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Another template with this resource path already exists. If you want to use the same resource you can duplicate it in the resources menu.", null);
 
         //save the template
@@ -1251,7 +1252,7 @@ public class AdminController {
         //finally add site
         Site site = new Site();
         site.setAccount(account);
-        String specialDomain = username + ".pragmacms.com"; //create a unique domain for this site
+        String specialDomain = username.replace(".", "-") + ".pragmacms.com"; //create a unique domain for this site
         site.setDomains(specialDomain);
         contentService.saveSite(site);
 
@@ -1769,7 +1770,8 @@ public class AdminController {
 
     //convert user site to site root folder (for resources)
     private String toRootFolder(Site site) {
-        return "/" + site.getId() + "/";
+        //return "/" + site.getId() + "/";
+        return "/" + site.getId();
     }
 
     //create new site folder and add sample design templates
@@ -1785,7 +1787,7 @@ public class AdminController {
                 //copy the sample zip
                 Resource sampleDesignSrc = resourceService.getResource(ResourceService.ROOT_FOLDER, "/sample/" + samples[i]);
                 Resource sampleDesignDst = new Resource();
-                sampleDesignDst.setFolder(toRootFolder(site));
+                sampleDesignDst.setFolder(toRootFolder(site) + "/");
                 sampleDesignDst.setName(samples[i]);
                 resourceService.copyResource(ResourceService.ROOT_FOLDER, sampleDesignSrc, sampleDesignDst);
 

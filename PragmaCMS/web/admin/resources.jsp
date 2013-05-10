@@ -52,7 +52,7 @@
                                 <th>Resource Name</th>
                                 <th>Last Modified</th>
                                 <th>Size</th>
-                                <th width="150">Actions</th>
+                                <th width="160">Actions</th>
                             </tr>
                             <c:forEach items="${resources}" var="resource">
                                 <c:if test="${resource.directory}">
@@ -64,7 +64,7 @@
                                         <td>[FOLDER]</td>
                                         <td>
                                             <div class="btn-group">
-                                                <a class="btn" href="resources?resourceFolder=${resource.folder}${resource.name}"><i class="icon-folder-open"></i> Open</a>
+                                                <a class="btn" href="resources?resourceFolder=${resource.folder}${resource.name}"><i class="icon-folder-open"></i> Open Folder</a>
                                                 <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                                 <ul class="dropdown-menu">
                                                     <li><a href="javascript:removeResource('${resource.name}', true)"><i class="icon-trash"></i> Delete Folder</a></li>
@@ -82,16 +82,26 @@
                                         <td>${resource.contentLength}</td>
                                         <td>
                                             <div class="btn-group">
-                                                <a class="btn" href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static"><i class="icon-file"></i> Open</a>
-                                                <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
-                                                <ul class="dropdown-menu">
-                                                    <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Resource</a></li>
-                                                    <c:if test="${fn:endsWith(resource.name, '.htm')||fn:endsWith(resource.name, '.html')}">
-                                                        <li><a href="templates?addTemplate=${resource.folder}${resource.name}"><i class="icon-ok"></i> Set as Template</a></li>
-                                                    </c:if>
-                                                    <li class="divider"></li>
-                                                    <li><a href="javascript:removeResource('${resource.name}')"><i class="icon-trash"></i> Delete Resource</a></li>
-                                                </ul>
+                                                <c:if test="${fn:endsWith(resource.name, '.htm')||fn:endsWith(resource.name, '.html')}">
+                                                    <a class="btn btn-info" href="templates?addTemplate=${resource.folder}${resource.name}"><i class="icon-ok"></i> Make Template </a>
+                                                    <a class="btn btn-info dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+                                                    <ul class="dropdown-menu">                                                                                                        
+                                                        <li><a href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static"><i class="icon-file"></i> Preview</a></li>
+                                                        <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Resource</a></li>
+                                                        <li class="divider"></li>
+                                                        <li><a href="javascript:removeResource('${resource.name}')"><i class="icon-trash"></i> Delete Resource</a></li>
+                                                    </ul>                                                    
+                                                </c:if>
+                                                <c:if test="${!(fn:endsWith(resource.name, '.htm')||fn:endsWith(resource.name, '.html'))}">
+                                                    <a class="btn" href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static"><i class="icon-file"></i> Preview</a>
+                                                    <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+                                                    <ul class="dropdown-menu">                                                                                                        
+                                                        <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Resource</a></li>
+                                                        <li class="divider"></li>
+                                                        <li><a href="javascript:removeResource('${resource.name}')"><i class="icon-trash"></i> Delete Resource</a></li>
+                                                    </ul>                                                    
+                                                </c:if>
+
                                             </div>
                                         </td>
                                     </tr>

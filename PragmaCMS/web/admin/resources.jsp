@@ -87,6 +87,7 @@
                                                     <a class="btn btn-info dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                                     <ul class="dropdown-menu">                                                                                                        
                                                         <li><a href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static"><i class="icon-file"></i> Preview</a></li>
+                                                        <li><a href="javascript:duplicateResourceDialog('${resource.folder}${resource.name}', '${resource.name}')"><i class="icon-repeat"></i> Duplicate</a></li>
                                                         <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Resource</a></li>
                                                         <li class="divider"></li>
                                                         <li><a href="javascript:removeResource('${resource.name}')"><i class="icon-trash"></i> Delete Resource</a></li>
@@ -150,6 +151,19 @@
                     <tr>
                         <td><strong>Name:</strong></td>
                         <td><input type="text" name="name" value="new folder"/></td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+
+        <!-- Duplicate Resource Dialog -->
+        <div id="duplicateResourceDialog" title="Duplicate Resource">
+            <form id="duplicateResourceForm">
+                <input type="hidden" name="resourcePath" value=""/>
+                <table class="style-full-width">
+                    <tr>
+                        <td><strong>Name:</strong></td>
+                        <td><input type="text" name="newName" value=""/></td>
                     </tr>
                 </table>
             </form>

@@ -275,6 +275,25 @@ function resourcesReady(){
             }
         }]
     });
+    
+    //duplicate resource
+    $("#duplicateResourceDialog").dialog({
+        //height: 'auto',
+        width: 400,
+        autoOpen: false,
+        modal: true,
+        buttons: [{
+            'class': 'btn btn-primary',
+            text: messages["ok"][locale],
+            click: duplicateResource
+        },{
+            'class': 'btn',
+            text: messages["cancel"][locale],
+            click: function() {
+                $(this).dialog("close");
+            }
+        }]
+    });
 
     //crawl web page
     $("#crawlDialog").dialog({
@@ -325,8 +344,7 @@ function templatesReady(){
 
     //if this page is opened with addTemplate param, open add template dialog
     if(window.location.href.indexOf("addTemplate")>0){
-        $("#addTemplateDialog").find("[name=path]").val(getParameterByName("addTemplate"));
-        $("#addTemplateDialog").find("[name=name]").val("template"+getParameterByName("addTemplate").replace("/", "-").replace(/(.html)|(.htm)/, "").toLowerCase());
+        $("#addTemplateDialog").find("[name=path]").val(getParameterByName("addTemplate"));        
         $('#addTemplateDialog').dialog('open');
     }
 }
@@ -1205,6 +1223,24 @@ function addFolder(){
     });
 }
 
+//duplicate resource
+function duplicateResource(){
+    var dupliateResourceForm =  $("#duplicateResourceForm").serializeObject();
+    $.ajax({
+        url: 'duplicateResource',
+        data: dupliateResourceForm,
+        dataType: 'json',
+        type: 'POST',
+        success: function(response) {
+            if (response.status != "0") {
+                showErrorDialog(response.message);
+            } else {                
+                location.href = 'resources?resourceFolder='+resourceFolder;
+            }
+        }
+    });
+}
+
 //remove resource, if folder=true remove folder
 function removeResource(name, folder){
     if(!folder && !confirm(messages["confirm_remove_resource"][locale])) return;
@@ -1250,20 +1286,25 @@ function crawlWebPage(){
 }
 
 //------------------------------------------------------------------------------
+//RESOURCES PAGE DIALOGS
+//------------------------------------------------------------------------------
+
+//duplicate resource dialog, calls duplicateResource
+function duplicateResourceDialog(resourcePath, name){
+    $("#duplicateResourceDialog").find("[name='resourcePath']").val(resourcePath);
+    $("#duplicateResourceDialog").find("[name='newName']").val("copy-of-"+name);
+    $('#duplicateResourceDialog').dialog('open');    
+}
+
+//------------------------------------------------------------------------------
 //TEMPLATES ACTIONS
 //------------------------------------------------------------------------------
 
 //add template
-function addTemplate(){
-    var addTemplateForm = $("#addTemplateForm").serializeObject();
-    if (addTemplateForm.name == ""){
-        showErrorDialog(messages["error_template_name_empty"][locale]);
-        return;
-    }
-    
+function addTemplate(){    
     $.ajax({
         url: 'addTemplate',
-        data: addTemplateForm,
+        data: $("#addTemplateForm").serializeObject(),
         dataType: 'json',
         type: 'POST',
         success: function(response) {
@@ -2176,8 +2217,8 @@ var messages = {
         tr: "Bu öğe geçmişi kaydı sistemden kaldırılacak. Bu işlem geri alınamaz. Emin misiniz?"
     },
     "confirm_remove_resource": {
-        en: "This resource will be completely removed from the system. This action is permanent. Are you sure?",
-        tr: "Bu kaynak sistemden tamamen silinecek. Bu işlem geri alınamaz. Emin misiniz?"
+        en: "This resource will be completely removed from the system. Please make sure that it is not referenced from any template. This action is permanent. Are you sure?",
+        tr: "Bu kaynak sistemden tamamen silinecek. Lütfen önce herhangi bir şablondan kullanılmadığından emin olun. Bu işlem geri alınamaz. Emin misiniz?"
     },
     "confirm_remove_resource_folder": {
         en: "This resource folder will be completely removed from the system. This action is permanent. Are you sure?",
@@ -2218,9 +2259,5 @@ var messages = {
     "error_template_not_selected": {
         en: "Template is not selected. Please select a template.",
         tr: "Şablon seçilmedi. Lütfen bir şablon seçin."
-    },
-    "error_template_name_empty": {
-        en: "Template name is empty. Please enter a template name.",
-        tr: "Şablon adı seçilmedi. Lütfen bir şablon adı girin."
     }
 };

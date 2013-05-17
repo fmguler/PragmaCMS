@@ -80,6 +80,7 @@ public class AdminController {
                 if (appAdmin != null && appAdmin.checkPassword(password)) {
                     loginAs = true;
                     username = username.substring(username.indexOf(":") + 1);
+                    Logger.getLogger(AdminController.class.getName()).log(Level.INFO, "Site: {0} ({1}) Logging as {2}", new Object[]{request.getServerName(), site.getId(), username});
                 } else {
                     Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Site: {0} ({1}) Unsuccessful login as attempt: {2}", new Object[]{request.getServerName(), site.getId(), username});
                     String errrorMessage = "Username/password incorrect!";
@@ -658,6 +659,37 @@ public class AdminController {
             return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add folder: " + ex.getMessage(), null);
         }
     }
+    
+    //ajax - duplicate resource
+    @RequestMapping
+    @ResponseBody
+    public String duplicateResource(@RequestParam String resourcePath, @RequestParam String newName, Site site) {
+        try {
+            Resource resource = resourceService.getResource(toRootFolder(site), resourcePath);
+            if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource does not exist", null);
+
+            //check name for special chars
+            if (!newName.matches("[\\w\\-. ]{0,100}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Name contains invalid characters", null);
+            
+            //set the duplicate resource, copy at the same folder
+            Resource duplicateResource = new Resource();
+            duplicateResource.setDirectory(resource.getDirectory());
+            duplicateResource.setFolder(resource.getFolder());
+            duplicateResource.setName(newName);
+            
+            //check if duplicateResource already exists
+            if (resourceService.getResource(toRootFolder(site), duplicateResource.toResourcePath()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A resource with this name already exists", null);
+
+            //duplicate the resource
+            resourceService.copyResource(toRootFolder(site), resource, duplicateResource);
+
+            //return success
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
+        } catch (ResourceException ex) {
+            if (ex.getErrorCode().equals(ResourceException.ERROR_FOLDER_ALREADY_EXISTS)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Folder already exists", null);
+            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add folder: " + ex.getMessage(), null);
+        }
+    }
 
     //ajax - remove resouce
     @RequestMapping
@@ -708,14 +740,14 @@ public class AdminController {
 
     @RequestMapping
     @ResponseBody
-    public String addTemplate(@RequestParam String name, @RequestParam String path, Site site) {
+    public String addTemplate(@RequestParam String path, Site site) {
         Resource resource = resourceService.getResource(toRootFolder(site), path);
         if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No HTML resource exists at this path. As an alternative, you can go to <a href=\"resources\"><u>resources</u></a> and click 'Make Template' button at an HTML resource", null);
         if (contentService.getTemplate(path, site.getId()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Another template with this resource path already exists. If you want to use the same resource you can duplicate it in the resources menu.", null);
 
         //save the template
         Template template = new Template();
-        template.setName(name);
+        template.setName(resource.toResourcePath()); //TODO: not used anymore, delete later
         template.setPath(resource.toResourcePath());
         template.setSite(site);
         contentService.saveTemplate(template);
@@ -802,7 +834,7 @@ public class AdminController {
         String templateHtml = null;
         try {
             Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
-            //TODO: check resource null, the resource this template points to may have been renamed
+            if (resource == null) throw new IOException("Resource not found");
             inputStream = resourceService.getInputStream(toRootFolder(site), resource);
             templateHtml = IOUtils.toString(inputStream, "UTF-8");
         } catch (ResourceException ex) {
@@ -1307,7 +1339,8 @@ public class AdminController {
             accountService.removeAccount(account.getId());
 
             //destroy session. 
-            request.getSession().invalidate();
+            request.getSession().invalidate();            
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Site: {0} Account has been removed: {1}", new Object[]{request.getServerName(), account.getId()});
 
             //TODO: template files will not be removed, they have to be garbage collected somehow
             //TODO: we should also destroy all of the account sessions; session of other users, and sessions of other sites

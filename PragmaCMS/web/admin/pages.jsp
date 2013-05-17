@@ -79,7 +79,7 @@
                         <td><strong>Template:</strong></td>
                         <td>
                             <select name="template.id">
-                                <c:forEach items="${templates}" var="template"><option value="${template.id}">${template.name}</option></c:forEach>
+                                <c:forEach items="${templates}" var="template"><option value="${template.id}">${template.path}</option></c:forEach>
                             </select>
                         </td>
                     </tr>

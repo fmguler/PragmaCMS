@@ -35,14 +35,12 @@
                             </div>
                         </div>
                         <table class="table table-striped">
-                            <tr>
-                                <th>Name</th>
+                            <tr>                                
                                 <th>Resource Path</th>
                                 <th>Actions</th>
                             </tr>
                             <c:forEach items="${templates}" var="template">
-                                <tr id="template-${template.id}">
-                                    <td><a href="editTemplate?id=${template.id}">${fn:escapeXml(template.name)}</a></td>
+                                <tr id="template-${template.id}">                                    
                                     <td>${template.path}</td>
                                     <td>
                                         <div class="btn-group">
@@ -69,11 +67,7 @@
         <!-- Add Template Dialog -->
         <div id="addTemplateDialog" title="Add Template">
             <form id="addTemplateForm">
-                <table class="style-full-width">
-                    <tr>
-                        <td><strong>Template Name:</strong></td>
-                        <td><input type="text" name="name" value=""/></td>
-                    </tr>
+                <table class="style-full-width">                    
                     <tr>
                         <td><strong>Resource Path:</strong></td>
                         <td><input type="text" name="path" value=""/></td>

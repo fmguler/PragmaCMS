@@ -60,7 +60,7 @@ public class AAInterceptor extends HandlerInterceptorAdapter {
 
             //either case remove authToken from the query string
             String queryStr = request.getQueryString();
-            if (queryStr.contains("&authToken")) queryStr = queryStr.substring(0, request.getQueryString().lastIndexOf("&authToken"));
+            if (queryStr != null && queryStr.contains("&authToken")) queryStr = queryStr.substring(0, request.getQueryString().lastIndexOf("&authToken"));
 
             //no authToken, redirect to login page
             if (user == null) {

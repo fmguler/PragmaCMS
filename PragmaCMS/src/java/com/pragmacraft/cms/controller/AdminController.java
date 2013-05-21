@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -630,6 +631,9 @@ public class AdminController {
                 }
             }
 
+            //synchronize templates with resources
+            synchronizeTemplates(site);
+
             //return success
             return "redirect:resources?resourceFolder=" + folder.toResourcePath();
         }
@@ -659,7 +663,7 @@ public class AdminController {
             return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add folder: " + ex.getMessage(), null);
         }
     }
-    
+
     //ajax - duplicate resource
     @RequestMapping
     @ResponseBody
@@ -670,13 +674,13 @@ public class AdminController {
 
             //check name for special chars
             if (!newName.matches("[\\w\\-. ]{0,100}")) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Name contains invalid characters", null);
-            
+
             //set the duplicate resource, copy at the same folder
             Resource duplicateResource = new Resource();
             duplicateResource.setDirectory(resource.getDirectory());
             duplicateResource.setFolder(resource.getFolder());
             duplicateResource.setName(newName);
-            
+
             //check if duplicateResource already exists
             if (resourceService.getResource(toRootFolder(site), duplicateResource.toResourcePath()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "A resource with this name already exists", null);
 
@@ -712,13 +716,20 @@ public class AdminController {
     //ajax - crawl web page
     @RequestMapping
     @ResponseBody
-    public String crawlWebPage(@RequestParam String baseFolder, @RequestParam String pageUrl, @RequestParam(required = false) String followLinks, Site site) {
+    public String crawlWebPage(@RequestParam String baseFolder, @RequestParam String pageUrl, @RequestParam(required = false) String followLinks, final Site site) {
         try {
             Resource folder = resourceService.getResource(toRootFolder(site), baseFolder);
             if (folder == null || !folder.getDirectory()) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Base folder does not exist", null);
 
             //crawl web page, asynchronously
-            resourceService.crawlWebPage(toRootFolder(site), folder, pageUrl, followLinks != null);
+            resourceService.crawlWebPage(toRootFolder(site), folder, pageUrl, followLinks != null, new Callable() {
+                //called when crawling finishes
+                public Object call() throws Exception {
+                    //synchronize templates with resources
+                    synchronizeTemplates(site);
+                    return true;
+                }
+            });
 
             //return success
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Started crawling web page. Reload page to see crawled resources.", null);
@@ -736,60 +747,6 @@ public class AdminController {
         List templates = contentService.getTemplates(site.getId());
         model.addAttribute("templates", templates);
         return "admin/templates";
-    }
-
-    @RequestMapping
-    @ResponseBody
-    public String addTemplate(@RequestParam String path, Site site) {
-        Resource resource = resourceService.getResource(toRootFolder(site), path);
-        if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "No HTML resource exists at this path. As an alternative, you can go to <a href=\"resources\"><u>resources</u></a> and click 'Make Template' button at an HTML resource", null);
-        if (contentService.getTemplate(path, site.getId()) != null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Another template with this resource path already exists. If you want to use the same resource you can duplicate it in the resources menu.", null);
-
-        //save the template
-        Template template = new Template();
-        template.setName(resource.toResourcePath()); //TODO: not used anymore, delete later
-        template.setPath(resource.toResourcePath());
-        template.setSite(site);
-        contentService.saveTemplate(template);
-
-        //copy the resource html as template file
-        InputStream is = null;
-        OutputStream os = null;
-        String templateHtml;
-        try {
-            is = resourceService.getInputStream(toRootFolder(site), resource);
-            templateHtml = IOUtils.toString(is, "UTF-8");
-            Document templateDocument = Jsoup.parse(templateHtml);
-            templateDocument.outputSettings().prettyPrint(false);
-
-            //add initial history record
-            TemplateHistory templateHistory = new TemplateHistory();
-            templateHistory.setTemplate(template);
-            templateHistory.setHtml(templateHtml);
-            templateHistory.setAuthor("admin");
-            templateHistory.setComment("template is added");
-            templateHistory.setDate(new Date());
-            contentService.saveTemplateHistory(templateHistory);
-
-            //save processed form as template file
-            os = templateService.getSourceOutputStream(template.getId() + ".ftl");
-            os.write(processTemplate(templateDocument, resource, true, site).getBytes("UTF-8"));
-        } catch (ResourceException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at addTemplate cannot read resource", ex);
-            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
-        } catch (TemplateException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at addTemplate cannot write to template source os", ex);
-            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
-        } catch (IOException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at addTemplate cannot write to template source os", ex);
-            return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
-        } finally {
-            IOUtils.closeQuietly(is);
-            IOUtils.closeQuietly(os);
-        }
-
-        //return success
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", template);
     }
 
     //remove template
@@ -810,6 +767,41 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //EDIT TEMPLATE
     //--------------------------------------------------------------------------
+    //edit template by resource path
+    @RequestMapping
+    public String editTemplateRedirect(@RequestParam String path, Model model, Site site) {
+        //check the resource
+        Resource resource = resourceService.getResource(toRootFolder(site), path);
+        if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) {
+            model.addAttribute("errorMessage", "A resource with given path could not be found.");
+            model.addAttribute("errorAction", "Go Back");
+            model.addAttribute("errorActionUrl", "resources");
+            return "admin/error";
+        }
+
+        //check the template
+        Template template = contentService.getTemplate(path, site.getId());
+
+        //no such template
+        if (template == null) {
+            try {
+                template = createTemplateFromResource(site, resource);
+            } catch (ResourceException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at editTemplate cannot read resource", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
+            } catch (TemplateException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at editTemplate cannot write to template source os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
+            } catch (IOException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at editTemplate cannot write to template source os", ex);
+                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Could not add template, error: " + ex.getMessage(), null);
+            }
+        }
+
+        //redirect to editTemplate
+        return "redirect:/admin/editTemplate?id=" + template.getId();
+    }
+
     //edit a template
     @RequestMapping()
     public String editTemplate(@RequestParam int id, @RequestParam(required = false) String ofPage, Model model, HttpServletRequest request, Site site) {
@@ -834,7 +826,7 @@ public class AdminController {
         String templateHtml = null;
         try {
             Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
-            if (resource == null) throw new IOException("Resource not found");
+            if (resource == null) throw new IOException("Resource of this template is not found.");
             inputStream = resourceService.getInputStream(toRootFolder(site), resource);
             templateHtml = IOUtils.toString(inputStream, "UTF-8");
         } catch (ResourceException ex) {
@@ -1339,7 +1331,7 @@ public class AdminController {
             accountService.removeAccount(account.getId());
 
             //destroy session. 
-            request.getSession().invalidate();            
+            request.getSession().invalidate();
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Site: {0} Account has been removed: {1}", new Object[]{request.getServerName(), account.getId()});
 
             //TODO: template files will not be removed, they have to be garbage collected somehow
@@ -1829,6 +1821,97 @@ public class AdminController {
             }
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.SEVERE, "Error creating root folder of the new site. Site id: " + site.getId(), ex);
+        }
+
+        //synchronize templates with resources
+        synchronizeTemplates(site);
+    }
+
+    //create template from .html resource
+    private Template createTemplateFromResource(Site site, Resource resource) throws ResourceException, TemplateException, IOException {
+        //create template
+        Template template = new Template();
+        template.setName(resource.toResourcePath()); //TODO: not used anymore, delete later
+        template.setPath(resource.toResourcePath());
+        template.setSite(site);
+        contentService.saveTemplate(template);
+
+        //copy the resource html as template file
+        InputStream is = null;
+        OutputStream os = null;
+        String templateHtml;
+        try {
+            is = resourceService.getInputStream(toRootFolder(site), resource);
+            templateHtml = IOUtils.toString(is, "UTF-8");
+            Document templateDocument = Jsoup.parse(templateHtml);
+            templateDocument.outputSettings().prettyPrint(false);
+
+            //add initial history record
+            TemplateHistory templateHistory = new TemplateHistory();
+            templateHistory.setTemplate(template);
+            templateHistory.setHtml(templateHtml);
+            templateHistory.setAuthor("admin");
+            templateHistory.setComment("template is added");
+            templateHistory.setDate(new Date());
+            contentService.saveTemplateHistory(templateHistory);
+
+            //save processed form as template file
+            os = templateService.getSourceOutputStream(template.getId() + ".ftl");
+            os.write(processTemplate(templateDocument, resource, true, site).getBytes("UTF-8"));
+        } finally {
+            IOUtils.closeQuietly(is);
+            IOUtils.closeQuietly(os);
+        }
+
+        return template;
+    }
+
+    //synchronize html resources and templates for the site
+    private void synchronizeTemplates(Site site) {
+        //get all the .html resources of the site;
+        //check if a template already exists for this resource
+        //if not add a template object and write as template source
+        //detect extra templates without resource and delete? recover? them
+
+        //all resources
+        List<Resource> resources;
+        try {
+            resources = resourceService.getAllResources(toRootFolder(site));
+        } catch (ResourceException ex) {
+            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at synchronizeTemplates cannot get all resources", ex);
+            return;
+        }
+
+        //all templates
+        List<Template> templates = contentService.getTemplates(site.getId());
+
+        //iterate over resources
+        for (Resource resource : resources) {
+            if (!resource.getName().toLowerCase().matches(".*(.html|.htm)")) continue; //i know i could do with endsWith, but it was a matter of pride
+
+            //search for template
+            boolean hasTemplate = false;
+
+            //poor man's n^2 search
+            for (Template template : templates) {
+                if (template.getPath().equals(resource.toResourcePath())) {
+                    hasTemplate = true;
+                    break;
+                }
+            }
+
+            //create one if not exists
+            if (!hasTemplate) {
+                try {
+                    createTemplateFromResource(site, resource);
+                } catch (ResourceException ex) {
+                    Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at synchronizeTemplates cannot read resource", ex);
+                } catch (TemplateException ex) {
+                    Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at synchronizeTemplates cannot write to template source os", ex);
+                } catch (IOException ex) {
+                    Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at synchronizeTemplates cannot write to template source os", ex);
+                }
+            }
         }
     }
 

@@ -85,9 +85,7 @@
                     </div>
                 </div>
             </div>
-            <footer>
-                <p>&copy; PragmaCraft 2012</p>
-            </footer>
+            <%@include file="_footer.jspf" %>
         </div>
 
         <!-- Upload Attachment Dialog -->

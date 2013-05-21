@@ -42,8 +42,8 @@
                             </tr>
                             <c:forEach items="${pages}" var="page">
                                 <tr id="page-${page.id}">
-                                    <td><a href="${pageContext.request.contextPath}${page.path}/edit">${page.path}</a></td>
-                                    <td><a href="editTemplate?id=${page.template.id}">${page.template.name}</a></td>
+                                    <td><a href="${pageContext.request.contextPath}${page.path}" target="_blank">${page.path}</a></td>
+                                    <td><a href="${pageContext.request.contextPath}${page.template.path}?static" target="_blank">${page.template.path}</a></td>
                                     <td>${page.newPath}</td>
                                     <td>
                                         <div class="btn-group">
@@ -51,6 +51,7 @@
                                             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                             <ul class="dropdown-menu">
                                                 <li><a href="${pageContext.request.contextPath}${page.path}" target="_blank"><i class="icon-search"></i> View Page</a></li>
+                                                <li><a href="editTemplate?id=${page.template.id}"><i class="icon-edit"></i> Edit Template</a></li>
                                                 <li class="divider"></li>
                                                 <li><a href="javascript:removePage(${page.id})"><i class="icon-trash"></i> Delete Page</a></li>
                                             </ul>
@@ -62,9 +63,7 @@
                     </div>
                 </div>
             </div>
-            <footer>
-                <p>&copy; PragmaCraft 2012</p>
-            </footer>
+            <%@include file="_footer.jspf" %>
         </div>
 
         <!-- Add Page Dialog -->

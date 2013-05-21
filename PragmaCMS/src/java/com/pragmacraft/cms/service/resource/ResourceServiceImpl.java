@@ -9,6 +9,7 @@ package com.pragmacraft.cms.service.resource;
 import com.pragmacraft.cms.service.resource.domain.Resource;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -57,6 +58,23 @@ public class ResourceServiceImpl implements ResourceService {
                 return f1.getName().compareTo(f2.getName());
             }
         });
+
+        //convert to service domain object
+        for (File file : files) {
+            result.add(fileToResource(rootFolder, file));
+        }
+
+        return result;
+    }
+
+    @Override
+    public List getAllResources(String rootFolder) throws ResourceException {
+        List result = new LinkedList();
+
+        File folder = resourcePathToFile(rootFolder, null); //always check path again
+        if (!folder.exists()) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, null, null);
+        if (!folder.isDirectory()) throw new ResourceException(ResourceException.ERROR_RESOURCE_NOT_FOUND, null, null);
+        Collection<File> files = FileUtils.listFiles(folder, null, true);
 
         //convert to service domain object
         for (File file : files) {
@@ -166,14 +184,18 @@ public class ResourceServiceImpl implements ResourceService {
     }
 
     @Override
-    public void crawlWebPage(String rootFolder, Resource parentFolder, final String pageUrl, final boolean followLinks) throws ResourceException {
+    public void crawlWebPage(String rootFolder, Resource parentFolder, final String pageUrl, final boolean followLinks, final Callable callback) throws ResourceException {
         final File crawlFolder = resourcePathToFile(rootFolder, parentFolder.toResourcePath());
         new Thread(new Runnable() {
             public void run() {
-                SimpleWebCrawler crawler = new SimpleWebCrawler();
-                crawler.crawl(crawlFolder, pageUrl, followLinks);
-                System.out.println("***************CRAWLING FINISHED FOR***************");
-                System.out.println(pageUrl);
+                try {
+                    SimpleWebCrawler crawler = new SimpleWebCrawler();
+                    crawler.crawl(crawlFolder, pageUrl, followLinks);
+                    Logger.getLogger(ResourceServiceImpl.class.getName()).log(Level.INFO, "***************CRAWLING FINISHED FOR***************:" + pageUrl);                    
+                    callback.call();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
         }).start();
     }

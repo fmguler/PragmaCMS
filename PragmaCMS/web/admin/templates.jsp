@@ -31,17 +31,17 @@
                         <div class="page-header">
                             <h1 style="display: inline">List of Templates</h1>
                             <div style="float: right">
-                                <button onclick="$('#addTemplateDialog').dialog('open')" class="btn btn-primary btn-large">Add Template</button>
+                                
                             </div>
                         </div>
                         <table class="table table-striped">
                             <tr>                                
-                                <th>Resource Path</th>
+                                <th width="740">Resource Path</th>
                                 <th>Actions</th>
                             </tr>
                             <c:forEach items="${templates}" var="template">
                                 <tr id="template-${template.id}">                                    
-                                    <td>${template.path}</td>
+                                    <td><a href="${pageContext.request.contextPath}${template.path}?static" target="_blank">${fn:escapeXml(template.name)}</a></td>
                                     <td>
                                         <div class="btn-group">
                                             <a class="btn" href="editTemplate?id=${template.id}"><i class="icon-edit"></i> Edit Template</a>
@@ -59,21 +59,7 @@
                     </div>
                 </div>
             </div>
-            <footer>
-                <p>&copy; PragmaCraft 2012</p>
-            </footer>
-        </div>
-
-        <!-- Add Template Dialog -->
-        <div id="addTemplateDialog" title="Add Template">
-            <form id="addTemplateForm">
-                <table class="style-full-width">                    
-                    <tr>
-                        <td><strong>Resource Path:</strong></td>
-                        <td><input type="text" name="path" value=""/></td>
-                    </tr>
-                </table>
-            </form>
+            <%@include file="_footer.jspf" %>
         </div>
     </body>
 </html>

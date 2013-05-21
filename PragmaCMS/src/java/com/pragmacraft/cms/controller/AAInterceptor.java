@@ -41,7 +41,7 @@ public class AAInterceptor extends HandlerInterceptorAdapter {
 
         //this domain does not belong to any of the registered sites and there is no default web site (with domain '*')
         if (siteId == null) {
-            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "This domain name does not match any site record, returning 404: {0} path: {1}", new Object[]{request.getServerName(), path});
+            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "This domain name does not match any site record, returning 404: {0} path: {1} IP: {3}", new Object[]{request.getServerName(), path, request.getHeader("X-Real-IP")});
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return false;
         }
@@ -89,7 +89,7 @@ public class AAInterceptor extends HandlerInterceptorAdapter {
         //security check for the logged in user.
         //NOTE: this does not happen since session cookie is domain based but, just in case...
         if (!user.getAccount().checkSite(siteId)) {
-            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "The domain {0} does not belong to the account of this user userId: {1} username: {2}", new Object[]{request.getServerName(), user.getId(), user.getUsername()});
+            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "The domain {0} does not belong to the account of this user userId: {1} username: {2} IP: {3}", new Object[]{request.getServerName(), user.getId(), user.getUsername(), request.getHeader("X-Real-IP")});
             response.setStatus(HttpServletResponse.SC_NOT_FOUND); //fail silently do not invoke site 404.html           
             return false;
         }

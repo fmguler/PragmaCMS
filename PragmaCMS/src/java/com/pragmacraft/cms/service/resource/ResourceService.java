@@ -10,6 +10,7 @@ import com.pragmacraft.cms.service.resource.domain.Resource;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * Handles static resource operations. Virtual folders for users' static files.
@@ -38,6 +39,15 @@ public interface ResourceService {
      * @throws ResourceException folder does not exist
      */
     List getResources(String rootFolder, Resource folder) throws ResourceException;
+
+    /**
+     * Get all the resources within the specified folder
+     *
+     * @param rootFolder the root folder resources are relative to
+     * @return list of all resources
+     * @throws ResourceException folder does not exist
+     */
+    List getAllResources(String rootFolder) throws ResourceException;
 
     /**
      * Add folder with specified path
@@ -102,7 +112,8 @@ public interface ResourceService {
      * @param parentFolder parent folder for all resources
      * @param pageUrl the url of the page to be crawled
      * @param followLinks follow links and crawl other same domain pages
+     * @param callback callback function to call when crawling is finished
      * @throws ResourceException
      */
-    void crawlWebPage(String rootFolder, Resource parentFolder, String pageUrl, boolean followLinks) throws ResourceException;
+    void crawlWebPage(String rootFolder, Resource parentFolder, String pageUrl, boolean followLinks, Callable callback) throws ResourceException;
 }

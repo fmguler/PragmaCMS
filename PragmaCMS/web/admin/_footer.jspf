@@ -1,0 +1,6 @@
+<%@ page pageEncoding="UTF-8" %>
+<%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+
+<footer>
+    <p class="style-float-right"> &copy; Copyright 2011 - 2013 <br/><a href="http://www.pragmacraft.com"><img src="js/pragmacraft.png" /></a></p>    
+</footer>

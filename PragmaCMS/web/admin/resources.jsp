@@ -76,25 +76,25 @@
                                 <c:if test="${!resource.directory}">
                                     <tr>
                                         <td>
-                                            <a href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static">${resource.name}</a>
+                                            <a href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static" target="_blank">${resource.name}</a>
                                         </td>
                                         <td><fmt:formatDate value="${resource.lastModified}" pattern="dd.MM.yyyy HH:mm" /></td>
                                         <td>${resource.contentLength}</td>
                                         <td>
                                             <div class="btn-group">
                                                 <c:if test="${fn:endsWith(resource.name, '.htm')||fn:endsWith(resource.name, '.html')}">
-                                                    <a class="btn btn-info" href="templates?addTemplate=${resource.folder}${resource.name}"><i class="icon-ok"></i> Make Template </a>
-                                                    <a class="btn btn-info dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+                                                    <a class="btn btn-success" href="editTemplateRedirect?path=${resource.folder}${resource.name}"><i class="icon-edit"></i> Edit Template </a>
+                                                    <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                                     <ul class="dropdown-menu">                                                                                                        
-                                                        <li><a href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static"><i class="icon-file"></i> Preview</a></li>
-                                                        <li><a href="javascript:duplicateResourceDialog('${resource.folder}${resource.name}', '${resource.name}')"><i class="icon-repeat"></i> Duplicate</a></li>
+                                                        <li><a href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static" target="_blank"><i class="icon-search"></i> Preview</a></li>
+                                                        <li><a href="javascript:duplicateResourceDialog('${resource.folder}${resource.name}', '${resource.name}')"><i class="icon-repeat"></i> Duplicate Resource</a></li>
                                                         <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Resource</a></li>
                                                         <li class="divider"></li>
-                                                        <li><a href="javascript:removeResource('${resource.name}')"><i class="icon-trash"></i> Delete Resource</a></li>
+                                                        <li><a href="javascript:removeResource('${resource.name}')"><i class="icon-trash"></i> Delete Template</a></li>
                                                     </ul>                                                    
                                                 </c:if>
                                                 <c:if test="${!(fn:endsWith(resource.name, '.htm')||fn:endsWith(resource.name, '.html'))}">
-                                                    <a class="btn" href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static"><i class="icon-file"></i> Preview</a>
+                                                    <a class="btn" href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static" target="_blank"><i class="icon-search"></i> Preview</a>
                                                     <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                                     <ul class="dropdown-menu">                                                                                                        
                                                         <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Resource</a></li>
@@ -112,9 +112,7 @@
                     </div>
                 </div>
             </div>
-            <footer>
-                <p>&copy; PragmaCraft 2012</p>
-            </footer>
+            <%@include file="_footer.jspf" %>
         </div>
 
         <!-- Upload Resource Dialog -->
@@ -189,7 +187,7 @@
                     </tr>
                     <tr>
                         <td><strong>Whole Site:</strong></td>
-                        <td><input type="checkbox" name="followLinks" value="false" /></td>
+                        <td><input type="checkbox" name="followLinks" value="false" />  <i>Experimental. Be careful! </i> </td>
                     </tr>
                 </table>
             </form>

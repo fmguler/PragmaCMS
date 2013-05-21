@@ -9,7 +9,7 @@
                 <li class="${viewMenuPages}"><a href="pages">Pages</a></li>
                 <c:if test="${not empty viewMenuEditPage}" >
                     <li class="active"><a href="#">[Edit Page]</a></li>
-                </c:if>
+                </c:if>                    
                 <li class="${viewMenuTemplates}"><a href="templates">Templates</a></li>
                 <c:if test="${not empty viewMenuEditTemplate}" >
                     <li class="active"><a href="#">[Edit Template]</a></li>

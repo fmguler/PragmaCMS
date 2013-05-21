@@ -67,7 +67,7 @@
                         <table class="table table-striped">
                             <tr>
                                 <th>Site ID</th>
-                                <th>Domains</th>
+                                <th>Domains (Aliases)</th>
                                 <th width="150">Actions</th>
                             </tr>
                             <c:set var="currentSiteId" value="${site.id}"/>
@@ -128,9 +128,7 @@
                     </div>
                 </div>
             </div>
-            <footer>
-                <p>&copy; PragmaCraft 2012</p>
-            </footer>
+            <%@include file="_footer.jspf" %>
         </div>
 
         <!-- Edit Site Dialog -->

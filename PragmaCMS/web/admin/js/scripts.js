@@ -298,7 +298,7 @@ function resourcesReady(){
     //crawl web page
     $("#crawlDialog").dialog({
         //height: 'auto',
-        width: 400,
+        width: 450,
         autoOpen: false,
         modal: true,
         buttons: [{
@@ -323,30 +323,7 @@ function resourcesReady(){
 
 //on templates ready
 function templatesReady(){
-    //add template
-    $("#addTemplateDialog").dialog({
-        //height: 'auto',
-        width: 400,
-        autoOpen: false,
-        modal: true,
-        buttons: [{
-            'class': 'btn btn-primary',
-            text: messages["ok"][locale],
-            click: addTemplate
-        },{
-            'class': 'btn',
-            text: messages["cancel"][locale],
-            click: function() {
-                $(this).dialog("close");
-            }
-        }]
-    });
-
-    //if this page is opened with addTemplate param, open add template dialog
-    if(window.location.href.indexOf("addTemplate")>0){
-        $("#addTemplateDialog").find("[name=path]").val(getParameterByName("addTemplate"));        
-        $('#addTemplateDialog').dialog('open');
-    }
+    
 }
 
 //on edit template ready
@@ -1299,23 +1276,6 @@ function duplicateResourceDialog(resourcePath, name){
 //------------------------------------------------------------------------------
 //TEMPLATES ACTIONS
 //------------------------------------------------------------------------------
-
-//add template
-function addTemplate(){    
-    $.ajax({
-        url: 'addTemplate',
-        data: $("#addTemplateForm").serializeObject(),
-        dataType: 'json',
-        type: 'POST',
-        success: function(response) {
-            if (response.status != "0") {
-                showErrorDialog(response.message);
-            } else {
-                location.href = 'templates';
-            }
-        }
-    });
-}
 
 //remove template
 function removeTemplate(templateId, goback){

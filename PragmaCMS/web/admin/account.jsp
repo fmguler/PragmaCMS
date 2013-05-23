@@ -82,6 +82,7 @@
                                             <ul class="dropdown-menu">
                                                 <c:if test="${currentSiteId!=site.id}">
                                                     <li><a href="javascript:switchSite(${site.id}, '${site.domains}')"><i class="icon-resize-horizontal"></i> Switch Site</a></li>
+                                                    <li class="divider"></li>
                                                     <li><a href="javascript:removeSite(${site.id})"><i class="icon-trash"></i> Delete Site</a></li>                                                
                                                 </c:if>
                                                 <c:if test="${currentSiteId==site.id}">

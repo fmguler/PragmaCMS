@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -52,7 +53,7 @@ public class ContentController implements ServletContextAware {
     private ResourceService resourceService;
     private StorageService storageService;
     private ServletContext servletContext;
-
+    
     @RequestMapping
     protected ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response, Site site) throws Exception {
         //Based on the host header decide which site does this request belongs to
@@ -106,7 +107,7 @@ public class ContentController implements ServletContextAware {
             response.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
             StringBuffer absoluteUrl = request.getRequestURL();
             absoluteUrl.replace(absoluteUrl.length() - path.length(), absoluteUrl.length(), page.getNewPath());
-
+            
             response.setHeader("Location", response.encodeRedirectURL(absoluteUrl.toString()));
             return null;
         }
@@ -217,6 +218,7 @@ public class ContentController implements ServletContextAware {
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.setContentLength(resource.getContentLength());
                 response.addDateHeader("Last-Modified", resource.getLastModified().getTime());
+                response.addDateHeader("Expires", new Date().getTime() + 60L * 60 * 24 * 1000 * 30); //expires a month
                 inputStream = resourceService.getInputStream(toRootFolder(site), resource);
                 outputStream = response.getOutputStream();
                 IOUtils.copyLarge(inputStream, outputStream);
@@ -247,7 +249,7 @@ public class ContentController implements ServletContextAware {
         try {
             PageAttachment pageAttachment = contentService.getPageAttachment(attachmentId);
             long cachedResDate = request.getDateHeader("If-Modified-Since");
-
+            
             if (pageAttachment == null || !pageAttachment.getPage().checkSite(site)) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
@@ -283,13 +285,13 @@ public class ContentController implements ServletContextAware {
     //get all the page and template attributes and return them as map
     private Map getPageAttributesMap(Page page) {
         Map result = new HashMap();
-
+        
         Iterator it = page.getPageAttributes().iterator();
         while (it.hasNext()) {
             PageAttribute attribute = (PageAttribute)it.next();
             result.put(attribute.getAttribute(), attribute.getValue());
         }
-
+        
         return result;
     }
 
@@ -304,17 +306,17 @@ public class ContentController implements ServletContextAware {
     public void setContentService(ContentService contentService) {
         this.contentService = contentService;
     }
-
+    
     @Autowired
     public void setTemplateService(TemplateService templateService) {
         this.templateService = templateService;
     }
-
+    
     @Autowired
     public void setResourceService(ResourceService resourceService) {
         this.resourceService = resourceService;
     }
-
+    
     @Autowired
     public void setStorageService(StorageService storageService) {
         this.storageService = storageService;

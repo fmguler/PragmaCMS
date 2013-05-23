@@ -87,7 +87,7 @@
                                                     <a class="btn btn-success dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                                     <ul class="dropdown-menu">                                                                                                        
                                                         <li><a href="${pageContext.request.contextPath}${resource.folder}${resource.name}?static" target="_blank"><i class="icon-search"></i> View Template</a></li>
-                                                        <li><a href="javascript:duplicateResourceDialog('${resource.folder}${resource.name}', '${resource.name}')"><i class="icon-repeat"></i> Duplicate Template</a></li>
+                                                        <li><a href="javascript:duplicateResourceDialog('${resource.folder}${resource.name}', '${resource.name}')"><i class="icon-repeat"></i> Duplicate Template (Copy)</a></li>
                                                         <li><a href="downloadResource?resourcePath=${resource.folder}${resource.name}"><i class="icon-download"></i> Download Template</a></li>
                                                         <li class="divider"></li>
                                                         <li><a href="javascript:removeResource('${resource.name}')"><i class="icon-trash"></i> Delete Template</a></li>

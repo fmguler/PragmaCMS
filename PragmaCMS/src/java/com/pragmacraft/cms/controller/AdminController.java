@@ -1026,7 +1026,7 @@ public class AdminController {
         //update template html and version if this is not a draft
         if (publish) {
             //scan new attributes and add them to existing pages
-            Set addedAttributes = scanAttributes(template, templateHtml, request.getParameterMap(), site);
+            Map attributes = scanAttributes(template, templateHtml, request.getParameterMap(), site);
 
             //save new template html to resource
             Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
@@ -1068,7 +1068,8 @@ public class AdminController {
             //return updated objects if published (state change)
             result.put("template", template);
             result.put("templateHtml", templateHtml);
-            result.put("addedAttributes", addedAttributes);
+            result.put("addedAttributes", attributes.get("addedAttributes"));
+            result.put("allAttributes", attributes.get("allAttributes"));
         }
 
         //return success
@@ -1644,9 +1645,12 @@ public class AdminController {
     }
 
     //scan template attributes and add to all pages
-    private Set<String> scanAttributes(Template template, String templateHtml, Map attributeValues, Site site) {
+    private Map scanAttributes(Template template, String templateHtml, Map attributeValues, Site site) {
         //scan the template for ${} placeholders
         //detect the new page attributes, and add them to the pages of the template
+        //return both new and all attributes
+
+        Map result = new HashMap();
 
         //get the page's template html
         String originalTemplateHtml;
@@ -1657,10 +1661,10 @@ public class AdminController {
             originalTemplateHtml = IOUtils.toString(inputStream, "UTF-8");
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for originalTemplateHtml", ex);
-            return new HashSet();
+            return result;
         } catch (IOException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error reading template resource for originalTemplateHtml", ex);
-            return new HashSet();
+            return result;
         } finally {
             IOUtils.closeQuietly(inputStream);
         }
@@ -1675,6 +1679,9 @@ public class AdminController {
             pageAttributes.add(attribute);
         }
 
+        //return as allAttributes
+        result.put("allAttributes", new HashSet(pageAttributes));
+
         //scan original template html for attributes
         Set<String> existingPageAttributes = new HashSet();
         matcher = pattern.matcher(originalTemplateHtml);
@@ -1688,36 +1695,45 @@ public class AdminController {
             if (pageAttributes.contains(existingAttr)) pageAttributes.remove(existingAttr);
         }
 
+        //return as addedAttributes
+        result.put("addedAttributes", pageAttributes);
+
         //the pages of this template
         List<Page> pages = contentService.getPages(template.getId(), site.getId());
 
         //add new attributes to all pages of this template
         for (Page page : pages) {
             for (String attribute : pageAttributes) {
-                PageAttribute pageAttribute = new PageAttribute();
-                pageAttribute.setAttribute(attribute);
-                pageAttribute.setAuthor("admin");
-                pageAttribute.setComment("attribute is added to template");
-                pageAttribute.setDate(new Date());
-                pageAttribute.setPage(page);
-                String[] defaultValue = (String[])attributeValues.get("newAttributes[" + attribute + "]");
-                pageAttribute.setValue(defaultValue == null ? "[Add Content]" : defaultValue[0]);
-                pageAttribute.setVersion(0);
-                contentService.savePageAttribute(pageAttribute);
+                try {
+                    PageAttribute pageAttribute = new PageAttribute();
+                    pageAttribute.setAttribute(attribute);
+                    pageAttribute.setAuthor("admin");
+                    pageAttribute.setComment("attribute is added to template");
+                    pageAttribute.setDate(new Date());
+                    pageAttribute.setPage(page);
+                    String[] defaultValue = (String[])attributeValues.get("newAttributes[" + attribute + "]");
+                    pageAttribute.setValue(defaultValue == null ? "[Add Content]" : defaultValue[0]);
+                    pageAttribute.setVersion(0);
+                    contentService.savePageAttribute(pageAttribute);
 
-                //add history record
-                PageAttributeHistory attributeHistory = new PageAttributeHistory();
-                attributeHistory.setPage(page);
-                attributeHistory.setAttribute(pageAttribute.getAttribute());
-                attributeHistory.setValue(pageAttribute.getValue());
-                attributeHistory.setAuthor(pageAttribute.getAuthor());
-                attributeHistory.setDate(pageAttribute.getDate());
-                attributeHistory.setComment(pageAttribute.getComment());
-                contentService.savePageAttributeHistory(attributeHistory);
+                    //add history record
+                    PageAttributeHistory attributeHistory = new PageAttributeHistory();
+                    attributeHistory.setPage(page);
+                    attributeHistory.setAttribute(pageAttribute.getAttribute());
+                    attributeHistory.setValue(pageAttribute.getValue());
+                    attributeHistory.setAuthor(pageAttribute.getAuthor());
+                    attributeHistory.setDate(pageAttribute.getDate());
+                    attributeHistory.setComment(pageAttribute.getComment());
+                    contentService.savePageAttributeHistory(attributeHistory);
+                } catch (Exception e) {
+                    //what to do if the same named attribute already added in previous versions,
+                    //and removed/reverted and re-added again?
+                    //here throws duplicate key exception.
+                }
             }
         }
 
-        return pageAttributes;
+        return result;
     }
 
     //process template - make links absolute

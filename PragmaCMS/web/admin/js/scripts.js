@@ -403,6 +403,10 @@ function editTemplateReady(templateId, templatePath){
         autoOpen: false,
         modal: true,
         buttons: [{
+            'class': 'btn btn-warning',
+            text: messages["button_revert_changes"][locale],
+            click: revertTemplateChanges
+        },{
             'class': 'btn btn-primary',
             text: messages["ok"][locale],
             click: function() {
@@ -1382,6 +1386,7 @@ function saveTemplate(publish){
                 //get result
                 var result = response.object;
                 var addedAttrs = result.addedAttributes;
+                var allAttrs = result.allAttributes;                
                 if (publish){
                     templateHtml = result.templateHtml;
                     template = result.template;
@@ -1440,6 +1445,9 @@ function revertTemplate(templateId, templateHistoryId, publish, silent){
 function revertTemplateChanges(){
     if(!confirm(messages["confirm_revert_changes_template"][locale])) return;
     revertTemplate(template.id, template.version, false, true);
+    //if called from review changes dialog
+    $('#viewChangesDialog').dialog('close');
+    $('#saveTemplateDialog').dialog('close');
 }
 
 //revert template to selected history version
@@ -2076,6 +2084,10 @@ var messages = {
     "button_make_attribute": {
         en: "Make Attribute",
         tr: "Öğe Yap"
+    },
+    "button_revert_changes": {
+        en: "Revert Changes",
+        tr: "Değişiklikleri Geri Al"
     },
     "confirm_remove_page": {
         en: "This page will be completely removed from the system. This action is permanent. Are you sure?",

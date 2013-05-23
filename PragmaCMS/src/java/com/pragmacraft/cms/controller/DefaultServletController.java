@@ -6,6 +6,7 @@
  */
 package com.pragmacraft.cms.controller;
 
+import java.util.Date;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -46,6 +47,7 @@ public class DefaultServletController implements ServletContextAware {
             } 
             
             //Load all static resources locally >>>
+            response.addDateHeader("Expires", new Date().getTime() + 60L * 60 * 24 * 1000 * 30); //expires a month
             RequestDispatcher dispatcher = servletContext.getNamedDispatcher("default"); //this is the trick
             dispatcher.forward(request, response);
             return null;

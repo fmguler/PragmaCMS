@@ -42,14 +42,15 @@
                     <div class="span12">
                         <div class="page-header style-position-fixed">
                             <div class="style-display-ib style-width-600">
-                                <h2 class="style-display-inline">Editing Template: <span id="templateName">${fn:escapeXml(template.name)}</span> (${template.path})</h2>
+                                <h2 class="style-display-inline">Editing Template:</h2> 
+                                <h3><span id="templatePath">${fn:escapeXml(template.path)}</span></h3>
                             </div>
                             <div class="style-float-right">
                                 <div class="btn-group style-display-ib">
                                     <a class="btn btn-primary" href="javascript:inspectElement()"><i class="icon-map-marker icon-white"></i> <span id ="inspectButton">Inspect Element</span></a>
                                     <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                     <ul class="dropdown-menu">                                                                                
-                                        <li><a href="javascript:makeAttributeDialog()"><i class="icon-plus"></i> Make Attribute</a></li>                                        
+                                        <li><a href="javascript:makeAttributeDialog()"><i class="icon-plus"></i> Create Editable Region</a></li>                                        
                                     </ul>
                                 </div>
                                 <div class="btn-group style-display-ib">
@@ -87,10 +88,18 @@
         </div>
 
         <!-- Make Attribute Dialog -->
-        <div id="makeAttributeDialog" title="Make Attribute">
+        <div id="makeAttributeDialog" title="Create Editable Region">
             <table class="style-full-width">
                 <tr>
-                    <td><strong>Attribute:</strong></td>
+                        <td colspan="3">
+                            <p>
+                                The selected element will be set as editable region in all pages created from this template.
+                                <em>Please note that existing pages will also be updated with the default value of current fragment.</em>
+                            </p>
+                        </td>
+                    </tr>
+                <tr>
+                    <td><strong>Editable Name:</strong></td>
                     <td class="span1"></td>
                     <td><input id="makeAttributeDialogAttribute" class="span3" type="text" name="attribute" value=""/></td>
                 </tr>

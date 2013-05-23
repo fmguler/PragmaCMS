@@ -41,7 +41,7 @@ public class AAInterceptor extends HandlerInterceptorAdapter {
 
         //this domain does not belong to any of the registered sites and there is no default web site (with domain '*')
         if (siteId == null) {
-            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "This domain name does not match any site record, returning 404: {0} path: {1} IP: {3}", new Object[]{request.getServerName(), path, request.getHeader("X-Real-IP")});
+            Logger.getLogger(AAInterceptor.class.getName()).log(Level.WARNING, "This domain name does not match any site record, returning 404: {0} path: {1} IP: {2}", new Object[]{request.getServerName(), path, request.getHeader("X-Real-IP")});
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return false;
         }

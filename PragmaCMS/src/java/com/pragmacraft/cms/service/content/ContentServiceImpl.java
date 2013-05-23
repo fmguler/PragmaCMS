@@ -150,6 +150,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public Template getTemplate(String path, int siteId) {
         Set joins = new HashSet();
+        joins.add("Template.site");
         Criteria criteria = new Criteria();
         criteria.eq("Template.path", path);
         criteria.eq("Template.siteId", siteId).and();

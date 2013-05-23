@@ -17,10 +17,12 @@ import org.springframework.web.servlet.ModelAndView;
 
 /**
  * Redirecting static resources to servlet container's default servlet
+ *
  * @author Fatih Mehmet Güler
  */
 @Controller
 public class DefaultServletController implements ServletContextAware {
+    public static final boolean STATIC_RESOURCE_CDN_ENABLED = false; //should be false while debugging
     private ServletContext servletContext;
 
     @RequestMapping
@@ -36,6 +38,14 @@ public class DefaultServletController implements ServletContextAware {
 
         //we have to forward static resources to servlet container manually, otherwise content controller will receive it
         if (isStaticResource(path)) {
+            
+            //Poor man's CDN
+            if (STATIC_RESOURCE_CDN_ENABLED){
+                response.sendRedirect("http://static.pragmacms.com" + path);
+                return null;
+            } 
+            
+            //Load all static resources locally >>>
             RequestDispatcher dispatcher = servletContext.getNamedDispatcher("default"); //this is the trick
             dispatcher.forward(request, response);
             return null;

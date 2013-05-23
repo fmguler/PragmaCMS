@@ -687,6 +687,17 @@ public class AdminController {
             //duplicate the resource
             resourceService.copyResource(toRootFolder(site), resource, duplicateResource);
 
+            //create template for the new resource
+            try {
+                createTemplateFromResource(site, duplicateResource);
+            } catch (ResourceException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "ResourceException at duplicateResource cannot read duplicate resource", ex);
+            } catch (TemplateException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "TemplateException at duplicateResource cannot write to template source os", ex);
+            } catch (IOException ex) {
+                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "IOException at duplicateResource cannot write to template source os", ex);
+            }
+
             //return success
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
         } catch (ResourceException ex) {
@@ -767,7 +778,7 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //EDIT TEMPLATE
     //--------------------------------------------------------------------------
-    //edit template by resource path
+    //edit template by resource path, also create template if not exists
     @RequestMapping
     public String editTemplateRedirect(@RequestParam String path, Model model, Site site) {
         //check the resource
@@ -807,10 +818,11 @@ public class AdminController {
     public String editTemplate(@RequestParam int id, @RequestParam(required = false) String ofPage, Model model, HttpServletRequest request, Site site) {
         Template template;
 
-        //if ofPage parameter is set, edit the template of this page
+        //if ofPage parameter is set, edit the template of this page (or resource)
         if (ofPage != null) {
-            Page page = contentService.getPage(ofPage, site.getId());
-            template = page == null ? null : page.getTemplate();
+            Page page = contentService.getPage(ofPage, site.getId()); //try page
+            if (page == null) template = contentService.getTemplate(ofPage, site.getId()); //try template with this path
+            else template = page.getTemplate();
         } else template = contentService.getTemplate(id);
 
         //no such template

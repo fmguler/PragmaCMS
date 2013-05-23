@@ -4997,6 +4997,19 @@ body {
     width: 940px;
 }
 
+/* customized right side tab at editTemplate */
+.nav-tabs-right > li > a {
+  margin-right: 10px;  
+}
+
+.nav-tabs-right > li {
+  float: right;
+}
+
+.nav-tabs-right {
+  margin-top: -20px;  
+}
+
 /******************************************************************************/
 
 /* display inline */

@@ -41,7 +41,7 @@
                             </tr>
                             <c:forEach items="${templates}" var="template">
                                 <tr id="template-${template.id}">                                    
-                                    <td><a href="${pageContext.request.contextPath}${template.path}?static" target="_blank">${fn:escapeXml(template.name)}</a></td>
+                                    <td><a href="${pageContext.request.contextPath}${template.path}?static" target="_blank">${fn:escapeXml(template.path)}</a></td>
                                     <td>
                                         <div class="btn-group">
                                             <a class="btn" href="editTemplate?id=${template.id}"><i class="icon-edit"></i> Edit Template</a>

@@ -27,6 +27,8 @@
             var newAttributes = new Object();
             var selectedElement = null;
             var editor = null;
+            var editorTrackChange = false;
+            var editorLastChange = new Date().getTime();            
             $(function(){editTemplateReady(${template.id}, '${template.path}')});
         </script>
     </head>
@@ -46,10 +48,8 @@
                                 <div class="btn-group style-display-ib">
                                     <a class="btn btn-primary" href="javascript:inspectElement()"><i class="icon-map-marker icon-white"></i> <span id ="inspectButton">Inspect Element</span></a>
                                     <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
-                                    <ul class="dropdown-menu">
-                                        <li><a href="javascript:editTemplateHtmlDialog()"><i class="icon-pencil"></i> Edit HTML</a></li>
-                                        <li><a href="javascript:editTemplateInlineDialog()"><i class="icon-font"></i> Edit Inline</a></li>
-                                        <li><a href="javascript:makeAttributeDialog()"><i class="icon-plus"></i> Make Attribute</a></li>
+                                    <ul class="dropdown-menu">                                                                                
+                                        <li><a href="javascript:makeAttributeDialog()"><i class="icon-plus"></i> Make Attribute</a></li>                                        
                                     </ul>
                                 </div>
                                 <div class="btn-group style-display-ib">
@@ -60,39 +60,30 @@
                                         <li><a href="javascript:revertTemplateChanges()"><i class="icon-repeat"></i> Revert Changes</a></li>
                                         <li><a href="javascript:templateHistoryDialog()"><i class="icon-list"></i> Template History</a></li>
                                         <li class="divider"></li>
-                                        <li><a href="javascript:viewTemplate('${template.path}')"><i class="icon-search"></i> View Template</a></li>
-                                        <li><a href="javascript:renameTemplateDialog()"><i class="icon-edit"></i> Rename Template</a></li>
+                                        <li><a href="javascript:viewTemplate('${template.path}')"><i class="icon-search"></i> View Template</a></li>                                        
                                         <li class="divider"></li>
                                         <li><a href="javascript:removeTemplate(${template.id},true)"><i class="icon-trash"></i> Delete Template</a></li>
                                     </ul>
                                 </div>
                             </div>
-                            <div id="inspector-holder"></div>
+                            <ul class="nav nav-tabs nav-tabs-right" id="templateTab">
+                                <li><a data-toggle="tab" href="#tab-editor">Editor</a></li>                                    
+                                <li class="active"><a data-toggle="tab" href="#tab-inspector">Inspector</a></li>               
+                            </ul>
+                            <div class="tab-content">                                
+                                <div class="tab-pane" id="tab-editor">
+                                    <div id="editor" style="position: relative; height: 200px;">Please select an element via inspector...</div>
+                                </div>               
+                                <div class="tab-pane active " id="tab-inspector">
+                                    <div id="inspector-holder"></div>
+                                </div>
+                            </div>                            
                         </div>
                         <div id="page-header-placeholder"></div>
                     </div>
                 </div>
             </div>
             <%@include file="_footer.jspf" %>
-        </div>
-
-        <!-- Rename Template Dialog -->
-        <div id="renameTemplateDialog" title="Rename Template">
-            <form id="renameTemplateForm" onsubmit="return false;">
-                <input type="hidden" name="templateId" value="${template.id}"/>
-                <table class="style-full-width">
-                    <tr>
-                        <td><strong>Name:</strong></td>
-                        <td class="span1"></td>
-                        <td><input class="span4" type="text" name="name" value="${template.name}"/></td>
-                    </tr>
-                </table>
-            </form>
-        </div>
-
-        <!-- Action Dialog -->
-        <div id="actionDialog" title="Choose Action">
-            <p>What do you want to do with the selected element?</p>
         </div>
 
         <!-- Make Attribute Dialog -->
@@ -104,11 +95,6 @@
                     <td><input id="makeAttributeDialogAttribute" class="span3" type="text" name="attribute" value=""/></td>
                 </tr>
             </table>
-        </div>
-
-        <!-- Edit Template Html Dialog -->
-        <div id="editTemplateHtmlDialog" title="Edit Template HTML">
-            <div id="editor" style="position: relative; width: 730px; height: 500px;"></div>
         </div>
 
         <!-- Save Template Dialog -->

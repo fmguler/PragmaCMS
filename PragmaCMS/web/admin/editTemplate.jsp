@@ -25,6 +25,7 @@
             var templateHtml = null;
             var templateHistory = null;
             var newAttributes = new Object();
+            var templateAttributes = null;
             var selectedElement = null;
             var editor = null;
             var editorTrackChange = false;
@@ -143,5 +144,7 @@
         <!-- View Changes Dialog -->
         <div id="viewChangesDialog" title="View Changes">
         </div>
+        
+        <%@include file="_scripts.jspf" %>
     </body>
 </html>

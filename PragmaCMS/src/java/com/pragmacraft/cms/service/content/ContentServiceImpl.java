@@ -189,6 +189,15 @@ public class ContentServiceImpl implements ContentService {
         criteria.orderDesc("TemplateHistory.date");
         return ven.list(TemplateHistory.class, joins, criteria);
     }
+    
+    @Override
+    public List getTemplateAttributes(int templateId){
+        Set joins = new HashSet();        
+        Criteria criteria = new Criteria();
+        criteria.eq("TemplateAttribute.templateId", templateId);        
+        criteria.orderAsc("TemplateAttribute.attribute");
+        return ven.list(TemplateAttribute.class, joins, criteria);
+    }
 
     @Override
     public void saveTemplate(Template template) {
@@ -199,6 +208,11 @@ public class ContentServiceImpl implements ContentService {
     public void saveTemplateHistory(TemplateHistory templateHistory) {
         ven.save(templateHistory);
     }
+    
+    @Override
+    public void saveTemplateAttribute(TemplateAttribute templateAttribute) {
+        ven.save(templateAttribute);
+    }
 
     @Override
     public void removeTemplate(int id) {
@@ -208,6 +222,11 @@ public class ContentServiceImpl implements ContentService {
     @Override
     public void removeTemplateHistory(int id) {
         ven.delete(id, TemplateHistory.class);
+    }
+    
+    @Override
+    public void removeTemplateAttribute(int id) {
+        ven.delete(id, TemplateAttribute.class);
     }
 
     //--------------------------------------------------------------------------

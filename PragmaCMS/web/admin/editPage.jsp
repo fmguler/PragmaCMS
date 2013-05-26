@@ -196,5 +196,7 @@
                 </tbody>
             </table>
         </div>
+
+        <%@include file="_scripts.jspf" %>
     </body>
 </html>

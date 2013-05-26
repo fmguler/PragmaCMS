@@ -56,5 +56,7 @@
             </div>
             <%@include file="_footer.jspf" %>
         </div>
+
+        <%@include file="_scripts.jspf" %>
     </body>
 </html>

@@ -31,7 +31,7 @@
                         <div class="page-header">
                             <h1 style="display: inline">List of Templates</h1>
                             <div style="float: right">
-                                
+
                             </div>
                         </div>
                         <table class="table table-striped">
@@ -48,6 +48,7 @@
                                             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
                                             <ul class="dropdown-menu">
                                                 <li><a href="${pageContext.request.contextPath}${template.path}?static" target="_blank"><i class="icon-search"></i> View Template</a></li>
+                                                <li><a href="resources?duplicateResource=${template.path}"><i class="icon-repeat"></i> Duplicate Template (Copy)</a></li>
                                                 <li class="divider"></li>
                                                 <li><a href="javascript:removeTemplate(${template.id})"><i class="icon-trash"></i> Delete Template</a></li>
                                             </ul>
@@ -61,5 +62,7 @@
             </div>
             <%@include file="_footer.jspf" %>
         </div>
+        
+        <%@include file="_scripts.jspf" %>
     </body>
 </html>

@@ -319,6 +319,11 @@ function resourcesReady(){
         $("#addFolderDialog").find("[name='name']").val(addFolderParam);
         $('#addFolderDialog').dialog('open');
     }
+    
+    //if this page is opened with duplicateResource param, open duplicate resource dialog
+    if(duplicateResourceParam){           
+        duplicateResourceDialog(getParameterByName("duplicateResource"), duplicateResourceParam);
+    }
 }
 
 //on templates ready
@@ -415,21 +420,6 @@ function editTemplateReady(templateId, templatePath){
         }]
     });
 
-    //get the template as json
-    $.ajax({
-        url: 'getTemplate',
-        data: 'templateId='+templateId,
-        dataType: 'json',
-        type: 'POST',
-        success: function(response) {
-            if (response.status != "0") {
-                showErrorDialog(response.message);
-            } else {
-                template = response.object;
-            }
-        }
-    });
-
     //get the original template html as json
     $.ajax({
         url: 'getTemplateHtml',
@@ -440,7 +430,9 @@ function editTemplateReady(templateId, templatePath){
             if (response.status != "0") {
                 showErrorDialog(response.message);
             } else {
-                templateHtml = response.object;
+                template = response.object.template;
+                templateHtml = response.object.templateHtml;
+                templateAttributes = response.object.templateAttributes;
             }
         }
     });
@@ -1287,6 +1279,12 @@ function updateTemplateHtml(){
     data.templateId = template.id;
     data.elemId = elemId;
     data.html = editor.getValue();
+    
+    //check if attribute is created manually, do not allow duplicate attrs
+    /* not working - need to undo ace
+    var manualAttrs = /\$\{(.+?)\}/.exec(data.html);
+    if (manualAttrs && checkTemplateAttributeExists(manualAttrs[1])) return;
+    */
 
     $.ajax({
         url: 'updateTemplateElementHtml',
@@ -1313,7 +1311,10 @@ function makeAttribute(){
         showErrorDialog("Attribute should not contain spaces or special characters");
         return;
     }
-
+    
+    //do not allow duplicate attrs
+    if (checkTemplateAttributeExists(attribute)) return;
+    
     //get the element id
     var elemId = getSelectedElementId();
     if (!elemId) return;
@@ -1326,38 +1327,47 @@ function makeAttribute(){
         type: 'POST',
         success: function(response) {
             if (response.status != "0") {
-            //fail silently
-            } else {
-                newAttributes[attribute] = response.object;
-            }
-        }
-    });
-
-    //update the html in server
-    var data = new Object();
-    data.templateId = template.id;
-    data.elemId = elemId;
-    data.html = ("${"+attribute+"}");
-
-    $.ajax({
-        url: 'updateTemplateElementHtml',
-        data: data,
-        dataType: 'json',
-        type: 'POST',
-        success: function(response) {
-            if (response.status != "0") {
                 showErrorDialog(response.message);
             } else {
-                //the new html fragment
-                $(selectedElement).html(response.object);
-                editorTrackChange = false;
-                editor.setValue(response.object);
-                editor.gotoLine(0);
-                editorTrackChange = true;
-                //update the tree
-                $("#templatePreview")[0].contentWindow.Firebug.HTML.fmgUpdateTree();
-                //close the dialog
-                $('#makeAttributeDialog').dialog('close');
+                
+                //first check if element html already contains attribute - do not allow nested
+                var manualAttrs = /\$\{(.+?)\}/.exec(response.object);
+                if (manualAttrs){
+                    showErrorDialog("Selected region already contains an editable. You cannot create nested editables. Remove it or move it somewhere else.");
+                    return;
+                } 
+                
+                //save default value
+                newAttributes[attribute] = response.object;
+                
+                //update the html in server
+                var data = new Object();
+                data.templateId = template.id;
+                data.elemId = elemId;
+                data.html = ("${"+attribute+"}");
+
+                $.ajax({
+                    url: 'updateTemplateElementHtml',
+                    data: data,
+                    dataType: 'json',
+                    type: 'POST',
+                    success: function(response2) {
+                        if (response2.status != "0") {
+                            showErrorDialog(response2.message);
+                        } else {
+                            //the new html fragment
+                            $(selectedElement).html(response2.object);
+                            editorTrackChange = false;
+                            editor.setValue(response2.object);
+                            editor.gotoLine(0);
+                            editorTrackChange = true;
+                            //update the tree
+                            $("#templatePreview")[0].contentWindow.Firebug.HTML.fmgUpdateTree();
+                            //close the dialog
+                            $('#makeAttributeDialog').dialog('close');
+                        }
+                    }
+                });
             }
         }
     });
@@ -1384,21 +1394,22 @@ function saveTemplate(publish){
                 $('#saveTemplateDialog').dialog('close');
 
                 //get result
-                var result = response.object;
-                var addedAttrs = result.addedAttributes;
-                var allAttrs = result.allAttributes;                
-                if (publish){
-                    templateHtml = result.templateHtml;
-                    template = result.template;
-                }
+                var result = response.object;   
+                
+                //the status message
+                var message = response.message;
 
-                //add added attributes to message
-                var message = response.message+"<br/>";
-                message += "<ul>";
-                for (var i=0; i<addedAttrs.length; i++){
-                    message += "<li>"+addedAttrs[i]+"</li>"
+                //update state on publish
+                if (publish){
+                    template = result.template;
+                    templateHtml = result.templateHtml;
+                    templateAttributes = result.templateAttributes;
+                    newAttributes = new Object();
+                    
+                    //add info to message
+                    message += composePublishMessage(result);
+                    
                 }
-                message += "</ul>";
 
                 //show message with saved attrs
                 showStatusDialog(message);
@@ -1421,17 +1432,30 @@ function revertTemplate(templateId, templateHistoryId, publish, silent){
             if (response.status != "0") {
                 showErrorDialog(response.message);
             } else {
-                //show the status
                 $('#templateHistoryDialog').dialog('close');
-                showStatusDialog(response.message);
-
+                
                 //get result
                 var result = response.object;
-                if (publish){
-                    templateHtml = result.templateHtml;
-                    template = result.template;
-                }
+                
+                //the status message
+                var message = response.message;
+                
+                //reset new attributes even not publish
+                newAttributes = new Object();
 
+                //update state on publish
+                if (publish){
+                    template = result.template;
+                    templateHtml = result.templateHtml;                    
+                    templateAttributes = result.templateAttributes;
+                    
+                    //add info to message
+                    message += composePublishMessage(result);
+                }
+                
+                //show message with saved attrs
+                showStatusDialog(message);
+                
                 //re-load the page preview iframe
                 $("#templatePreview").remove();
                 var templatePreviewSrc = contextPath+template.path+"?time="+(new Date()).getTime()+"&static&edit";
@@ -1488,6 +1512,9 @@ function makeAttributeDialog(){
     }
 
     if (!getSelectedElementId()) return;
+    
+    //set default attribute name
+    $("#makeAttributeDialogAttribute").val('editable'+(templateAttributes.length+1));
 
     //show the dialog
     $('#makeAttributeDialog').dialog('open');
@@ -1510,7 +1537,7 @@ function reviewTemplateChangesDialog(){
             if (response.status != "0") {
                 showErrorDialog(response.message);
             } else {
-                var currentTemplateHtml = response.object;
+                var currentTemplateHtml = response.object.templateHtml;
                 if (templateHtml == currentTemplateHtml){
                     showStatusDialog("Nothing is changed!");
                     return;
@@ -1702,6 +1729,52 @@ function getSelectedElementId(){
     if (elemChanged) $("#templatePreview")[0].contentWindow.Firebug.HTML.select(selectedElement)
 
     return elemId;
+}
+
+//compose publish message
+function composePublishMessage(result){
+    var message = "";
+    
+    //add added attributes to message                
+    if (result.attributesInfo.addedAttributes.length){
+        message += "<br/>Following editables are added<br/><ul>";
+        for (var i=0; i<result.attributesInfo.addedAttributes.length; i++){
+            message += "<li>"+result.attributesInfo.addedAttributes[i]+"</li>"
+        }
+        message += "</ul>";
+    }
+                    
+                
+    //add removed attributes to message
+    if (result.attributesInfo.removedAttributes.length){
+        message += "<br/>Following editables are removed<br/><ul>";
+        for (var i=0; i<result.attributesInfo.removedAttributes.length; i++){
+            message += "<li>"+result.attributesInfo.removedAttributes[i]+"</li>"
+        }
+        message += "</ul>";
+    }                    
+                
+    //add re-added attributes to message
+    if (result.attributesInfo.reAddedAttributes.length){
+        message += "<br/>Following editables are re-added (previously removed)<br/><ul>";
+        for (var i=0; i<result.attributesInfo.reAddedAttributes.length; i++){
+            message += "<li>"+result.attributesInfo.reAddedAttributes[i]+"</li>"
+        }
+        message += "</ul>";
+    }
+    
+    return message;
+}
+
+//check if such attribute already exists
+function checkTemplateAttributeExists(attribute){    
+    for (var i = 0; i < templateAttributes.length; i++){
+        if (!templateAttributes[i].removed && templateAttributes[i].attribute == attribute){
+            showErrorDialog("There is already an editable with this name: "+attribute);
+            return true;
+        }
+    }
+    return false;
 }
 
 //------------------------------------------------------------------------------
@@ -2082,8 +2155,8 @@ var messages = {
         tr: "Anlık Düzenle"
     },
     "button_make_attribute": {
-        en: "Make Attribute",
-        tr: "Öğe Yap"
+        en: "Create Editable",
+        tr: "Düzenlenebilir Yap"
     },
     "button_revert_changes": {
         en: "Revert Changes",
@@ -2106,8 +2179,8 @@ var messages = {
         tr: "Bu öğe geçmişi kaydı sistemden kaldırılacak. Bu işlem geri alınamaz. Emin misiniz?"
     },
     "confirm_remove_resource": {
-        en: "This resource will be completely removed from the system. Please make sure that it is not referenced from any template. This action is permanent. Are you sure?",
-        tr: "Bu kaynak sistemden tamamen silinecek. Lütfen önce herhangi bir şablondan kullanılmadığından emin olun. Bu işlem geri alınamaz. Emin misiniz?"
+        en: "This resource will be completely removed from the system. Please make sure that it is not referenced from any template. Corresponding template won't be deleted. This action is permanent. Are you sure?",
+        tr: "Bu kaynak sistemden tamamen silinecek. Lütfen önce herhangi bir şablondan kullanılmadığından emin olun. Buna karşılık gelen şablon silinmeyecek. Bu işlem geri alınamaz. Emin misiniz?"
     },
     "confirm_remove_resource_folder": {
         en: "This resource folder will be completely removed from the system. This action is permanent. Are you sure?",

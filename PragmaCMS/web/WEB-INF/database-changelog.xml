@@ -511,4 +511,31 @@
         <addUniqueConstraint schemaName="public" tableName="author" columnNames="username" constraintName="author_username_unique"/>
     </changeSet>
     <!-- <<MILESTONE 0.32 MULTISITE -->
+     <changeSet author="fmguler" id="54">
+        <tagDatabase tag="tag-milestone-03"/>
+    </changeSet>
+    
+    <!-- <<MILESTONE 1.0 SCENARIO -->    
+    <!-- add template attribute for scanned attributes enumeration and default values -->
+    <changeSet author="fmguler" id="55">
+        <createTable schemaName="public" tableName="template_attribute">
+            <column autoIncrement="true" name="id" type="serial">
+                <constraints nullable="false" primaryKey="true" primaryKeyName="template_attribute_pkey"/>
+            </column>
+            <column name="template_id" type="int"/>
+            <column name="attribute" type="VARCHAR(1000)"/>            
+            <column name="value" type="TEXT"/>
+            <column name="removed" type="BOOLEAN"/>
+        </createTable>
+    </changeSet>
+    <changeSet author="fmguler" id="56">
+        <addForeignKeyConstraint
+            constraintName="template_attribute_template_id_fkey"
+            baseTableSchemaName="public" baseTableName="template_attribute" baseColumnNames="template_id"
+            referencedTableSchemaName="public" referencedTableName="template" referencedColumnNames="id"
+            deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" />
+    </changeSet>
+    <changeSet author="fmguler" id="57">
+        <addUniqueConstraint schemaName="public" tableName="template_attribute" columnNames="template_id, attribute" constraintName="template_attribute_template_id_attribute_unique"/>
+    </changeSet>
 </databaseChangeLog>

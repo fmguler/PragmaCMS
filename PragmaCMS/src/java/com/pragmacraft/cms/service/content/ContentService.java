@@ -92,14 +92,20 @@ public interface ContentService {
     List getTemplateHistories(Integer templateId, int siteId);
 
     TemplateHistory getTemplateHistory(int id);
+    
+    List getTemplateAttributes(int templateId);
 
     void saveTemplateHistory(TemplateHistory templateHistory);
+    
+    void saveTemplateAttribute(TemplateAttribute templateAttribute);
 
     Template getTemplate(String path, int siteId);
 
     void removePageAttributeHistory(int id);
 
     void removeTemplateHistory(int id);
+    
+    void removeTemplateAttribute(int id);
 
     List getPages(int templateId, int siteId);
 

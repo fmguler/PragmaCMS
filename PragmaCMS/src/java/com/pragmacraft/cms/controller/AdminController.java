@@ -204,7 +204,7 @@ public class AdminController {
         page = contentService.getPage(page.getId());
 
         //scan and auto add attributes
-        scanAttributes(page, site);
+        createPageAttributes(page, site);
 
         //return success
         return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", page);
@@ -503,12 +503,18 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //list resources
     @RequestMapping()
-    public String resources(Model model, @RequestParam(required = false) String resourceFolder, @RequestParam(required = false) String addFolder, Site site) {
+    public String resources(Model model, @RequestParam(required = false) String resourceFolder, @RequestParam(required = false) String addFolder, @RequestParam(required = false) String duplicateResource, Site site) {
         try {
             //partition the add folder /a/b/c to /a/b and c
             if (addFolder != null && addFolder.contains("/")) {
                 resourceFolder = addFolder.substring(0, addFolder.lastIndexOf("/"));
                 addFolder = addFolder.substring(addFolder.lastIndexOf("/") + 1);
+            }
+
+            //called with duplicateResource=path param
+            if (duplicateResource != null && duplicateResource.contains("/")) {
+                resourceFolder = duplicateResource.substring(0, duplicateResource.lastIndexOf("/"));
+                duplicateResource = duplicateResource.substring(duplicateResource.lastIndexOf("/") + 1);
             }
 
             //check null
@@ -529,6 +535,7 @@ public class AdminController {
             model.addAttribute("resourceFolder", folder.toResourcePath());
             model.addAttribute("resourceFolderArray", folder.toResourcePath().split("/"));
             model.addAttribute("addFolderParam", addFolder);
+            model.addAttribute("duplicateResourceParam", duplicateResource);
             return "admin/resources";
         } catch (ResourceException ex) {
             model.addAttribute("errorMessage", "Unknown Error. Please report this to us: " + ex.getMessage());
@@ -769,6 +776,11 @@ public class AdminController {
             if (template == null || !template.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
             contentService.removeTemplate(templateId);
             templateService.removeSource(templateId + ".ftl");
+
+            //also remove the resource
+            Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
+            if (resource != null) resourceService.removeResource(toRootFolder(site), resource);
+
             return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", null);
         } catch (Exception ex) { //TODO: service exception
             return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "This template could not be removed. Error: " + ex.getMessage(), null);
@@ -778,9 +790,9 @@ public class AdminController {
     //--------------------------------------------------------------------------
     //EDIT TEMPLATE
     //--------------------------------------------------------------------------
-    //edit template by resource path, also create template if not exists
+    //edit template by resource path, also create template if not exists (called from resources)
     @RequestMapping
-    public String editTemplateRedirect(@RequestParam String path, Model model, Site site) {
+    public String editTemplateOfResource(@RequestParam String path, Model model, Site site) {
         //check the resource
         Resource resource = resourceService.getResource(toRootFolder(site), path);
         if (resource == null || resource.getDirectory() || !(resource.getName().endsWith(".htm") || resource.getName().endsWith(".html"))) {
@@ -834,13 +846,9 @@ public class AdminController {
         }
 
         //get the original unmodified html (scripts can modify DOM)
-        InputStream inputStream = null;
         String templateHtml = null;
         try {
-            Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
-            if (resource == null) throw new IOException("Resource of this template is not found.");
-            inputStream = resourceService.getInputStream(toRootFolder(site), resource);
-            templateHtml = IOUtils.toString(inputStream, "UTF-8");
+            templateHtml = getOriginalTemplateHtml(site, template);
         } catch (ResourceException ex) {
             Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for templateHtml", ex);
             model.addAttribute("errorMessage", "Unknown Error. Please report this to us: " + ex.getMessage());
@@ -853,8 +861,6 @@ public class AdminController {
             model.addAttribute("errorAction", "Go Back");
             model.addAttribute("errorActionUrl", "resources");
             return "admin/error";
-        } finally {
-            IOUtils.closeQuietly(inputStream);
         }
 
         //NOTE: we add custom attributes to all elements to detect where to merge changes
@@ -885,15 +891,6 @@ public class AdminController {
         return "admin/editTemplate";
     }
 
-    //ajax - get template
-    @RequestMapping()
-    @ResponseBody
-    public String getTemplate(@RequestParam Integer templateId, Site site) {
-        Template template = contentService.getTemplate(templateId);
-        if (template == null || !template.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", template);
-    }
-
     //ajax - get template html original or current (for review changes)
     @RequestMapping()
     @ResponseBody
@@ -901,55 +898,29 @@ public class AdminController {
         Template template = contentService.getTemplate(templateId);
         if (template == null || !template.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
 
-        //resulting template html
-        String templateHtml = null;
+        //current html
+        Document templateDocument = (Document)request.getSession().getAttribute("templateDocument:" + templateId);
+        if (templateDocument == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template document in session, please report this error to us", null);
 
+        //clone the element (do not modify original - can save again), remove custom id and script, get html
+        Document docCopy = templateDocument.clone();
+        docCopy.getAllElements().removeAttr("fmgcms-id");
+        docCopy.head().getElementById("fmgcms-injected-script").remove();
+        String templateHtml = docCopy.html();
+
+        //return template, templateHtml, and templateAttributes for ajax state
+        Map result = new HashMap();
+        result.put("templateHtml", templateHtml);
+
+        //return these only on the first call (on ready) do not return on review changes
         if (original) {
-            //get the original unmodified html
-            InputStream inputStream = null;
-            try {
-                Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
-                inputStream = resourceService.getInputStream(toRootFolder(site), resource);
-                templateHtml = IOUtils.toString(inputStream, "UTF-8");
-            } catch (ResourceException ex) {
-                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for templateHtml", ex);
-                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template resource not found: " + ex.getMessage(), null);
-            } catch (IOException ex) {
-                Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error reading template resource for templateHtml", ex);
-                return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template resource not found: " + ex.getMessage(), null);
-            } finally {
-                IOUtils.closeQuietly(inputStream);
-            }
-        } else {
-            //current html
-            Document templateDocument = (Document)request.getSession().getAttribute("templateDocument:" + templateId);
-            if (templateDocument == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Cannot find template document in session, please report this error to us", null);
-
-            //clone the element (do not modify original - can save again), remove custom id and script, get html
-            Document docCopy = templateDocument.clone();
-            docCopy.getAllElements().removeAttr("fmgcms-id");
-            docCopy.head().getElementById("fmgcms-injected-script").remove();
-            templateHtml = docCopy.html();
+            template.setSite(null); //to hide in page ajax
+            result.put("template", template);
+            result.put("templateAttributes", contentService.getTemplateAttributes(templateId));
         }
 
         //return the result
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", templateHtml);
-    }
-
-    //ajax - rename template
-    @RequestMapping
-    @ResponseBody
-    public String renameTemplate(@RequestParam Integer templateId, @RequestParam String name, Site site) {
-        Template template = contentService.getTemplate(templateId);
-        if (template == null || !template.checkSite(site)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Template not found", null);
-        if (template.getName().equals(name)) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "You did not change the name...", null);
-
-        //change the name and save
-        template.setName(name);
-        contentService.saveTemplate(template);
-
-        //return success
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template is renamed successfully", null);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "", result);
     }
 
     //ajax - get template element html
@@ -1026,7 +997,7 @@ public class AdminController {
         //update template html and version if this is not a draft
         if (publish) {
             //scan new attributes and add them to existing pages
-            Map attributes = scanAttributes(template, templateHtml, request.getParameterMap(), site);
+            Map attributesInfo = scanAttributes(template, templateHtml, request.getParameterMap(), site);
 
             //save new template html to resource
             Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
@@ -1068,12 +1039,12 @@ public class AdminController {
             //return updated objects if published (state change)
             result.put("template", template);
             result.put("templateHtml", templateHtml);
-            result.put("addedAttributes", attributes.get("addedAttributes"));
-            result.put("allAttributes", attributes.get("allAttributes"));
+            result.put("templateAttributes", contentService.getTemplateAttributes(templateId));
+            result.put("attributesInfo", attributesInfo);
         }
 
         //return success
-        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template is saved successfully. Following attributes are added;", result);
+        return CommonController.toStatusJson(CommonController.JSON_STATUS_SUCCESS, "Template is saved successfully.", result);
     }
 
     //ajax - template histories
@@ -1122,6 +1093,9 @@ public class AdminController {
         //the result
         Map result = new HashMap();
         if (publish) {
+            //scan new attributes and add them to existing pages
+            Map attributesInfo = scanAttributes(template, templateHtml, request.getParameterMap(), site);
+
             //save new template html to resource
             Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
             if (resource == null) return CommonController.toStatusJson(CommonController.JSON_STATUS_FAIL, "Resource corresponding to this template is not found", null);
@@ -1167,6 +1141,8 @@ public class AdminController {
             //return updated objects if published (state change)
             result.put("template", template);
             result.put("templateHtml", templateHtml);
+            result.put("templateAttributes", contentService.getTemplateAttributes(templateId));
+            result.put("attributesInfo", attributesInfo);
         }
 
         //return success
@@ -1578,57 +1554,40 @@ public class AdminController {
 
     //PRIVATE
     //--------------------------------------------------------------------------
+    //scan attributes from html
+    private Set<String> scanAttributesCommon(String html) {
+        Set<String> attributes = new HashSet();
+        Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
+        Matcher matcher = pattern.matcher(html);
+        while (matcher.find()) {
+            String attribute = matcher.group(1);
+            attributes.add(attribute);
+        }
+
+        return attributes;
+    }
+
     //scan page attributes
-    private void scanAttributes(Page page, Site site) {
-        //scan the page template for ${} placeholders
-        //detect the new page attributes, and add them to the page
+    private void createPageAttributes(Page page, Site site) {
 
         //new page, template not selected yet (this shouldn't happen anymore, but be safe)
         if (page.getTemplate() == null) return;
 
-        //get the page's template html
-        String templateHtml;
-        InputStream inputStream = null;
-        try {
-            String resourcePath = page.getTemplate().getPath();
-            if (resourcePath.equals("/")) resourcePath = "/index.html";
-            Resource resource = resourceService.getResource(toRootFolder(site), resourcePath);
-            inputStream = resourceService.getInputStream(toRootFolder(site), resource);
-            templateHtml = IOUtils.toString(inputStream, "UTF-8");
-        } catch (ResourceException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for templateHtml", ex);
-            return;
-        } catch (IOException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error reading template resource for templateHtml", ex);
-            return;
-        } finally {
-            IOUtils.closeQuietly(inputStream);
-        }
+        //template attributes (current attributes)
+        List<TemplateAttribute> templateAttributes = contentService.getTemplateAttributes(page.getTemplate().getId());
 
-        //scan template html for attributes
-        Set<String> pageAttributes = new HashSet();
-        Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
-        Matcher matcher = pattern.matcher(templateHtml);
-        while (matcher.find()) {
-            String attribute = matcher.group(1);
-            pageAttributes.add(attribute);
-        }
-
-        //detect new attributes
-        List<PageAttribute> existingPageAttributes = page.getPageAttributes();
-        for (PageAttribute existingAttr : existingPageAttributes) {
-            if (pageAttributes.contains(existingAttr.getAttribute())) pageAttributes.remove(existingAttr.getAttribute());
-        }
+        //ad-hoc resource folder - instead of getting resource by templatePath and getting folder from it
+        String templateResourceFolder = page.getTemplate().getPath().substring(0, page.getTemplate().getPath().lastIndexOf("/")) + "/";
 
         //add new attributes to the page
-        for (String attribute : pageAttributes) {
+        for (TemplateAttribute templateAttribute : templateAttributes) {
             PageAttribute pageAttribute = new PageAttribute();
-            pageAttribute.setAttribute(attribute);
+            pageAttribute.setAttribute(templateAttribute.getAttribute());
             pageAttribute.setAuthor("admin");
-            pageAttribute.setComment("attribute is scanned");
+            pageAttribute.setComment("initial creation");
             pageAttribute.setDate(new Date());
             pageAttribute.setPage(page);
-            pageAttribute.setValue("[Add Content]");
+            pageAttribute.setValue(processAttribute(templateAttribute.getValue(), templateResourceFolder)); //default value
             pageAttribute.setVersion(0);
             contentService.savePageAttribute(pageAttribute);
 
@@ -1652,58 +1611,67 @@ public class AdminController {
 
         Map result = new HashMap();
 
-        //get the page's template html
-        String originalTemplateHtml;
-        InputStream inputStream = null;
-        try {
-            Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
-            inputStream = resourceService.getInputStream(toRootFolder(site), resource);
-            originalTemplateHtml = IOUtils.toString(inputStream, "UTF-8");
-        } catch (ResourceException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error getting the template resource for originalTemplateHtml", ex);
-            return result;
-        } catch (IOException ex) {
-            Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Error reading template resource for originalTemplateHtml", ex);
-            return result;
-        } finally {
-            IOUtils.closeQuietly(inputStream);
-        }
-
-
         //scan template html for attributes
-        Set<String> pageAttributes = new HashSet();
-        Pattern pattern = Pattern.compile("\\$\\{(.+?)\\}");
-        Matcher matcher = pattern.matcher(templateHtml);
-        while (matcher.find()) {
-            String attribute = matcher.group(1);
-            pageAttributes.add(attribute);
-        }
+        Set<String> newAttributes = scanAttributesCommon(templateHtml);
 
-        //return as allAttributes
-        result.put("allAttributes", new HashSet(pageAttributes));
+        //get template attributes (current attributes)
+        List<TemplateAttribute> templateAttributes = contentService.getTemplateAttributes(template.getId());
 
-        //scan original template html for attributes
-        Set<String> existingPageAttributes = new HashSet();
-        matcher = pattern.matcher(originalTemplateHtml);
-        while (matcher.find()) {
-            String attr = matcher.group(1);
-            existingPageAttributes.add(attr);
-        }
+        //detect removed attributes
+        Set<String> removedAttributes = new HashSet();
+
+        //detect re-added attributes
+        Set<String> reAddedAttributes = new HashSet();
 
         //detect new attributes
-        for (String existingAttr : existingPageAttributes) {
-            if (pageAttributes.contains(existingAttr)) pageAttributes.remove(existingAttr);
+        for (TemplateAttribute templateAttribute : templateAttributes) {
+
+            //check if this attribute is new 
+            if (newAttributes.contains(templateAttribute.getAttribute())) {
+
+                //existing attribute, remove from new
+                newAttributes.remove(templateAttribute.getAttribute());
+
+                //this attribute was removed and now re-added                
+                if (templateAttribute.getRemoved()) {
+                    reAddedAttributes.add(templateAttribute.getAttribute());
+                    templateAttribute.setTemplate(template);
+                    String[] defaultValue = (String[])attributeValues.get("newAttributes[" + templateAttribute.getAttribute() + "]");
+                    templateAttribute.setValue(defaultValue == null ? "" : defaultValue[0]);
+                    templateAttribute.setRemoved(Boolean.FALSE);
+                    contentService.saveTemplateAttribute(templateAttribute);
+                }
+
+            } else if (!templateAttribute.getRemoved()) {
+                //this attribute does not exist in scanned attributes and not marked as removed
+                //so this attribute is removed, mark as removed (don't remove in case it is re-added - not to lose data on existing pages)
+                removedAttributes.add(templateAttribute.getAttribute());
+                templateAttribute.setTemplate(template);
+                templateAttribute.setRemoved(Boolean.TRUE);
+                contentService.saveTemplateAttribute(templateAttribute);
+            }
         }
 
-        //return as addedAttributes
-        result.put("addedAttributes", pageAttributes);
+        //add new attributes as template attributes (current attributes)
+        for (String attribute : newAttributes) {
+            TemplateAttribute templateAttribute = new TemplateAttribute();
+            templateAttribute.setTemplate(template);
+            templateAttribute.setAttribute(attribute);
+            String[] defaultValue = (String[])attributeValues.get("newAttributes[" + attribute + "]");
+            templateAttribute.setValue(defaultValue == null ? "" : defaultValue[0]);
+            templateAttribute.setRemoved(Boolean.FALSE);
+            contentService.saveTemplateAttribute(templateAttribute);
+        }
 
         //the pages of this template
         List<Page> pages = contentService.getPages(template.getId(), site.getId());
+        
+        //ad-hoc resource folder - instead of getting resource by templatePath and getting folder from it
+        String templateResourceFolder = template.getPath().substring(0, template.getPath().lastIndexOf("/")) + "/";
 
         //add new attributes to all pages of this template
         for (Page page : pages) {
-            for (String attribute : pageAttributes) {
+            for (String attribute : newAttributes) {
                 try {
                     PageAttribute pageAttribute = new PageAttribute();
                     pageAttribute.setAttribute(attribute);
@@ -1712,7 +1680,7 @@ public class AdminController {
                     pageAttribute.setDate(new Date());
                     pageAttribute.setPage(page);
                     String[] defaultValue = (String[])attributeValues.get("newAttributes[" + attribute + "]");
-                    pageAttribute.setValue(defaultValue == null ? "[Add Content]" : defaultValue[0]);
+                    pageAttribute.setValue(processAttribute(defaultValue == null ? "" : defaultValue[0], templateResourceFolder));
                     pageAttribute.setVersion(0);
                     contentService.savePageAttribute(pageAttribute);
 
@@ -1725,13 +1693,18 @@ public class AdminController {
                     attributeHistory.setDate(pageAttribute.getDate());
                     attributeHistory.setComment(pageAttribute.getComment());
                     contentService.savePageAttributeHistory(attributeHistory);
-                } catch (Exception e) {
-                    //what to do if the same named attribute already added in previous versions,
-                    //and removed/reverted and re-added again?
-                    //here throws duplicate key exception.
+                } catch (RuntimeException e) {
+                    //this should never ever happen since we handle re-added attributes above
+                    Logger.getLogger(AdminController.class.getName()).log(Level.WARNING, "Runtime exception at scanAttributes, this shouldn't have happened: {0}", e.getMessage());
+                    throw (e);
                 }
             }
         }
+
+        //return new, removed and re-added attributes (for information purposes)
+        result.put("addedAttributes", newAttributes);
+        result.put("removedAttributes", removedAttributes);
+        result.put("reAddedAttributes", reAddedAttributes);
 
         return result;
     }
@@ -1821,6 +1794,58 @@ public class AdminController {
         }
     }
 
+    //process attribute - make links absolute (for the html fragment) same as processTemplate but for given html fragment
+    private String processAttribute(String html, String resourceFolder) {
+
+        //the difference from processTemplate is we parse html here as fragment
+        Document attributeDocument = Jsoup.parseBodyFragment(html);
+        attributeDocument.outputSettings().prettyPrint(false);
+
+        String contextPath = ""; //TODO & NOTE & IMPORTANT: We assume that the app does not have a contextPath, this won't work otherwise
+
+        //process all links, media, imports
+        //convert links to absolute path like /a/b/c
+        Elements links = attributeDocument.select("a[href]");
+        Elements media = attributeDocument.select("[src]");
+        Elements imports = attributeDocument.select("link[href]");
+        Elements styles = attributeDocument.select("style");
+
+        //make media src absolute
+        for (Element src : media) {
+            src.attr("src", contextPath + resourceFolder + src.attr("src"));
+        }
+
+        //make css href absolute
+        for (Element link : imports) {
+            link.attr("href", contextPath + resourceFolder + link.attr("href"));
+        }
+
+        //make link href absolute
+        for (Element link : links) {
+            if (!link.absUrl("href").equals("")) continue; //skip absolute links
+            link.attr("href", contextPath + resourceFolder + link.attr("href"));
+        }
+
+        //also replace inline styles
+        for (Element style : styles) {
+            String cssContents = style.html();
+
+            //process css contents (copied from processCss)
+            Pattern pattern = Pattern.compile("url\\(\\s*(['\\\"]?+)(.*?)\\1\\s*\\)");
+            Matcher matcher = pattern.matcher(cssContents);
+            StringBuffer sb = new StringBuffer();
+            while (matcher.find()) {
+                matcher.appendReplacement(sb, "url('" + contextPath + resourceFolder + "$2')");
+            }
+            matcher.appendTail(sb);
+
+            //replace inline style
+            style.html(sb.toString());
+        }
+
+        return attributeDocument.body().html();
+    }
+
     //convert user site to site root folder (for resources)
     private String toRootFolder(Site site) {
         //return "/" + site.getId() + "/";
@@ -1871,8 +1896,6 @@ public class AdminController {
         try {
             is = resourceService.getInputStream(toRootFolder(site), resource);
             templateHtml = IOUtils.toString(is, "UTF-8");
-            Document templateDocument = Jsoup.parse(templateHtml);
-            templateDocument.outputSettings().prettyPrint(false);
 
             //add initial history record
             TemplateHistory templateHistory = new TemplateHistory();
@@ -1883,7 +1906,25 @@ public class AdminController {
             templateHistory.setDate(new Date());
             contentService.saveTemplateHistory(templateHistory);
 
+            //set the published template version            
+            template.setVersion(templateHistory.getId());
+            contentService.saveTemplate(template);
+
+            //check if resource has attributes (this shouldn't happen, but just in case)
+            Set<String> attributes = scanAttributesCommon(templateHtml);
+            for (String attribute : attributes) {
+                TemplateAttribute scannedAttribute = new TemplateAttribute();
+                scannedAttribute.setAttribute(attribute);
+                scannedAttribute.setValue(""); //no default value since it was already in there
+                scannedAttribute.setRemoved(Boolean.FALSE);
+                scannedAttribute.setTemplate(template);
+                contentService.saveTemplateAttribute(scannedAttribute);
+                Logger.getLogger(AdminController.class.getName()).log(Level.INFO, "Initial resource contains scanned attribute: {0}", attribute);
+            }
+
             //save processed form as template file
+            Document templateDocument = Jsoup.parse(templateHtml);
+            templateDocument.outputSettings().prettyPrint(false);
             os = templateService.getSourceOutputStream(template.getId() + ".ftl");
             os.write(processTemplate(templateDocument, resource, true, site).getBytes("UTF-8"));
         } finally {
@@ -1941,6 +1982,22 @@ public class AdminController {
                 }
             }
         }
+    }
+
+    //get the original unmodified html of the template (from resource)
+    private String getOriginalTemplateHtml(Site site, Template template) throws ResourceException, IOException {
+        InputStream inputStream = null;
+        String templateHtml = null;
+        try {
+            Resource resource = resourceService.getResource(toRootFolder(site), template.getPath());
+            if (resource == null) throw new IOException("Resource of this template is not found.");
+            inputStream = resourceService.getInputStream(toRootFolder(site), resource);
+            templateHtml = IOUtils.toString(inputStream, "UTF-8");
+        } finally {
+            IOUtils.closeQuietly(inputStream);
+        }
+
+        return templateHtml;
     }
 
     //SETTERS

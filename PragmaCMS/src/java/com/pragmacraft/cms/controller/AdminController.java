@@ -1722,6 +1722,8 @@ public class AdminController {
 
         //make media src absolute
         for (Element src : media) {
+            //TODO: test this, and also add / check
+            if (!src.absUrl("href").equals("")) continue; //skip absolute links
             src.attr("src", contextPath + templateResource.getFolder() + src.attr("src"));
         }
 
@@ -1733,6 +1735,8 @@ public class AdminController {
 
         //make link href absolute
         for (Element link : links) {
+            if (!link.absUrl("href").equals("")) continue; //skip absolute links
+            //TODO: test this, and also add / check
             if (!link.absUrl("href").equals("")) continue; //skip absolute links
             link.attr("href", contextPath + templateResource.getFolder() + link.attr("href"));
         }

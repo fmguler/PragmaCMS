@@ -1720,24 +1720,22 @@ public class AdminController {
         Elements imports = templateDocument.select("link[href]");
         Elements styles = templateDocument.select("style");
 
-        //make media src absolute
+        //make media src absolute - img and script tags
         for (Element src : media) {
-            //TODO: test this, and also add / check
-            if (!src.absUrl("href").equals("")) continue; //skip absolute links
+            if (src.attr("src").startsWith("/") || src.attr("src").startsWith("http")) continue; //skip absolute links
             src.attr("src", contextPath + templateResource.getFolder() + src.attr("src"));
         }
 
         //make css href absolute
         for (Element link : imports) {
             if (initial) processCss(contextPath, templateResource, resourceService.getResource(toRootFolder(site), templateResource.getFolder() + link.attr("href")), site); //if initial also update css contents
+            if (link.attr("href").startsWith("/") || link.attr("href").startsWith("http")) continue; //skip absolute links
             link.attr("href", contextPath + templateResource.getFolder() + link.attr("href"));
         }
 
         //make link href absolute
         for (Element link : links) {
-            if (!link.absUrl("href").equals("")) continue; //skip absolute links
-            //TODO: test this, and also add / check
-            if (!link.absUrl("href").equals("")) continue; //skip absolute links
+            if (link.attr("href").startsWith("/") || link.attr("href").startsWith("http")) continue; //skip absolute links
             link.attr("href", contextPath + templateResource.getFolder() + link.attr("href"));
         }
 

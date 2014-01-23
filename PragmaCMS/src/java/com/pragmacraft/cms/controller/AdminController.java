@@ -1861,7 +1861,7 @@ public class AdminController {
             resourceService.addFolder(ResourceService.ROOT_FOLDER, ResourceService.ROOT_FOLDER, site.getId() + "");
 
             //then copy some sample design templates
-            String[] samples = new String[]{"softwaretemplate.zip", "designstudio.zip", "businessworldtemplate.zip"};
+            String[] samples = new String[]{"softwaretemplate.zip"};
             for (int i = 0; i < samples.length; i++) {
 
                 //copy the sample zip

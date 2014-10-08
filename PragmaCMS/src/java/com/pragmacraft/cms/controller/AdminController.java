@@ -23,6 +23,7 @@ import com.pragmacraft.common.service.storage.domain.StorageObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -98,7 +99,6 @@ public class AdminController {
                 model.addAttribute("errorMessage", errrorMessage);
                 return "admin/login";
             }
-
 
             //generate authentication token instead of putting to session
             String authToken = generateAuthToken(user);
@@ -1068,7 +1068,6 @@ public class AdminController {
         //NOTE: this is kind of merge of editTemplate and saveTemplate (parts are copied from those blocks)
         //save the templateHtml as in saveTemplate
         //set the templateDocument as in editTemplate
-
         //>>>FROM EDITTEMPLATE>>>
         Document templateDocument = Jsoup.parse(templateHtml);
         templateDocument.outputSettings().prettyPrint(false);
@@ -1089,7 +1088,6 @@ public class AdminController {
         request.getSession().setAttribute("templateElemCounter:" + template.getId(), templateElemCounter);
 
         //>>>FROM SAVETEMPLATE>>>
-
         //the result
         Map result = new HashMap();
         if (publish) {
@@ -1236,7 +1234,6 @@ public class AdminController {
         ////////////////////////////////////////////////////////////////////////
         //LET'S DO IT!!!
         ////////////////////////////////////////////////////////////////////////
-
         //add account
         Account account = new Account();
         account.setCompany(company);
@@ -1665,7 +1662,7 @@ public class AdminController {
 
         //the pages of this template
         List<Page> pages = contentService.getPages(template.getId(), site.getId());
-        
+
         //ad-hoc resource folder - instead of getting resource by templatePath and getting folder from it
         String templateResourceFolder = template.getPath().substring(0, template.getPath().lastIndexOf("/")) + "/";
 
@@ -1722,20 +1719,20 @@ public class AdminController {
 
         //make media src absolute - img and script tags
         for (Element src : media) {
-            if (src.attr("src").startsWith("/") || src.attr("src").startsWith("http")) continue; //skip absolute links
+            if (skipURL(src.attr("src"))) continue; //skip absolute links
             src.attr("src", contextPath + templateResource.getFolder() + src.attr("src"));
         }
 
         //make css href absolute
         for (Element link : imports) {
             if (initial) processCss(contextPath, templateResource, resourceService.getResource(toRootFolder(site), templateResource.getFolder() + link.attr("href")), site); //if initial also update css contents
-            if (link.attr("href").startsWith("/") || link.attr("href").startsWith("http")) continue; //skip absolute links
+            if (skipURL(link.attr("href"))) continue; //skip absolute links
             link.attr("href", contextPath + templateResource.getFolder() + link.attr("href"));
         }
 
         //make link href absolute
         for (Element link : links) {
-            if (link.attr("href").startsWith("/") || link.attr("href").startsWith("http")) continue; //skip absolute links
+            if (skipURL(link.attr("href"))) continue; //skip absolute links
             link.attr("href", contextPath + templateResource.getFolder() + link.attr("href"));
         }
 
@@ -2000,6 +1997,20 @@ public class AdminController {
         }
 
         return templateHtml;
+    }
+
+    //check if URL is to be skipped
+    private boolean skipURL(String url) {
+        try {
+            //skip URL if it is absolute, starts with / or #
+            URI u = new URI(url);
+            if (u.isAbsolute()) return true;
+            if (u.getPath().startsWith("/")) return true;
+            if (u.getPath().equals("")) return true; //if it has only fragment (#abc) it should not have a path
+            return false;
+        } catch (Exception e) {
+            return true; //don't try to make it relative if you cannot parse it
+        }
     }
 
     //SETTERS
